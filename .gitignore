@@ -1,0 +1,25 @@
+# Dart / Flutter tool output
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+coverage/
+
+# Compiled worker artefacts emitted by experiments and tooling
+experiments/*/web/dwi/
+experiments/*/build/
+tooling/**/out/
+*.js.deps
+*.js.map
+!experiments/*/web/*.js.map
+
+# Research clones, probes and scratch work
+.research/
+.scratch/
+
+# OS noise
+.DS_Store
+Thumbs.db

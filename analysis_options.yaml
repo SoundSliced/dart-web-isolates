@@ -1,0 +1,18 @@
+# Root analyzer configuration for the DWI monorepo.
+#
+# Individual packages may `include: ../../analysis_options.yaml` and add their
+# own `include: package:lints/recommended.yaml` (or flutter_lints) on top.
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  errors:
+    todo: ignore
+  exclude:
+    - .research/**
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - build/**
+    - "**/build/**"
