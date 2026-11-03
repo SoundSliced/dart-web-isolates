@@ -17,4 +17,4 @@ Rules:
 
 | Experiment | Question | Verdict |
 | --- | --- | --- |
-| `dart_worker_poc/` (M001) | Can compiled Dart run CPU work in a browser worker while Flutter keeps rendering? | Pending |
+| `dart_worker_poc/` (M001) | Can compiled Dart run CPU work in a browser worker while Flutter keeps rendering? | **PASS WITH LIMITATIONS** — Chrome 156 measured; Firefox/Safari/Edge unverified. See `dart_worker_poc/M001_FINDINGS.md`. |

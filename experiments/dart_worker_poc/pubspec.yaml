@@ -1,0 +1,21 @@
+name: dart_worker_poc
+description: >-
+  M001: proof that compiled Dart can execute CPU work in a browser Web Worker
+  while a Flutter Web UI keeps rendering.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  web: ^1.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
