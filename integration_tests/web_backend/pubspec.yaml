@@ -1,0 +1,16 @@
+name: dwi_web_backend_it
+description: Browser integration test for the DWI protocol and web backend.
+publish_to: none
+version: 0.2.0
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  dwi_core:
+    path: ../../packages/dwi_core
+  dwi_protocol:
+    path: ../../packages/dwi_protocol
+  dwi_web:
+    path: ../../packages/dwi_web
+  web: ^1.1.2

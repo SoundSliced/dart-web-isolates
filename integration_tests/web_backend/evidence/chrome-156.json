@@ -1,0 +1,1 @@
+{"echo":{"a":1},"unknownTask":"unknown task \"missing\"","remoteError":{"type":"StateError","message":"Bad state: boom from worker","hasStack":true},"capabilities":{"backend":"worker","protocolVersion":1,"transferables":true,"workerCount":1}}

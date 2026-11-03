@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>DWI web backend integration test</title></head>
+<body><pre id="out">running…</pre>
+<script>
+  const out = document.getElementById('out');
+  const script = document.createElement('script');
+  script.src = 'client.js';
+  document.body.appendChild(script);
+  setTimeout(() => {
+    if (out.textContent === 'running…') out.textContent = 'FAILED: client did not complete';
+  }, 20000);
+</script>
+</body>
+</html>

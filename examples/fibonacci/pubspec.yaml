@@ -1,0 +1,11 @@
+name: dwi_fibonacci_example
+description: Minimal native example using Dwi.run with a registered task.
+publish_to: none
+version: 0.2.0
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  dwi:
+    path: ../../packages/dwi
