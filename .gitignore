@@ -11,7 +11,10 @@ coverage/
 # Compiled worker artefacts emitted by experiments and tooling
 experiments/*/web/dwi/
 experiments/*/build/
+experiments/*/results/
 tooling/**/out/
+integration_tests/*/build/
+integration_tests/*/results/
 *.js.deps
 *.js.map
 !experiments/*/web/*.js.map
