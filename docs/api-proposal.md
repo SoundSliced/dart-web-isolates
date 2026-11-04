@@ -87,10 +87,13 @@ dart run dwi_builder:dwi clean
 ```
 
 `build` generates sources, compiles the worker with `dart compile js` and writes
-the manifest. An unchanged content hash reuses the compiled artefact.
-`--flutter-build` runs `flutter build web` after the worker step; arguments after
-`--` are forwarded. There is no supported Flutter web build hook in this SDK, so
-plain `flutter build web` does not trigger the worker build (R013 §4.3).
+the manifest. An unchanged content hash and a matching artefact digest reuse the
+compiled artefact. `--flutter-build` runs `flutter build web` after the worker
+step; arguments after `--` are forwarded. On Flutter 3.47+ a normal dependency
+on `dwi_builder` installs a web build hook, so plain `flutter build web` and
+`flutter run -d chrome` also generate and compile the worker (ADR-009). The
+wrapper remains the supported path for older Flutter versions and plain Dart
+web apps.
 
 The generated worker imports `DwiWorkerRuntime` from
 `package:dwi_web/dwi_worker.dart`. That runtime is generated-code API, not

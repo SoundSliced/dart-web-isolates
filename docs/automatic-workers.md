@@ -70,11 +70,15 @@ envelopes, awaits asynchronous tasks, forwards typed errors, and handles
 - A task takes no input or exactly one **required positional** input. Named,
   optional and additional parameters are rejected.
 - Parameter and result types must round-trip: primitives, `dynamic`, `Object?`,
-  `Future<T>`/`FutureOr<T>` of those, typed data, and untyped
-  `List`/`Set`/`Map<String, …>` (`dynamic`/`Object?` elements). Typed collections
-  (`List<int>`, `Map<String,int>`, `Set<int>`), classes, enums and `DateTime` are
-  build errors — Dart's web compilers erase their types across the worker
-  boundary. A type-directed codec is v0.4 work.
+  `Future<T>`/`FutureOr<T>`, nullable forms, typed collections
+  (`List<T>`, `Set<T>`, `Map<String, V>`), and typed data (`Uint8List` and the
+  other typed lists, `ByteData`, `ByteBuffer`). Generated codecs validate and
+  convert decoded `List`/`Map` values on both sides. Custom classes, enums,
+  records, functions, streams, `DateTime` and non-String map keys are build
+  errors (`DWI001`).
+- Generated proxies also register their native implementations, so the same
+  `DwiTasks.foo(input)` call runs on an isolate on the VM and in a worker on
+  web; no manual `Dwi.registerTask` is required for generated tasks.
 - The result may be `T`, `Future<T>`, `FutureOr<T>` or `void`. The worker awaits
   the future before replying.
 - Generic functions, getters/setters, methods, private functions, `main` and
@@ -88,7 +92,7 @@ Diagnostics:
 
 | Code | Meaning |
 | --- | --- |
-| `DWI001` | A parameter/result type cannot cross the boundary (error for DOM, functions, ports, `Stream`, typed collections, classes, enums and `DateTime`). |
+| `DWI001` | A parameter/result type cannot cross the boundary (DOM, functions, ports, `Stream`, records, classes, enums, `DateTime`, non-String map keys). |
 | `DWI002` | The task library closure imports Flutter, `dart:ui`, `dart:io`, `dart:html` or `dart:isolate`. |
 | `DWI003` | Unsupported declaration or signature. |
 | `DWI004` | Duplicate task name or colliding generated proxy method. |
@@ -110,6 +114,7 @@ Diagnostics are build-time; they never turn into a silent main-thread fallback.
   "target": "js",
   "optimization": "O1",
   "compiled": true,
+  "artifactDigest": "<sha256 of the compiled worker>",
   "workers": {
     "default": {
       "artifact": "dwi/worker.dart.js",
@@ -133,12 +138,21 @@ The content hash covers:
 
 - generated worker source and generated proxies;
 - every source file reachable from a task library;
-- the Dart compiler version and executable;
+- the DWI runtime and generator sources compiled into the worker
+  (`dwi_web`, `dwi_protocol`, `dwi_core`, `dwi_annotations`, `dwi_builder`);
+- the project's `.dart_tool/package_config.json`, so package-resolution changes
+  invalidate the cache;
+- the identity of the **selected** compiler executable (`<dart> --version`), not
+  the SDK running the build tool;
 - `dwi_builder` version, manifest protocol and worker id;
 - target (`js`) and optimisation level.
 
-If the hash and a compiled artefact are unchanged, compilation is skipped. The
-cache is conservative: a dependency change recompiles. `--force` bypasses it.
+If the hash and a compiled artefact **plus its recorded digest** are unchanged,
+compilation is skipped. A corrupted, truncated or deleted artefact fails
+`dwi check` and forces a rebuild. `--force` bypasses the cache. Compilation
+writes a temporary file and publishes it by rename, so a failed compilation
+never replaces a valid artefact; concurrent builds are last-writer-wins and
+`dwi check` reports any interleaved mismatch.
 
 ## Lazy startup and bundling
 
@@ -192,9 +206,12 @@ web apps, use the watcher:
 dart run dwi_builder:dwi watch
 ```
 
-The watcher polls the configured source paths (500 ms), excludes generated
-files, regenerates and recompiles on change. It does not hot-patch a running
-worker: reload the page after a rebuild.
+The watcher polls the configured source paths, the task dependency closure
+(including dependencies outside `--include`), `pubspec.yaml`, `pubspec.lock` and
+`.dart_tool/package_config.json` (500 ms), excludes generated files, regenerates
+and recompiles on change, and reruns a build if inputs change while it is
+running. It does not hot-patch a running worker: reload the page after a
+rebuild.
 
 Why the CLI still exists: build hooks are Flutter-specific. `dart build` has
 only a `cli` subcommand, `dart compile js` has no extra-entrypoint mode, and a

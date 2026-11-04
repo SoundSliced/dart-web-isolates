@@ -23,15 +23,19 @@ build/web/dwi/worker.dart.js
   `package:dwi_web/dwi_worker.dart`.
 - In v0.2 compilation was a documented command; v0.3 automates it.
 
-## Why not automate inside `flutter build web`
+## Flutter web build hooks (v0.3.1)
 
-- The web build compiles a single `target` (R002 §3); no extra-entrypoint hook
-  was found in the web build sources.
-- Each `dart compile js` output is self-contained; there is no shared runtime to
-  link against (R004 §5).
-- Any future hook would need to be supported by the Flutter tool, not by
-  monkey-patching. Until then DWI provides `dwi build --flutter-build`, which is
-  a wrapper, not a Flutter hook.
+Flutter 3.47+ exposes web build hooks. `dwi_builder` ships `hook/build.dart`;
+when the app lists `dwi_builder` as a normal dependency, Flutter runs the hook
+before `dart2js` for `flutter build web` and `flutter run -d chrome`, and the
+hook invokes the same `DwiBuilder` as the CLI. Web build hooks do not expose the
+target OS, so a multi-platform app that has `web/index.html` runs the (cached)
+worker build during native builds too. Older Flutter versions, plain Dart web
+apps and CI retain the CLI (`dwi build`, `dwi check`, `dwi watch`); see ADR-009.
+
+Each `dart compile js` output is self-contained; there is no shared runtime to
+link against (R004 §5). Any future hook must be supported by the Flutter tool,
+not by monkey-patching.
 
 ## v0.3: generated entrypoint and automatic compilation (shipped)
 
@@ -49,11 +53,13 @@ The developer writes no worker file. `dwi_builder`:
 
    ```dart
    final Map<String, DwiWorkerTask> _tasks = <String, DwiWorkerTask>{
-     'calculatePrimes': (Object? input) => task0.calculatePrimes(input! as int),
+     'calculatePrimes': (Object? input) =>
+         task0.calculatePrimes(_dwiDecode0(input, 'input')),
    };
    ```
 
-   A name in a string would be tree-shaken; a reference is not.
+   A name in a string would be tree-shaken; a reference is not. The decoder is
+   generated from the resolved parameter type and validates the decoded value.
 3. Emits `lib/dwi_tasks.g.dart` with typed proxies:
 
    ```dart

@@ -44,35 +44,39 @@ limitation is not here or in `compatibility-matrix.md`, that is a bug.
     `dart:html` and `dart:isolate` in the task import closure are build errors
     (`DWI002`). Browser-safe `package:web` is allowed, but DOM objects are not
     transferable (`DWI001`).
-11. **Serialization is structural and limited in v0.3.** Only primitives,
-    `List`/`Set`/`Map` with `dynamic`/`Object?` elements (String keys for maps)
-    and typed data round-trip. Custom classes, enums and `DateTime` are build
-    errors (`DWI001`), because `jsify`/`dartify` erase their Dart type. A
-    type-directed codec is v0.4 work (R003 §3, R006).
+11. **Serialization is structural and type-directed in v0.3.1.** Primitives,
+    nullable forms, `List<T>`, `Set<T>`, `Map<String, V>` and typed data
+    (`Uint8List`, other typed lists, `ByteData`, `ByteBuffer`) round-trip.
+    Generated codecs validate decoded values on both sides and fail with
+    `DwiSerializationException` naming the path; they never silently coerce.
+    Custom classes, enums, records, functions, streams, `DateTime` and
+    non-String map keys are build errors (`DWI001`).
 12. **Payload size is enforced approximately.** `DwiConfig.maxPayloadBytes` is
     checked by the host before send and by the worker for results (the limit is
     sent in request metadata). The estimate counts strings by UTF-16 code units,
     so it is a resource guard rather than an exact wire size.
-12. **Generated-registry tree shaking is verified for tested shapes.** The
+13. **Generated-registry tree shaking is verified for tested shapes.** The
     generated worker uses static references, and v0.3 compiles and runs in
     Chrome. A universal proof for every library shape is not claimed.
-13. **Wasm worker generation is not implemented.** Wasm requires a `.wasm` +
+14. **Wasm worker generation is not implemented.** Wasm requires a `.wasm` +
     `.mjs` loader pair and a module worker (R005). No Wasm support is claimed.
-14. **Runtime compilation is not implemented and is not planned for v0.x.** A
+15. **Runtime compilation is not implemented and is not planned for v0.x.** A
     browser-hosted Dart compiler, CSP `eval` restrictions, size and attack
     surface make it non-viable on current evidence (R013 §4.5).
-15. **No hot reload of a running worker.** A rebuild produces a new script;
+16. **No hot reload of a running worker.** A rebuild produces a new script;
     existing workers keep the old one. Reload the page (or hot restart) after
     the build hook or `dwi watch` rebuilds. Flutter hot reload does not reload
     the worker script.
-16. **Queue limits are enforced; payload limits are not (yet).** Waiting
-    callers are capped by `maxQueuedTasks` and fail with
-    `DwiUnsupportedException` when full; queued callers are woken when a worker
-    is released or replaced after a timeout. `maxPayloadBytes` is not enforced
-    in v0.3.
-17. **Only Chrome has been measured.** Firefox, Safari and Edge are unverified
+17. **Queueing and deadlines are bounded.** Waiting callers are capped by
+    `maxQueuedTasks` (failing with `DwiUnsupportedException` when full) and by
+    `queueTimeout` (failing with `DwiTimeoutException`). `taskTimeout` starts
+    only after a worker is executing the call; `startupTimeout` bounds the
+    `ready` handshake. `close()` settles queued and in-flight work immediately
+    and is idempotent. A worker whose startup fails repeatedly stops being
+    respawned after three consecutive failures.
+18. **Only Chrome has been measured.** Firefox, Safari and Edge are unverified
     (M001_FINDINGS, docs/browser-matrix.md).
-18. **No Flutter `compute()` integration.** Changing Flutter's web `compute()`
+19. **No Flutter `compute()` integration.** Changing Flutter's web `compute()`
     is an upstream proposal, not a package feature.
 
 ## Operational limitations

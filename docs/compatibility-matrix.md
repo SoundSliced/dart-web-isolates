@@ -28,7 +28,7 @@ v0.3 unless marked proposed.** No cell claims parity.
 | --- | --- | --- |
 | DWI-0 | background worker, ad-hoc messaging | demonstrated by M001 |
 | DWI-1 | typed named tasks, correlated, typed errors, timeouts | shipped in v0.2 |
-| DWI-1.5 | annotation-driven worker generation, typed proxies, automatic compilation | shipped in v0.3 |
+| DWI-1.5 | annotation-driven worker generation, typed proxies, automatic compilation, typed payload codecs | shipped in v0.3.1 |
 | DWI-2 | long-lived workers, pooled scheduling | proposed |
 | DWI-3 | port-like messaging | proposed |
 | DWI-4 | high `dart:isolate` API similarity | research |
@@ -39,5 +39,7 @@ v0.3 unless marked proposed.** No cell claims parity.
 
 - “Isolates on web”.
 - “Same semantics as `Isolate.run`”.
-- That plain `flutter build web` triggers worker generation; DWI uses `dwi build` / `--flutter-build` instead.
+- That plain `flutter build web` never triggers worker generation; on Flutter
+  3.47+ with `dwi_builder` as a dependency it does (ADR-009), and the CLI is the
+  fallback elsewhere.
 - Any browser support cell that was not measured.

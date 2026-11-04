@@ -280,6 +280,55 @@ wakes waiters after termination/failure (v0.3.1 fix).
 heartbeat, restart policy, and the multi-browser benchmark matrix. v0.5–v1.0
 remain proposals.
 
+## ADR-011 — Generated proxies own native dispatch and payload decoding (v0.3.1)
+
+**Decision.** `dwi_builder` emits, into `lib/dwi_tasks.g.dart`, a private
+registration function that registers every generated task with
+`Dwi.registerTask` on first use, using the same statically referenced lambda as
+the worker. It also emits type-directed decoders for input (worker side) and
+result (proxy side). Types are captured from the analyzer's resolved element
+model (library URI, name, type arguments, nullability), never from declaration
+source text, and generated imports qualify names from non-`dart:core` libraries.
+
+**Why.** Before this decision, a generated proxy called `Dwi.run` without a
+registered native implementation (so the VM raised
+`DwiUnknownTaskException`), and `Uint8List`/qualified/imported types produced
+invalid generated source. On web, `jsify`/`dartify` erase collection element
+types, so a decoded `List<dynamic>` cannot be returned as `List<int>` without an
+explicit conversion. Registration is idempotent and guarded before it runs, so
+concurrent first calls are deterministic; the registry survives `Dwi.close()`,
+so a closed backend can be recreated and reused.
+
+**Supported payload types.** `null`, `num`/`int`/`double`/`bool`/`String`,
+`dynamic`/`Object?`, nullable forms, `List<T>`, `Set<T>`, `Map<String, V>` with
+supported keys/values, and typed data (`Uint8List`, other typed lists,
+`ByteData`, `ByteBuffer`). Custom classes, enums, records, functions, streams,
+`DateTime` and non-String map keys remain build errors (`DWI001`). Decoding
+validates every element and fails with `DwiSerializationException` naming the
+path (`input[1]`, `result[0]`) instead of coercing.
+
+**Forbids.** Relying on source-text type rendering, silently registering tasks
+outside generated code, and changing the public `Dwi`/`DwiTaskFunction` API for
+this feature (none was needed). Generated code is build output and must stay
+deterministic.
+
+## ADR-012 — Queue waiting has its own deadline (v0.3.1)
+
+**Decision.** `DwiConfig` gains `queueTimeout` (default 30 s, must be positive).
+A call waiting for pool capacity fails with `DwiTimeoutException` when it
+exceeds that deadline; `taskTimeout` starts only once a worker is executing the
+call. `startupTimeout` remains the bound for a worker's `ready` handshake.
+
+**Why.** Before this decision a queued caller had no bound at all: if every
+worker was stuck, the caller waited forever. The three delays have different
+causes and different operators, so one combined deadline would either
+mis-report a fast task behind a slow queue or let a queued call hang.
+
+**Forbids.** An unbounded queue wait. `close()` settles queued and in-flight
+requests immediately with `DwiUnsupportedException`; it is idempotent, and
+repeated worker-startup failures are capped at three before remaining callers
+receive the terminal startup error.
+
 ## Consequences
 
 - The first release is deliberately narrow: named tasks, one worker pool, typed

@@ -5,6 +5,50 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - unreleased
+
+Correctness and lifecycle pass over the automatic-worker pipeline. No public
+Dart API was removed; `DwiConfig.queueTimeout` is additive (ADR-012).
+
+### Added
+
+- Generated proxies register their own native implementations, so
+  `DwiTasks.foo(input)` runs on an isolate on the VM with no manual
+  `Dwi.registerTask` (ADR-011).
+- Generated, type-directed payload codecs for input (worker side) and result
+  (proxy side): nullable and nested `List`/`Set`/`Map<String, V>`, typed data,
+  and precise `DwiSerializationException` paths. Typed collections now
+  round-trip in Chrome and on native.
+- `DwiConfig.queueTimeout`: queue waiting is bounded separately from
+  `taskTimeout` and `startupTimeout` (ADR-012).
+- Manifest `artifactDigest`; `dwi check` rejects missing, truncated or corrupt
+  worker artefacts and `dwi build` rebuilds them.
+- Browser regression tests (Chrome via CDP) for collection conversion and for
+  pool recovery after timeout, queue overflow, close, oversized payload and
+  startup failure.
+- Tests for generated native dispatch, imported-type compilation, artifact
+  corruption, failed-compilation preservation, compiler-identity hashing,
+  package-resolution invalidation, and watch over dependencies outside
+  `--include`.
+
+### Fixed
+
+- `Uint8List`/imported and qualified types produced invalid generated source;
+  types are now captured from the analyzer's resolved element model with
+  deterministic, qualified imports.
+- Generated proxies no longer raise `DwiUnknownTaskException` on the VM.
+- Worker `close()` settles queued and in-flight requests promptly and is
+  idempotent; a closed pool can be reconfigured and reused.
+- `messageerror` is handled; terminated workers settle their pending requests;
+  repeated startup failures are capped instead of restarting in a loop.
+- Native task failures are delivered as `DwiRemoteException` with remote type
+  and stack instead of leaking the remote error object.
+- The worker hash now covers the selected compiler's identity, the DWI runtime
+  and generator sources, and `package_config.json`; the watcher follows the
+  dependency closure and rebuilds when inputs change during a build.
+- Compilation publishes by rename, so a failed compile never overwrites a
+  previously valid artefact.
+
 ## [0.3.0] - unreleased
 
 ### Added
