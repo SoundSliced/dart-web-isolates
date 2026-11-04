@@ -102,8 +102,9 @@ worker” was found. A name in a string is not a reference and can be tree-shake
 **16. What tree-shaking complications exist?**
 Reachability is a whole-program property (`WorldImpact`,
 `pkg/compiler/lib/src/universe/world_impact.dart:22`). Generated dispatch tables
-must use static references; string-keyed reflection is removed. **UNRESOLVED**
-until a generated-registry probe is run.
+must use static references; string-keyed reflection is removed. v0.3 compiles a
+generated static-reference registry and runs it in Chrome; the general case is
+still not proven for every library shape. **PARTIALLY RESOLVED**
 
 **17. Can worker entrypoints share compiled modules?**
 Not with independent `dart compile js` invocations; each output contains the

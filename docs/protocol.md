@@ -1,6 +1,6 @@
 # DWI Protocol v1
 
-Status: specification for the v0.2 implementation. Wire changes require a version
+Status: specification for the v0.2/v0.3 implementation; wire version unchanged. Wire changes require a version
 bump and an ADR.
 
 ## Transport

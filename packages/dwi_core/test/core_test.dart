@@ -13,8 +13,10 @@ void main() {
     });
 
     test('rejects invalid values', () {
-      expect(() => const DwiConfig(maxWorkers: 0).validated(),
-          throwsA(isA<ArgumentError>()));
+      expect(
+        () => const DwiConfig(maxWorkers: 0).validated(),
+        throwsA(isA<ArgumentError>()),
+      );
       expect(
         () => const DwiConfig(taskTimeout: Duration.zero).validated(),
         throwsA(isA<ArgumentError>()),
@@ -25,22 +27,24 @@ void main() {
       );
     });
 
-    test('requires a worker script only when asked', () {
+    test('defaults to the generated worker path', () {
+      const config = DwiConfig();
+      expect(config.workerScript, DwiConfig.defaultWorkerScript);
+      expect(config.requireWorkerScript, returnsNormally);
+    });
+
+    test('rejects an explicitly empty worker script', () {
       expect(
-        () => const DwiConfig().requireWorkerScript(),
+        () => const DwiConfig(workerScript: '').requireWorkerScript(),
         throwsA(isA<DwiStartupException>()),
-      );
-      expect(
-        () => const DwiConfig(workerScript: 'dwi/worker.js')
-            .requireWorkerScript(),
-        returnsNormally,
       );
     });
   });
 
   group('DwiTaskRegistry', () {
     test('registers and invokes a task', () {
-      final registry = DwiTaskRegistry()..register('double', (i) => (i! as int) * 2);
+      final registry = DwiTaskRegistry()
+        ..register('double', (i) => (i! as int) * 2);
       expect(registry.contains('double'), isTrue);
       expect(registry.invoke('double', 21), 42);
     });

@@ -9,8 +9,10 @@ Dart web applications have no `dart:isolate`. `Isolate.run`, `Isolate.spawn`,
 DWI investigates closing that gap with browser Web Workers, a versioned message
 protocol, and — where it is honest to do so — an isolate-shaped API.
 
-> **Status: research proven, packages at 0.2.0, not published.** DWI is not an
-> isolate implementation and does not claim semantic parity with `dart:isolate`.
+> **Status: research proven, packages at 0.3.0, not published.** v0.3 adds
+> annotation-driven worker generation, automatic compilation, typed proxies,
+> content-hash caching and build-time diagnostics. DWI is not an isolate
+> implementation and does not claim semantic parity with `dart:isolate`.
 > Read [`docs/limitations.md`](docs/limitations.md) and
 > [`docs/compatibility-matrix.md`](docs/compatibility-matrix.md) before relying
 > on it.
@@ -34,29 +36,68 @@ not verified (see [`docs/browser-matrix.md`](docs/browser-matrix.md)).
 
 | Package | What it does | Status |
 | --- | --- | --- |
-| `dwi` | Public API: `Dwi.configure`, `Dwi.run`, `Dwi.capabilities` | implemented, 6 tests |
-| `dwi_core` | Config, capabilities, task registry, exceptions, backend interface | implemented, 9 tests |
+| `dwi` | Public API: `Dwi.configure`, `Dwi.run`, `Dwi.capabilities`, re-exported `@DwiTask` | implemented, 7 tests |
+| `dwi_annotations` | `@DwiTask` marker | implemented, 2 tests |
+| `dwi_builder` | Analyzer discovery, worker/proxy/manifest generation, compile CLI, cache | implemented, 20 tests |
+| `dwi_core` | Config, capabilities, task registry, exceptions, backend interface | implemented, 10 tests |
 | `dwi_protocol` | Protocol v1 envelopes, error payloads, validation | implemented, 8 tests |
 | `dwi_native` | Isolate backend | implemented, 6 tests |
-| `dwi_web` | Pooled Web Worker backend with timeouts and typed errors | implemented, browser-tested |
+| `dwi_web` | Pooled Web Worker backend plus generated-worker runtime | implemented, 8 tests, browser-tested |
+
+## Zero-boilerplate workers (v0.3)
+
+Annotate a top-level function; DWI discovers it, generates the worker entrypoint
+and typed proxy, compiles the worker, and writes the manifest:
+
+```dart
+// lib/tasks.dart
+import 'package:dwi_annotations/dwi_annotations.dart';
+
+@DwiTask()
+int calculatePrimes(int limit) {
+  // ...
+}
+```
+
+```dart
+// lib/main.dart
+import 'package:dwi/dwi.dart';
+import 'dwi_tasks.g.dart';
+
+final count = await DwiTasks.calculatePrimes(5000000);
+```
+
+```bash
+dart run dwi_builder:dwi build
+# or run the Flutter build after the worker step:
+dart run dwi_builder:dwi build --flutter-build -- --release
+```
+
+`DwiConfig.workerScript` defaults to `dwi/worker.dart.js`, so no path
+configuration is required. `dart run dwi_builder:dwi watch` rebuilds on task
+changes; `check` fails when generated sources or the artefact are stale. See
+[`docs/automatic-workers.md`](docs/automatic-workers.md).
+
+The lower-level named-task API remains available:
 
 ```dart
 Dwi.registerTask('primes', (input) => countPrimes(input! as int));
-await Dwi.configure(const DwiConfig(workerScript: 'dwi/worker.dart.js'));
 final count = await Dwi.run<int>('primes', 5000000);
 ```
 
-On native the same call runs on an isolate. On web it needs a compiled worker
-entrypoint; there is no main-thread fallback. Closures are not supported and
-cannot be until the compiler can help (see
-[`docs/compiler-strategy.md`](docs/compiler-strategy.md)).
+On native both shapes run on an isolate. On web there is no main-thread
+fallback. Function values and closures are still unsupported: the annotation or
+generated proxy selects a precompiled task (see
+[`docs/compiler-strategy.md`](docs/compiler-strategy.md) and
+[`research/R013_RUNTIME_WORKER_COMPILATION.md`](research/R013_RUNTIME_WORKER_COMPILATION.md)).
 
 ## Repository layout
 
 ```text
 docs/                architecture, protocol, limitations, browser matrix
-research/            evidence reports R001–R010
-packages/            dwi, dwi_core, dwi_protocol, dwi_web, dwi_native
+research/            evidence reports R001–R013
+packages/            dwi, dwi_annotations, dwi_builder, dwi_core, dwi_protocol,
+                     dwi_web, dwi_native
 experiments/         M001 proof with raw measurement evidence
 examples/            runnable examples
 integration_tests/   browser integration tests (protocol end to end)
@@ -64,6 +105,17 @@ benchmarks/          methodology and recorded results
 ```
 
 ## Quickstart
+
+Automatic worker example (Dart web):
+
+```bash
+cd examples/automatic_worker
+dart pub get
+dart run dwi_builder:dwi build
+dart compile js -O1 -o web/main.dart.js lib/main.dart
+python3 -m http.server 8080 --directory web
+# open http://localhost:8080/
+```
 
 Native example:
 

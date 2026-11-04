@@ -8,29 +8,39 @@ R003 (structured clone), R006 (comparison).
 | Type | Wire form | Notes |
 | --- | --- | --- |
 | `null`, `bool`, `int`, `double`, `String` | themselves | `int`/`double` distinction follows JS numbers on web |
-| `List` of accepted values | JS array | element types are not preserved |
-| `Map` with `String` keys | plain object | non-string keys are rejected on web |
-| `Uint8List`, `Int32List`, … | typed array | can be transferred |
-| `ByteBuffer` | `ArrayBuffer` | transfer detaches the sender's buffer |
+| `List` of accepted values | JS array | element types are erased; only `dynamic`/`Object?` element types build |
+| `Map` with `String` keys | plain object | non-string keys are rejected; only `dynamic`/`Object?` key and value types build |
+| `Set` of accepted values | JS array | arrives as a list; only `dynamic`/`Object?` element types build |
+| `Uint8List`, `Int32List`, … | typed array | accepted by the payload validator; transfer is v0.4 |
+| `ByteBuffer` | `ArrayBuffer` | transfer is v0.4 |
 
 Nested combinations of the above are allowed. Cycles are allowed only if the
 encoding is structured clone (it supports cycles); JSON codecs must reject them.
 
-## Requires an explicit codec
+**Typed collections are a build error in v0.3.** Dart's web compilers erase
+element types when a value passes through `jsify`/`dartify`: `List<int>` arrives
+as `List<dynamic>` and `Map<String, int>` arrives as `Map<Object?, Object?>`.
+A type-directed collection codec is planned for v0.4; until then use
+`List<dynamic>`/`Map<Object?, Object?>` and decode inside the task.
 
-- Custom classes: implement a codec and register it in the worker entrypoint.
-  Decoding validates shape; prototypes are restored by the codec, not by clone.
-- `DateTime`: encode as epoch milliseconds, decode explicitly.
-- `BigInt`: cloneable, but Dart `int` on web is a JS number; mixing them is an
-  error.
-- Records and enums: encode explicitly; nothing is automatic in v0.2.
+## Not supported (no codec in v0.3)
+
+- Custom classes and enums: rejected at build time and by the payload validator.
+  They do not survive `jsify` with their Dart type; a typed proxy would receive
+  an empty or plain JS object.
+- `DateTime`: send `millisecondsSinceEpoch` as an `int`.
+- `BigInt`, records: encode explicitly as primitives or collections.
+- Functions, closures, tear-offs and `Symbol`.
 
 ## Rejected
 
 - Functions, closures, tear-offs, `Symbol`.
-- Any object with a non-cloneable field, including a class instance without a
-  codec (rejected at the host boundary, not silently converted).
-- Buffers above the configured payload limit.
+- Any object with a non-cloneable field, including a class instance or an enum
+  (rejected before a worker is acquired, not silently converted).
+- Payloads above `DwiConfig.maxPayloadBytes`: the host enforces an approximate
+  budget before sending and includes the limit in request metadata so the worker
+  rejects oversized results. The budget counts strings by UTF-16 code units and
+  is a resource guard, not an exact wire size.
 - `SendPort`/`ReceivePort` (no web representation).
 
 Rejections throw `DwiSerializationException` *before* a worker is started or a

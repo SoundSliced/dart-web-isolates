@@ -25,7 +25,7 @@ consequence of evidence, not a plan the package depends on.
 | Stage | Artefact | Gate |
 | --- | --- | --- |
 | 1 | This repository: package + evidence + protocol | M001 PASS (done, with engine limits) |
-| 2 | v0.3 generated entrypoints + typed tasks | tests, tree-shaking probe, browser matrix |
+| 2 | v0.3 generated entrypoints + typed tasks (shipped) | tests, tree-shaking probe, browser matrix; Flutter hook still absent |
 | 3 | Wasm worker backend | WasmGC/`js-string` matrix, COOP/COEP guidance |
 | 4 | Design discussion (Dart SDK) | benchmarks, semantic table, no API breakage |
 | 5 | Compiler/build integration proposal | agreed hook with Flutter tooling |

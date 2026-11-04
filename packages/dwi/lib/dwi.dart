@@ -11,7 +11,10 @@ import 'dart:async';
 import 'package:dwi_core/dwi_core.dart';
 
 import 'src/backend_native.dart'
-    if (dart.library.js_interop) 'src/backend_web.dart' as impl;
+    if (dart.library.js_interop) 'src/backend_web.dart'
+    as impl;
+
+export 'package:dwi_annotations/dwi_annotations.dart' show DwiTask;
 
 export 'package:dwi_core/dwi_core.dart'
     show
@@ -23,7 +26,7 @@ export 'package:dwi_core/dwi_core.dart'
         DwiResultTypeException,
         DwiSerializationException,
         DwiStartupException,
-        DwiTask,
+        DwiTaskFunction,
         DwiTaskRegistry,
         DwiTimeoutException,
         DwiUnknownTaskException,
@@ -55,7 +58,7 @@ abstract final class Dwi {
   /// Registers a task implementation for the native backend and for tests.
   ///
   /// Worker entrypoints keep their own registry; see `docs/compiler-strategy.md`.
-  static void registerTask(String name, DwiTask task) {
+  static void registerTask(String name, DwiTaskFunction task) {
     registry.register(name, task);
   }
 

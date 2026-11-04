@@ -1,7 +1,7 @@
 import 'exceptions.dart';
 
 /// A callable task implementation: one structured-cloneable input, one output.
-typedef DwiTask = Object? Function(Object? input);
+typedef DwiTaskFunction = Object? Function(Object? input);
 
 /// Name → implementation registry used by the native backend and by generated
 /// worker entrypoints.
@@ -10,10 +10,10 @@ typedef DwiTask = Object? Function(Object? input);
 class DwiTaskRegistry {
   DwiTaskRegistry();
 
-  final Map<String, DwiTask> _tasks = <String, DwiTask>{};
+  final Map<String, DwiTaskFunction> _tasks = <String, DwiTaskFunction>{};
 
   /// Registers [task] under [name]. Re-registering replaces the old task.
-  void register(String name, DwiTask task) {
+  void register(String name, DwiTaskFunction task) {
     if (name.trim().isEmpty) {
       throw ArgumentError.value(name, 'name', 'must not be empty');
     }
@@ -21,14 +21,14 @@ class DwiTaskRegistry {
   }
 
   /// Registers several tasks at once.
-  void registerAll(Map<String, DwiTask> tasks) {
+  void registerAll(Map<String, DwiTaskFunction> tasks) {
     tasks.forEach(register);
   }
 
   bool contains(String name) => _tasks.containsKey(name);
 
   /// Returns the task or throws [DwiUnknownTaskException].
-  DwiTask lookup(String name) {
+  DwiTaskFunction lookup(String name) {
     final task = _tasks[name];
     if (task == null) {
       throw DwiUnknownTaskException('unknown task "$name"');

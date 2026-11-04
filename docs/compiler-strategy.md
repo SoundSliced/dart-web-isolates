@@ -18,11 +18,10 @@ web/dwi/worker.dart.js  # generated, gitignored
 build/web/dwi/worker.dart.js
 ```
 
-- The user writes `worker_main.dart` (or uses the generated one in v0.3).
-- DWI provides the runtime half: `DwiWorkerRuntime.register(...)` and
-  `DwiWorkerRuntime.start()`.
-- Compilation is a documented command (and a helper script); staleness must fail
-  loudly.
+- v0.2 required the user to write `worker_main.dart`; v0.3 generates it (below).
+- DWI provides the runtime half: `DwiWorkerRuntime.start(...)` from
+  `package:dwi_web/dwi_worker.dart`.
+- In v0.2 compilation was a documented command; v0.3 automates it.
 
 ## Why not automate inside `flutter build web`
 
@@ -31,34 +30,81 @@ build/web/dwi/worker.dart.js
 - Each `dart compile js` output is self-contained; there is no shared runtime to
   link against (R004 §5).
 - Any future hook would need to be supported by the Flutter tool, not by
-  monkey-patching.
+  monkey-patching. Until then DWI provides `dwi build --flutter-build`, which is
+  a wrapper, not a Flutter hook.
 
-## v0.3: code generation
+## v0.3: generated entrypoint and automatic compilation (shipped)
 
 ```dart
 @DwiTask()
 List<int> calculatePrimes(int max) { ... }
 ```
 
-Generator responsibilities:
+The developer writes no worker file. `dwi_builder`:
 
-1. Discover annotated functions (build_runner or a standalone tool).
-2. Emit a registry with **static references**:
+1. Discovers annotated public top-level functions with the analyzer's resolved
+   AST (not source-text regex), including the enclosing library, task-name
+   override, parameter/return types and the transitive import closure.
+2. Emits `.dwi/generated_worker.dart` with **static references**:
 
    ```dart
-   final Map<String, Object? Function(Object?)> _tasks = {
-     'calculatePrimes': (Object? input) => calculatePrimes(input! as int),
+   final Map<String, DwiWorkerTask> _tasks = <String, DwiWorkerTask>{
+     'calculatePrimes': (Object? input) => task0.calculatePrimes(input! as int),
    };
    ```
 
-3. Emit the worker entrypoint (`register`, `start`).
-4. Emit typed host wrappers (optional; keeps names out of user code).
-5. Be deterministic: stable ordering, no timestamps, byte-identical output for
-   identical input (AGENTS.md rule 11).
+   A name in a string would be tree-shaken; a reference is not.
+3. Emits `lib/dwi_tasks.g.dart` with typed proxies:
 
-**Unresolved:** whether a generated registry survives tree shaking end to end.
-Static references should keep the functions, but this needs a probe before the
-generator is promised (R004 unresolved).
+   ```dart
+   abstract final class DwiTasks {
+     static Future<List<int>> calculatePrimes(int input) =>
+         Dwi.run<List<int>>('calculatePrimes', input);
+   }
+   ```
+4. Computes a SHA-256 content hash over the generated sources, the reachable
+   dependency files, the Dart compiler version, the DWI version and the
+   compiler options. An unchanged hash and a present artefact skip compilation.
+5. Runs `dart compile js -O1 -o web/dwi/worker.dart.js
+   .dwi/generated_worker.dart` when needed.
+6. Writes `.dwi/worker_manifest.json` (protocol, hash, tasks, artefact,
+   optimisation, compiled flag).
+7. Fails loudly with `DWI001`–`DWI010` diagnostics instead of producing an
+   obscure runtime worker failure.
+
+The generated worker imports `DwiWorkerRuntime` from `dwi_web`; protocol
+dispatch is in the pure-Dart `DwiWorkerDispatcher`, so it is tested on the VM.
+
+### Build integration reality
+
+There is no supported web build hook in this SDK:
+
+- `dart build --help` lists only `cli`;
+- `dart compile` has no extra-entrypoint mode;
+- `hook/build.dart` is for native/code assets (R013 §4.3).
+
+Therefore DWI ships a single wrapper command rather than pretending that plain
+`flutter build web` invokes it:
+
+```bash
+dart run dwi_builder:dwi build --flutter-build -- --release
+```
+
+During development:
+
+```bash
+dart run dwi_builder:dwi watch
+```
+
+The watcher polls (500 ms), regenerates and recompiles on change. It does not
+hot-patch a live worker; reload the page. See `automatic-workers.md` for the
+full workflow, diagnostics and manifest.
+
+**Resolved by the v0.3 tests:** the generated registry survives compilation
+(`dart compile js` in `dwi_builder/test/build_test.dart`), and the generated
+worker runs in Chrome (`examples/automatic_worker`). Tree shaking of the
+generated registry is verified for the tested task shapes, not for every
+possible library.
 
 ## Wasm path (later)
 

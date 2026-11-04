@@ -1,6 +1,9 @@
 import 'package:dwi/dwi.dart';
 import 'package:test/test.dart';
 
+@DwiTask()
+int annotatedExample(int value) => value + 1;
+
 int countPrimes(int limit) {
   final sieve = List<bool>.filled(limit + 1, false);
   var count = 0;
@@ -28,10 +31,9 @@ void main() {
   tearDownAll(() => Dwi.close());
 
   test('runs a named task and returns a typed result', () async {
-    final count = await Dwi.run<int>(
-      'primes',
-      <String, Object?>{'limit': 1000},
-    );
+    final count = await Dwi.run<int>('primes', <String, Object?>{
+      'limit': 1000,
+    });
     expect(count, 168);
   });
 
@@ -61,5 +63,15 @@ void main() {
   test('reports isolate capabilities on the VM', () async {
     final caps = await Dwi.capabilities();
     expect(caps.backend, DwiBackendKind.isolate);
+  });
+
+  test('re-exports the @DwiTask marker and typed task function', () {
+    const marker = DwiTask(name: 'annotatedExample');
+    expect(marker.name, 'annotatedExample');
+    expect(annotatedExample(41), 42);
+
+    final DwiTaskFunction task = (input) => input;
+    Dwi.registerTask('typed', task);
+    expect(Dwi.registry.contains('typed'), isTrue);
   });
 }

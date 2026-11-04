@@ -18,6 +18,7 @@ repository. Research agents do not modify the Dart or Flutter SDKs.
 | R008 | `R008_BROWSER_COMPATIBILITY.md` | Per-engine worker/Wasm/CSP support |
 | R009 | `R009_EXISTING_PACKAGES.md` | Prior art and its limitations |
 | R010 | `R010_UPSTREAM_DART_ISSUES.md` | Relevant Dart/Flutter issues and design discussions |
+| R013 | `R013_RUNTIME_WORKER_COMPILATION.md` | Automatic worker compilation strategies and the v0.3 decision |
 
 ## Notes directories
 

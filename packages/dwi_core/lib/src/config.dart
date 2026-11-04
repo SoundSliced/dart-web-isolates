@@ -6,7 +6,7 @@ import 'exceptions.dart';
 /// never returns, must fail instead of hanging (docs/protocol.md).
 class DwiConfig {
   const DwiConfig({
-    this.workerScript,
+    this.workerScript = defaultWorkerScript,
     this.maxWorkers = 4,
     this.taskTimeout = const Duration(seconds: 30),
     this.startupTimeout = const Duration(seconds: 10),
@@ -14,7 +14,16 @@ class DwiConfig {
     this.maxPayloadBytes = 64 * 1024 * 1024,
   });
 
-  /// Path to the compiled worker entrypoint. Required on web, ignored native.
+  /// Conventional served path for the generated worker.
+  ///
+  /// This must match `dwi_builder`'s default. Override [workerScript] when the
+  /// generated artefact is served from a different path.
+  static const String defaultWorkerScript = 'dwi/worker.dart.js';
+
+  /// Path to the compiled worker entrypoint. Ignored on native.
+  ///
+  /// Defaults to [defaultWorkerScript] so generated workers need no manual
+  /// path configuration. Set an empty string to force a startup error.
   final String? workerScript;
 
   /// Upper bound on concurrently live workers.
@@ -38,7 +47,11 @@ class DwiConfig {
       throw ArgumentError.value(maxWorkers, 'maxWorkers', 'must be >= 1');
     }
     if (maxQueuedTasks < 0) {
-      throw ArgumentError.value(maxQueuedTasks, 'maxQueuedTasks', 'must be >= 0');
+      throw ArgumentError.value(
+        maxQueuedTasks,
+        'maxQueuedTasks',
+        'must be >= 0',
+      );
     }
     if (taskTimeout <= Duration.zero) {
       throw ArgumentError.value(taskTimeout, 'taskTimeout', 'must be positive');

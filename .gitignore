@@ -26,3 +26,12 @@ integration_tests/*/results/
 # OS noise
 .DS_Store
 Thumbs.db
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
+
+# Generated DWI worker artefacts (dwi_builder)
+.dwi/
+**/lib/dwi_tasks.g.dart
+**/web/dwi/
+examples/automatic_worker/web/main.dart.js

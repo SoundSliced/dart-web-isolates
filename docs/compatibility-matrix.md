@@ -1,7 +1,7 @@
 # Compatibility Matrix
 
 Dart `dart:isolate` feature vs DWI vs the web limitation. **DWI columns describe
-v0.2 unless marked proposed.** No cell claims parity.
+v0.3 unless marked proposed.** No cell claims parity.
 
 | `dart:isolate` feature | DWI (native) | DWI (web) | Web limitation | Evidence |
 | --- | --- | --- | --- | --- |
@@ -27,7 +27,8 @@ v0.2 unless marked proposed.** No cell claims parity.
 | Level | Meaning | Status |
 | --- | --- | --- |
 | DWI-0 | background worker, ad-hoc messaging | demonstrated by M001 |
-| DWI-1 | typed named tasks, correlated, typed errors, timeouts | v0.2 target |
+| DWI-1 | typed named tasks, correlated, typed errors, timeouts | shipped in v0.2 |
+| DWI-1.5 | annotation-driven worker generation, typed proxies, automatic compilation | shipped in v0.3 |
 | DWI-2 | long-lived workers, pooled scheduling | proposed |
 | DWI-3 | port-like messaging | proposed |
 | DWI-4 | high `dart:isolate` API similarity | research |
@@ -38,5 +39,5 @@ v0.2 unless marked proposed.** No cell claims parity.
 
 - “Isolates on web”.
 - “Same semantics as `Isolate.run`”.
-- “Automatic worker compilation” before it exists.
+- That plain `flutter build web` triggers worker generation; DWI uses `dwi build` / `--flutter-build` instead.
 - Any browser support cell that was not measured.

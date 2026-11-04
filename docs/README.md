@@ -13,6 +13,7 @@ directory holds the maintained reference material.
 | `dart-isolate-semantics.md` | Which isolate semantics DWI preserves, which it cannot. |
 | `serialization.md` | What can cross the boundary, and at what cost. |
 | `compiler-strategy.md` | How worker entrypoints are compiled and loaded. |
+| `automatic-workers.md` | v0.3 zero-boilerplate workflow, diagnostics, manifest and cache. |
 | `compatibility-matrix.md` | Dart isolate feature vs DWI vs web limitation. |
 | `browser-matrix.md` | Measured per-engine support and behaviour. |
 | `benchmarks.md` | Benchmark methodology and results. |

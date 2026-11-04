@@ -11,6 +11,7 @@ the recommended way to use DWI and must not reach into implementation details.
 | `worker_pool/` | Several tasks scheduled across a pool. |
 | `flutter_counter/` | Flutter integration with UI remaining responsive. |
 | `flutter_jank_demo/` | Measured frame-drop comparison, main thread vs worker. |
+| `automatic_worker/` | Zero-boilerplate `@DwiTask` discovery, worker generation and compilation. |
 
 Each example has its own `README.md` with run instructions and states which
 backend (native isolate / JS worker / Wasm worker) it exercises.
