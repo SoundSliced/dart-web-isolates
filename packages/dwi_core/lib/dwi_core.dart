@@ -3,6 +3,7 @@
 library;
 
 export 'src/backend.dart';
+export 'src/cancellable_task.dart';
 export 'src/capabilities.dart';
 export 'src/config.dart';
 export 'src/exceptions.dart';

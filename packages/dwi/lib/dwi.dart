@@ -19,6 +19,9 @@ export 'package:dwi_annotations/dwi_annotations.dart' show DwiTask;
 export 'package:dwi_core/dwi_core.dart'
     show
         DwiBackendKind,
+        DwiCancellableTask,
+        DwiCancellation,
+        DwiCancelledException,
         DwiCapabilities,
         DwiConfig,
         DwiException,
@@ -73,6 +76,44 @@ abstract final class Dwi {
     throw DwiResultTypeException(
       'task "$task" returned ${result.runtimeType}, expected $R',
     );
+  }
+
+  /// Runs [task] with [input] and returns a handle that can be cancelled.
+  ///
+  /// The task settles exactly once through [DwiCancellableTask.result] with a
+  /// value, a [DwiException], or [DwiCancelledException]. [DwiCancellableTask.cancel]
+  /// never throws (ADR-010 §10.1).
+  ///
+  /// ```dart
+  /// final task = Dwi.runCancellable<int>('primes', 5000000);
+  /// final cancelled = await task.cancel();
+  /// ```
+  static DwiCancellableTask<R> runCancellable<R>(
+    String task, [
+    Object? input,
+  ]) {
+    final inner = _active.start(task, input);
+    final outer = DwiCancellableTask<R>(cancel: inner.cancel);
+    outer.result.ignore();
+    unawaited(
+      inner.result.then<void>(
+        (value) {
+          if (value is R) {
+            outer.complete(value);
+          } else {
+            outer.completeError(
+              DwiResultTypeException(
+                'task "$task" returned ${value.runtimeType}, expected $R',
+              ),
+            );
+          }
+        },
+        onError: (Object error, StackTrace stack) {
+          outer.completeError(error, stack);
+        },
+      ),
+    );
+    return outer;
   }
 
   /// Reports what the selected backend can actually do here.

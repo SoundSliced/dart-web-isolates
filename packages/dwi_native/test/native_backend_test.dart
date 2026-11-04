@@ -29,7 +29,14 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 200));
         return 'done';
       })
-      ..register('boom', (Object? input) => throw StateError('boom'));
+      ..register('boom', (Object? input) => throw StateError('boom'))
+      ..register('spin', (Object? input) {
+        // Synchronous CPU work: it cannot observe a message until it returns,
+        // so only killing the isolate can stop it.
+        final until = DateTime.now().add(const Duration(seconds: 5));
+        while (DateTime.now().isBefore(until)) {}
+        return 'spun';
+      });
     backend = NativeBackend(registry);
   });
 
@@ -82,5 +89,77 @@ void main() {
       () => backend.run('primes', <String, Object?>{'limit': 10}),
       throwsA(isA<DwiUnsupportedException>()),
     );
+  });
+
+  group('cancellation', () {
+    test('reports running cancellation in capabilities', () async {
+      final caps = await backend.capabilities();
+      expect(caps.cancellation, DwiCancellation.running);
+    });
+
+    test('runCancellable returns a value like run', () async {
+      await backend.configure(const DwiConfig());
+      final task = backend.start('primes', <String, Object?>{'limit': 1000});
+      expect(await task.result, 168);
+      expect(task.isDone, isTrue);
+      expect(await task.cancel(), isFalse);
+    });
+
+    test('cancels a running task by killing its isolate', () async {
+      await backend.configure(const DwiConfig());
+      final task = backend.start('spin', null);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      final watch = Stopwatch()..start();
+      expect(await task.cancel(), isTrue);
+      await expectLater(
+        task.result,
+        throwsA(isA<DwiCancelledException>()),
+      );
+      // The isolate is killed, not abandoned: the caller is not waiting for the
+      // five second loop to finish.
+      expect(watch.elapsedMilliseconds, lessThan(2000));
+    });
+
+    test('cancel after completion is a no-op returning false', () async {
+      await backend.configure(const DwiConfig());
+      final task = backend.start('primes', <String, Object?>{'limit': 10});
+      expect(await task.result, 4);
+
+      expect(await task.cancel(), isFalse);
+      expect(await task.result, 4);
+    });
+
+    test('repeated cancellation reports true once and false afterwards',
+        () async {
+      await backend.configure(const DwiConfig());
+      final task = backend.start('spin', null);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(await task.cancel(), isTrue);
+      expect(await task.cancel(), isFalse);
+      await expectLater(
+        task.result,
+        throwsA(isA<DwiCancelledException>()),
+      );
+    });
+
+    test('a timeout kills the isolate and later work still runs', () async {
+      await backend.configure(
+        const DwiConfig(taskTimeout: Duration(milliseconds: 100)),
+      );
+      final timedOut = backend.start('spin', null);
+      await expectLater(
+        timedOut.result,
+        throwsA(isA<DwiTimeoutException>()),
+      );
+      expect(timedOut.isDone, isTrue);
+
+      await backend.configure(const DwiConfig());
+      expect(
+        await backend.run('primes', <String, Object?>{'limit': 1000}),
+        168,
+      );
+    });
   });
 }

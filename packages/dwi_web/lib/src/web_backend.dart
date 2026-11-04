@@ -29,6 +29,19 @@ class _Waiter {
   bool timedOut = false;
 }
 
+/// Where a cancellable request currently sits in the pool.
+///
+/// `waiter` is set while the request is queued, `slot`/`id` once a worker
+/// executes it, and [cancelled] records a cancellation that arrived in the
+/// window between being handed a slot and posting the request.
+class _CancelState {
+  late final DwiCancellableTask<Object?> handle;
+  _Waiter? waiter;
+  _WorkerSlot? slot;
+  int? id;
+  bool cancelled = false;
+}
+
 /// Executes named tasks in dedicated Web Workers over the DWI protocol.
 ///
 /// Workers are pooled lazily. A task that exceeds `taskTimeout`, a worker that
@@ -36,6 +49,10 @@ class _Waiter {
 /// settles every affected caller with a typed error. Queued callers are woken
 /// when capacity becomes available, including after a termination or startup
 /// failure, and their wait is bounded by `queueTimeout`.
+///
+/// Cancellation follows ADR-010 §10.1: a queued request leaves the queue, a
+/// running request terminates its worker, and `result` is the only future that
+/// receives [DwiCancelledException].
 class WebBackend implements DwiBackend {
   /// How many startups may fail in a row before the queued callers are failed.
   static const int _maxConsecutiveSpawnFailures = 3;
@@ -55,31 +72,55 @@ class WebBackend implements DwiBackend {
   }
 
   @override
-  Future<Object?> run(String task, Object? input) async {
-    if (_closed) {
-      throw const DwiUnsupportedException('backend is closed');
-    }
-    // Reject values jsify/dartify would silently corrupt (for example a closure
-    // becoming `{}`) before a worker is acquired.
-    validateDwiPayload(
-      input,
-      path: 'input',
-      maxBytes: _config.maxPayloadBytes,
+  Future<Object?> run(String task, Object? input) =>
+      start(task, input).result;
+
+  @override
+  DwiCancellableTask<Object?> start(String task, Object? input) {
+    final state = _CancelState();
+    final handle = DwiCancellableTask<Object?>(
+      cancel: () => _cancel(task, state),
     );
-
-    final slot = await _acquire(task);
-    if (_closed) {
-      _release(slot);
-      throw const DwiUnsupportedException('backend is closed');
-    }
-    final id = _nextTaskId++;
-    final completer = Completer<DwiEnvelope>();
+    state.handle = handle;
     // A late settlement (close, termination) must not become an unhandled
-    // asynchronous error after the request itself already failed.
-    completer.future.ignore();
-    slot.pending[id] = completer;
+    // asynchronous error after the caller stopped listening.
+    handle.result.ignore();
+    unawaited(_execute(task, input, state));
+    return handle;
+  }
 
+  Future<void> _execute(
+    String task,
+    Object? input,
+    _CancelState state,
+  ) async {
+    final handle = state.handle;
+    _WorkerSlot? slot;
+    int? id;
     try {
+      if (_closed) {
+        throw const DwiUnsupportedException('backend is closed');
+      }
+      // Reject values jsify/dartify would silently corrupt (for example a
+      // closure becoming `{}`) before a worker is acquired.
+      validateDwiPayload(
+        input,
+        path: 'input',
+        maxBytes: _config.maxPayloadBytes,
+      );
+
+      slot = await _acquire(task, state);
+      state.slot = slot;
+      if (state.cancelled || _closed) {
+        throw DwiCancelledException('task "$task" was cancelled');
+      }
+
+      id = _nextTaskId++;
+      state.id = id;
+      final completer = Completer<DwiEnvelope>();
+      completer.future.ignore();
+      slot.pending[id] = completer;
+
       try {
         final envelope = DwiEnvelope(
           type: DwiMessageType.request,
@@ -116,21 +157,55 @@ class WebBackend implements DwiBackend {
         path: 'result',
         maxBytes: _config.maxPayloadBytes,
       );
-      return response.payload;
+      handle.complete(response.payload);
     } on TimeoutException {
-      _terminate(
-        slot,
-        DwiTimeoutException(
-          'task "$task" exceeded ${_config.taskTimeout.inMilliseconds} ms',
-        ),
-      );
-      throw DwiTimeoutException(
+      final error = DwiTimeoutException(
         'task "$task" exceeded ${_config.taskTimeout.inMilliseconds} ms',
       );
+      if (slot != null) _terminate(slot, error);
+      handle.completeError(error);
+    } on DwiCancelledException catch (error) {
+      handle.completeError(error);
+    } catch (error, stack) {
+      handle.completeError(error, stack);
     } finally {
-      slot.pending.remove(id);
-      if (!slot.failed) _release(slot);
+      state.slot = null;
+      if (slot != null && id != null) slot.pending.remove(id);
+      if (slot != null && !slot.failed) _release(slot);
     }
+  }
+
+  /// Cancels the request described by [state] (ADR-010 §10.1).
+  Future<bool> _cancel(String task, _CancelState state) async {
+    final handle = state.handle;
+    if (handle.isDone) return false;
+    final error = DwiCancelledException('task "$task" was cancelled');
+
+    final waiter = state.waiter;
+    if (waiter != null) {
+      state.cancelled = true;
+      state.waiter = null;
+      _waiters.remove(waiter);
+      // Keeps a concurrent drain pass from handing this waiter a worker.
+      waiter.timedOut = true;
+      handle.completeError(error);
+      if (!waiter.completer.isCompleted) {
+        waiter.completer.completeError(error);
+      }
+      return true;
+    }
+
+    final slot = state.slot;
+    final id = state.id;
+    if (slot != null && id != null && slot.pending.containsKey(id)) {
+      state.cancelled = true;
+      // Settle the caller first so the observable outcome is "cancelled" even
+      // though termination also settles the in-flight request.
+      handle.completeError(error);
+      _terminate(slot, error);
+      return true;
+    }
+    return false;
   }
 
   @override
@@ -142,6 +217,9 @@ class WebBackend implements DwiBackend {
       // version, so advertising them here would be a false claim.
       transferables: false,
       workerCount: _slots.length,
+      // Queued and running cancellation are implemented here; the value is
+      // reported even when closed so the contract stays readable.
+      cancellation: DwiCancellation.running,
     );
   }
 
@@ -165,7 +243,7 @@ class WebBackend implements DwiBackend {
     _slots.clear();
   }
 
-  Future<_WorkerSlot> _acquire(String task) async {
+  Future<_WorkerSlot> _acquire(String task, _CancelState state) async {
     if (_closed) {
       throw const DwiUnsupportedException('backend is closed');
     }
@@ -195,6 +273,7 @@ class WebBackend implements DwiBackend {
       );
     }
     final waiter = _Waiter();
+    state.waiter = waiter;
     _waiters.add(waiter);
     _drainWaiters();
     try {
@@ -202,6 +281,7 @@ class WebBackend implements DwiBackend {
     } on TimeoutException {
       waiter.timedOut = true;
       _waiters.remove(waiter);
+      if (identical(state.waiter, waiter)) state.waiter = null;
       throw DwiTimeoutException(
         'task "$task" waited more than '
         '${_config.queueTimeout.inMilliseconds} ms in the queue',

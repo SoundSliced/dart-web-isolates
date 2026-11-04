@@ -338,7 +338,12 @@ not be described as parity.
 `queued`, `running`, or `none`, so callers can see the actual contract instead
 of assuming parity.
 
-**Implementation status.** Not implemented in v0.3.1.
+**Implementation status.** Implemented in v0.4. `Dwi.runCancellable`,
+`DwiCancellableTask` and `DwiCancelledException` are public; queued cancellation
+removes a waiter, running cancellation terminates the worker on web and kills
+the isolate on native, and both backends report `DwiCancellation.running`.
+Covered by `dwi_core` unit tests, `dwi_native` VM tests, `dwi` facade tests and
+the Chrome lifecycle test in `dwi_builder/test/browser_lifecycle_test.dart`.
 
 ### 10.2 Transferable bytes
 

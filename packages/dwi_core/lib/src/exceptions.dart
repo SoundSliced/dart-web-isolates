@@ -38,6 +38,14 @@ class DwiUnsupportedException extends DwiException {
   const DwiUnsupportedException(super.message);
 }
 
+/// A task was cancelled before it produced a result.
+///
+/// Delivered through [DwiCancellableTask.result], never thrown by
+/// [DwiCancellableTask.cancel]. See ADR-010 §10.1.
+class DwiCancelledException extends DwiException {
+  const DwiCancelledException(super.message);
+}
+
 /// A failure that happened inside another realm.
 ///
 /// [remoteStackTrace] is captured by the worker runtime. It is data, never a

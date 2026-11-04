@@ -157,7 +157,7 @@ as a local stack trace.
 
 ## v0.4 surface (ADR-010, accepted; implementation tracked per item)
 
-Cancellation:
+Cancellation — **implemented** (`Dwi.runCancellable`):
 
 ```dart
 final task = Dwi.runCancellable<int>('primes', 5_000_000);

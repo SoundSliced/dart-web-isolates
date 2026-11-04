@@ -18,6 +18,15 @@ Future<String> slow(int milliseconds) async {
 
 @DwiTask()
 String echo(String value) => value;
+
+@DwiTask()
+String spin(int milliseconds) {
+  final until = DateTime.now().add(Duration(milliseconds: milliseconds));
+  while (DateTime.now().isBefore(until)) {
+    // Synchronous CPU work: the worker cannot read a message until it returns.
+  }
+  return 'spun';
+}
 ''';
 
 const String lifecycleMain = r'''
@@ -45,6 +54,7 @@ String _classify(Object error) {
   if (error is DwiUnsupportedException) return 'DwiUnsupportedException';
   if (error is DwiStartupException) return 'DwiStartupException';
   if (error is DwiSerializationException) return 'DwiSerializationException';
+  if (error is DwiCancelledException) return 'DwiCancelledException';
   if (error is DwiRemoteException) return 'DwiRemoteException';
   return 'OTHER';
 }
@@ -194,6 +204,43 @@ Future<void> main() async {
     await Dwi.configure(const DwiConfig(workerScript: workerScript));
     result['gReused'] = await _outcome(Dwi.run<Object?>('echo', 'back'));
 
+    // H: cancellation — queued, running, repeated, after completion, recovery.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        maxWorkers: 1,
+        maxQueuedTasks: 2,
+        taskTimeout: Duration(seconds: 5),
+      ),
+    );
+    final hRunning = Dwi.runCancellable<String>('spin', 3000);
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    final hQueued = Dwi.runCancellable<String>('echo', 'queued');
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    result['hQueuedCancel'] = await hQueued.cancel();
+    result['hQueuedResult'] = await _outcome(hQueued.result);
+
+    final hWatch = Stopwatch()..start();
+    result['hRunningCancel'] = await hRunning.cancel();
+    result['hRunningResult'] = await _outcome(hRunning.result);
+    result['hRunningMs'] = hWatch.elapsedMilliseconds;
+    result['hRepeatedCancel'] = await hRunning.cancel();
+    result['hAfter'] = await _outcome(Dwi.run<Object?>('echo', 'afterCancel'));
+
+    final hDone = Dwi.runCancellable<String>('echo', 'done');
+    result['hDoneValue'] = await hDone.result;
+    result['hDoneCancel'] = await hDone.cancel();
+
+    // A cancel must beat a task timeout that would otherwise terminate the
+    // same worker.
+    final hRace = Dwi.runCancellable<String>('spin', 2000);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    result['hRaceCancel'] = await hRace.cancel();
+    result['hRaceResult'] = await _outcome(hRace.result);
+
+    result['hCaps'] = (await Dwi.capabilities()).cancellation.name;
+
     result['ok'] = true;
   } catch (error, stack) {
     result['ok'] = false;
@@ -293,6 +340,19 @@ void main() {
 
         expect(decoded['gMissing'], 'DwiStartupException');
         expect(decoded['gReused'], 'OK:back');
+
+        expect(decoded['hQueuedCancel'], isTrue);
+        expect(decoded['hQueuedResult'], 'DwiCancelledException');
+        expect(decoded['hRunningCancel'], isTrue);
+        expect(decoded['hRunningResult'], 'DwiCancelledException');
+        expect(decoded['hRunningMs'], lessThan(1000));
+        expect(decoded['hRepeatedCancel'], isFalse);
+        expect(decoded['hAfter'], 'OK:afterCancel');
+        expect(decoded['hDoneValue'], 'done');
+        expect(decoded['hDoneCancel'], isFalse);
+        expect(decoded['hRaceCancel'], isTrue);
+        expect(decoded['hRaceResult'], 'DwiCancelledException');
+        expect(decoded['hCaps'], 'running');
       } finally {
         await server.close(force: true);
       }
