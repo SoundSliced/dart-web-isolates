@@ -10,6 +10,7 @@ class DwiConfig {
     this.maxWorkers = 4,
     this.taskTimeout = const Duration(seconds: 30),
     this.startupTimeout = const Duration(seconds: 10),
+    this.queueTimeout = const Duration(seconds: 30),
     this.maxQueuedTasks = 64,
     this.maxPayloadBytes = 64 * 1024 * 1024,
   });
@@ -34,6 +35,13 @@ class DwiConfig {
 
   /// How long a worker may take to send `ready`.
   final Duration startupTimeout;
+
+  /// How long a request may wait for a worker slot before it fails.
+  ///
+  /// Queue waiting has its own bound, separate from [taskTimeout]: the task
+  /// timeout starts only once a worker is executing the request. A queued call
+  /// therefore never waits forever behind slow or stuck work.
+  final Duration queueTimeout;
 
   /// Upper bound on queued tasks; exceeding it fails the call.
   final int maxQueuedTasks;
@@ -60,6 +68,13 @@ class DwiConfig {
       throw ArgumentError.value(
         startupTimeout,
         'startupTimeout',
+        'must be positive',
+      );
+    }
+    if (queueTimeout <= Duration.zero) {
+      throw ArgumentError.value(
+        queueTimeout,
+        'queueTimeout',
         'must be positive',
       );
     }

@@ -20,18 +20,32 @@ class _WorkerSlot {
   bool failed = false;
 }
 
+/// One caller waiting for pool capacity.
+///
+/// [timedOut] lets the drain loop skip a waiter whose queue deadline expired
+/// between being scheduled and being handed a slot.
+class _Waiter {
+  final Completer<_WorkerSlot> completer = Completer<_WorkerSlot>();
+  bool timedOut = false;
+}
+
 /// Executes named tasks in dedicated Web Workers over the DWI protocol.
 ///
-/// Workers are pooled lazily. A task that exceeds `taskTimeout`, or a worker
-/// that crashes, is terminated; failures are never silently retried on the main
-/// thread. Queued callers are woken when capacity becomes available, including
-/// after a termination or startup failure.
+/// Workers are pooled lazily. A task that exceeds `taskTimeout`, a worker that
+/// crashes, or a message that cannot be decoded terminates that worker and
+/// settles every affected caller with a typed error. Queued callers are woken
+/// when capacity becomes available, including after a termination or startup
+/// failure, and their wait is bounded by `queueTimeout`.
 class WebBackend implements DwiBackend {
+  /// How many startups may fail in a row before the queued callers are failed.
+  static const int _maxConsecutiveSpawnFailures = 3;
+
   DwiConfig _config = const DwiConfig();
   final List<_WorkerSlot> _slots = <_WorkerSlot>[];
-  final List<Completer<_WorkerSlot>> _waiters = <Completer<_WorkerSlot>>[];
+  final List<_Waiter> _waiters = <_Waiter>[];
   int _nextWorkerId = 1;
   int _nextTaskId = 1;
+  int _consecutiveSpawnFailures = 0;
   bool _closed = false;
   bool _draining = false;
 
@@ -53,23 +67,30 @@ class WebBackend implements DwiBackend {
       maxBytes: _config.maxPayloadBytes,
     );
 
-    final slot = await _acquire();
+    final slot = await _acquire(task);
+    if (_closed) {
+      _release(slot);
+      throw const DwiUnsupportedException('backend is closed');
+    }
     final id = _nextTaskId++;
     final completer = Completer<DwiEnvelope>();
+    // A late settlement (close, termination) must not become an unhandled
+    // asynchronous error after the request itself already failed.
+    completer.future.ignore();
     slot.pending[id] = completer;
 
     try {
-      final envelope = DwiEnvelope(
-        type: DwiMessageType.request,
-        id: id,
-        task: task,
-        payload: input,
-        meta: <String, Object?>{
-          'workerId': 'w${slot.id}',
-          'maxPayloadBytes': _config.maxPayloadBytes,
-        },
-      );
       try {
+        final envelope = DwiEnvelope(
+          type: DwiMessageType.request,
+          id: id,
+          task: task,
+          payload: input,
+          meta: <String, Object?>{
+            'workerId': 'w${slot.id}',
+            'maxPayloadBytes': _config.maxPayloadBytes,
+          },
+        );
         slot.worker.postMessage(envelope.toMap().jsify());
       } catch (error) {
         // A synchronous postMessage failure (for example DataCloneError) must
@@ -97,7 +118,12 @@ class WebBackend implements DwiBackend {
       );
       return response.payload;
     } on TimeoutException {
-      _terminate(slot);
+      _terminate(
+        slot,
+        DwiTimeoutException(
+          'task "$task" exceeded ${_config.taskTimeout.inMilliseconds} ms',
+        ),
+      );
       throw DwiTimeoutException(
         'task "$task" exceeded ${_config.taskTimeout.inMilliseconds} ms',
       );
@@ -112,7 +138,8 @@ class WebBackend implements DwiBackend {
     return DwiCapabilities(
       backend: _closed ? DwiBackendKind.unsupported : DwiBackendKind.worker,
       protocolVersion: dwiProtocolVersion,
-      // v0.3 copies every payload. Transfer semantics arrive in v0.4.
+      // v0.3 copies every payload. Transfer semantics arrive in a later
+      // version, so advertising them here would be a false claim.
       transferables: false,
       workerCount: _slots.length,
     );
@@ -120,20 +147,25 @@ class WebBackend implements DwiBackend {
 
   @override
   Future<void> close() async {
+    if (_closed) return;
     _closed = true;
-    for (final slot in List<_WorkerSlot>.of(_slots)) {
-      _terminate(slot);
-    }
-    _slots.clear();
+    const error = DwiUnsupportedException('backend is closed');
+    // Settle queued callers first: they must not wait for their queue deadline.
     for (final waiter in _waiters) {
-      if (!waiter.isCompleted) {
-        waiter.completeError(const DwiUnsupportedException('backend is closed'));
+      if (!waiter.completer.isCompleted) {
+        waiter.completer.completeError(error);
       }
     }
     _waiters.clear();
+    // Terminating a slot settles its pending requests and its startup future,
+    // so a close during startup cannot leave an `_acquire` hanging.
+    for (final slot in List<_WorkerSlot>.of(_slots)) {
+      _terminate(slot, error);
+    }
+    _slots.clear();
   }
 
-  Future<_WorkerSlot> _acquire() async {
+  Future<_WorkerSlot> _acquire(String task) async {
     if (_closed) {
       throw const DwiUnsupportedException('backend is closed');
     }
@@ -162,10 +194,19 @@ class WebBackend implements DwiBackend {
         'task queue is full (${_config.maxQueuedTasks} waiting)',
       );
     }
-    final waiter = Completer<_WorkerSlot>();
+    final waiter = _Waiter();
     _waiters.add(waiter);
     _drainWaiters();
-    return waiter.future;
+    try {
+      return await waiter.completer.future.timeout(_config.queueTimeout);
+    } on TimeoutException {
+      waiter.timedOut = true;
+      _waiters.remove(waiter);
+      throw DwiTimeoutException(
+        'task "$task" waited more than '
+        '${_config.queueTimeout.inMilliseconds} ms in the queue',
+      );
+    }
   }
 
   _WorkerSlot? _idleSlot() {
@@ -183,10 +224,19 @@ class WebBackend implements DwiBackend {
 
   Future<_WorkerSlot> _spawn() async {
     final script = _config.workerScript!;
-    final slot = _WorkerSlot(web.Worker(script.toJS), _nextWorkerId++);
+    web.Worker worker;
+    try {
+      worker = web.Worker(script.toJS);
+    } catch (error) {
+      throw DwiStartupException(
+        'could not create a worker for "$script": $error',
+      );
+    }
+    final slot = _WorkerSlot(worker, _nextWorkerId++);
     _slots.add(slot);
 
     slot.worker.onmessage = ((web.MessageEvent event) {
+      if (slot.failed || _closed) return;
       final data = (event.data as JSObject?)?.dartify();
       if (data is! Map) {
         _fail(slot, 'worker sent a non-object message');
@@ -214,10 +264,22 @@ class WebBackend implements DwiBackend {
       _fail(slot, event.message.isEmpty ? 'worker error' : event.message);
     }).toJS;
 
+    // Fires when the browser could not deserialize an inbound message. Without
+    // this handler the request would wait for its full task timeout.
+    slot.worker.onmessageerror = ((web.Event event) {
+      _fail(slot, 'worker sent a message that could not be deserialized');
+    }).toJS;
+
     try {
       await slot.ready.future.timeout(_config.startupTimeout);
     } on TimeoutException {
-      _terminate(slot);
+      _terminate(
+        slot,
+        DwiStartupException(
+          'worker "$script" did not send ready within '
+          '${_config.startupTimeout.inMilliseconds} ms',
+        ),
+      );
       throw DwiStartupException(
         'worker "$script" did not send ready within '
         '${_config.startupTimeout.inMilliseconds} ms',
@@ -228,32 +290,45 @@ class WebBackend implements DwiBackend {
 
   void _fail(_WorkerSlot slot, String message) {
     if (slot.failed) return;
-    slot.failed = true;
+    final error = DwiRemoteException(
+      message: message,
+      workerId: 'w${slot.id}',
+    );
     if (!slot.ready.isCompleted) {
       slot.ready.completeError(DwiStartupException(message));
     }
-    for (final completer in slot.pending.values) {
-      if (!completer.isCompleted) {
-        completer.completeError(
-          DwiRemoteException(message: message, workerId: 'w${slot.id}'),
-        );
-      }
-    }
-    slot.pending.clear();
-    _terminate(slot);
+    _settlePending(slot, error);
+    _terminate(slot, error);
   }
 
-  void _terminate(_WorkerSlot slot) {
+  /// Terminates [slot], settles its pending requests with [cause], and offers
+  /// the freed capacity to queued callers.
+  void _terminate(_WorkerSlot slot, [DwiException? cause]) {
     slot.failed = true;
     _slots.remove(slot);
+    final error =
+        cause ??
+        DwiRemoteException(
+          message: 'worker w${slot.id} was terminated',
+          workerId: 'w${slot.id}',
+        );
+    if (!slot.ready.isCompleted) {
+      slot.ready.completeError(error);
+    }
+    _settlePending(slot, error);
     try {
       slot.worker.terminate();
     } catch (_) {
       // terminate on an already-dead worker is not an error.
     }
-    // A terminated worker frees capacity; hand it to queued callers instead of
-    // leaving them waiting for a release that will never happen.
     _drainWaiters();
+  }
+
+  void _settlePending(_WorkerSlot slot, DwiException error) {
+    for (final completer in slot.pending.values) {
+      if (!completer.isCompleted) completer.completeError(error);
+    }
+    slot.pending.clear();
   }
 
   bool get _hasCapacity =>
@@ -268,10 +343,17 @@ class WebBackend implements DwiBackend {
   Future<void> _drain() async {
     try {
       while (!_closed && _waiters.isNotEmpty) {
+        final waiter = _waiters.first;
+        if (waiter.timedOut || waiter.completer.isCompleted) {
+          _waiters.removeAt(0);
+          continue;
+        }
         final idle = _idleSlot();
         if (idle != null) {
+          _waiters.removeAt(0);
           idle.busy = true;
-          _waiters.removeAt(0).complete(idle);
+          waiter.completer.complete(idle);
+          _consecutiveSpawnFailures = 0;
           continue;
         }
         if (_slots.length >= _config.maxWorkers) break;
@@ -279,9 +361,27 @@ class WebBackend implements DwiBackend {
         _WorkerSlot slot;
         try {
           slot = await _spawn();
+          _consecutiveSpawnFailures = 0;
         } catch (error, stack) {
-          final waiter = _waiters.removeAt(0);
-          if (!waiter.isCompleted) waiter.completeError(error, stack);
+          _consecutiveSpawnFailures++;
+          _waiters.remove(waiter);
+          if (!waiter.completer.isCompleted) {
+            waiter.completer.completeError(error, stack);
+          }
+          if (_consecutiveSpawnFailures >= _maxConsecutiveSpawnFailures) {
+            // A worker that cannot start must not be respawned in a loop: fail
+            // every remaining caller with the terminal startup error.
+            final terminal = DwiStartupException(
+              'worker startup failed $_consecutiveSpawnFailures times in a '
+              'row; last error: $error',
+            );
+            for (final remaining in _waiters) {
+              if (!remaining.completer.isCompleted) {
+                remaining.completer.completeError(terminal);
+              }
+            }
+            _waiters.clear();
+          }
           continue;
         }
         if (_closed) {
@@ -292,8 +392,13 @@ class WebBackend implements DwiBackend {
           slot.busy = false;
           break;
         }
+        final target = _waiters.removeAt(0);
+        if (target.timedOut || target.completer.isCompleted) {
+          slot.busy = false;
+          continue;
+        }
         slot.busy = true;
-        _waiters.removeAt(0).complete(slot);
+        target.completer.complete(slot);
       }
     } finally {
       _draining = false;

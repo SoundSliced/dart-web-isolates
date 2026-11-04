@@ -8,6 +8,7 @@ void main() {
       expect(config.maxWorkers, 4);
       expect(config.taskTimeout, const Duration(seconds: 30));
       expect(config.startupTimeout, const Duration(seconds: 10));
+      expect(config.queueTimeout, const Duration(seconds: 30));
       expect(config.maxQueuedTasks, 64);
       expect(config.validated(), same(config));
     });
@@ -19,6 +20,10 @@ void main() {
       );
       expect(
         () => const DwiConfig(taskTimeout: Duration.zero).validated(),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(
+        () => const DwiConfig(queueTimeout: Duration.zero).validated(),
         throwsA(isA<ArgumentError>()),
       );
       expect(
