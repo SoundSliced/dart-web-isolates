@@ -56,8 +56,15 @@ void main() {
     );
   });
 
-  test('propagates a task failure', () {
-    expect(() => Dwi.run<Object?>('boom', null), throwsA(isA<StateError>()));
+  test('propagates a typed remote task failure', () async {
+    await expectLater(
+      Dwi.run<Object?>('boom', null),
+      throwsA(
+        isA<DwiRemoteException>()
+            .having((error) => error.remoteType, 'remoteType', 'StateError')
+            .having((error) => error.message, 'message', contains('boom')),
+      ),
+    );
   });
 
   test('reports isolate capabilities on the VM', () async {

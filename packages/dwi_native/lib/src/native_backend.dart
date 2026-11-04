@@ -31,6 +31,15 @@ class NativeBackend implements DwiBackend {
       throw DwiTimeoutException(
         'task "$task" exceeded ${_config.taskTimeout.inMilliseconds} ms',
       );
+    } catch (error, stack) {
+      if (error is DwiException) rethrow;
+      // Isolate.run rethrows the remote error in the caller. DWI must deliver a
+      // typed failure so callers never have to depend on the remote error type.
+      throw DwiRemoteException(
+        message: error.toString(),
+        remoteType: error.runtimeType.toString(),
+        remoteStack: stack.toString(),
+      );
     }
   }
 

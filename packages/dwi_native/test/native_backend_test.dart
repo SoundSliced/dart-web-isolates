@@ -57,11 +57,16 @@ void main() {
     );
   });
 
-  test('propagates an error thrown inside the isolate', () async {
+  test('delivers a typed remote error with the remote type and stack', () async {
     await backend.configure(const DwiConfig());
-    expect(
-      () => backend.run('boom', null),
-      throwsA(isA<StateError>()),
+    await expectLater(
+      backend.run('boom', null),
+      throwsA(
+        isA<DwiRemoteException>()
+            .having((error) => error.remoteType, 'remoteType', 'StateError')
+            .having((error) => error.message, 'message', contains('boom'))
+            .having((error) => error.remoteStack, 'remoteStack', isNotEmpty),
+      ),
     );
   });
 
