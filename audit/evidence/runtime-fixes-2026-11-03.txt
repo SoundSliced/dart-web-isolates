@@ -1,0 +1,20 @@
+DWI v0.3 runtime fixes — browser verification (Chrome 156, Dart 3.13.5, dart2js)
+Probe: maxWorkers=2, maxQueuedTasks=2, taskTimeout=500ms.
+
+capabilities={backend: worker, protocolVersion: 1, transferables: false, workerCount: 0}
+echo=OK:int:42:111ms
+timeout=ERR:DwiTimeoutException: task "slow" exceeded 500 ms:507ms
+afterTimeout=OK:String:alive:11ms
+nonCooperative=ERR:DwiTimeoutException: task "spin" exceeded 500 ms:504ms
+afterSpin=OK:String:alive2:10ms
+badResult=ERR:DwiSerializationException: result: (int) => int is not structured-cloneable by DWI...
+badInput=ERR:DwiSerializationException: input: (int) => int is not structured-cloneable by DWI...
+afterBadInput=OK:String:alive3:0ms
+concurrent=OK:String:0,1,2,3:9ms
+queueOverflow=OK:String:DwiTimeoutException,DwiTimeoutException,DwiTimeoutException,DwiTimeoutException,DwiUnsupportedException,DwiUnsupportedException:1018ms
+afterOverflow=OK:String:alive4:11ms
+afterClose=OK:int:1:8ms
+DONE
+
+Before the fixes the same queue scenario hung until the 6s harness guard and
+badResult/badInput returned OK:{}.

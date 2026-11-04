@@ -1,0 +1,37 @@
+Flutter web build hooks — independent probe (2026-11-03)
+Flutter 3.47.6 stable, engine b8c8d3d8d5d0, Dart 3.13.5, macOS arm64.
+
+Source evidence (installed Flutter SDK):
+  packages/flutter_tools/lib/src/build_system/targets/native_assets.dart:31
+    enum HookPlatform { native, web }
+  packages/flutter_tools/lib/src/build_system/targets/native_assets.dart:141
+    if (platform == HookPlatform.web) const BuildHooks(platform: HookPlatform.web)
+  packages/flutter_tools/lib/src/build_system/targets/web.dart:604
+    LinkHooks(platform: HookPlatform.web, extraDependencies: compileTargets)
+
+Runtime evidence (`flutter build web --release -v`):
+  [ +4 ms] Running build hooks for web.
+  [ +16 ms] Running `dart compile kernel --packages=<APP>/.dart_tool/package_config.json
+            --output=<APP>/.dart_tool/hooks_runner/dwi_builder/.../hook.dill ... hook/build.dart`
+  input.json: package_name = dwi_builder, package_root = <dwi_builder>, user_defines = {}
+  DWI_HOOK_PACKAGE_CONFIG=file://<APP>/.dart_tool/package_config.json
+
+Properties measured with probe hooks:
+  - Process.run inside a hook works (observed `dart --version`, exit 0).
+  - A hook can write files outside its package (observed marker + compiled worker).
+  - Hook cwd is the hook package root, not the app root.
+  - A hook in dev_dependencies did NOT run.
+  - An app-root hook/build.dart did NOT run.
+  - Platform.packageConfig gives the application package config, and the app
+    package is the entry whose own .dart_tool/package_config.json is that file.
+  - `flutter run -d web-server` also runs the hook (build mode debug).
+  - Caching: changing lib/tasks.dart re-ran the hook (new hash); an unchanged
+    build printed `Skipping target: build_hooks`.
+
+End-to-end with dwi_builder/hook/build.dart (this repository):
+  - dwi_builder listed as a normal dependency in the Flutter app.
+  - `flutter build web --release --base-href /sub/app/` produced
+    web/dwi/worker.dart.js and build/web/dwi/worker.dart.js (269,440 bytes),
+    and lib/dwi_tasks.g.dart contained the app's tasks (extraTask, greet, ...).
+  - The hook resolved the app from Platform.packageConfig and compiled with the
+    same DwiBuilder as the CLI.

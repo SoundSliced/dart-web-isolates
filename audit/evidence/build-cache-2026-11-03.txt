@@ -1,0 +1,17 @@
+Cache invalidation (Flutter consumer app, Dart 3.13.5)
+
+Unchanged build:
+  DWI: 2 task(s); worker reused (hash unchanged). hash 2a0e8cf2e720
+After editing lib/helper.dart (local transitive dependency):
+  DWI: 2 task(s); worker compiled. hash ff87d9e73df8
+After editing ../dwi_helper_pkg/lib/dwi_helper_pkg.dart (cross-package dependency):
+  DWI: check -> "Manifest hash does not match the current task sources."
+  DWI: build -> worker compiled. hash 2a0e8cf2e720 (from e313b700d13e)
+Generated worker source was unchanged in both cases, so the hash covers dependencies,
+not only generated text.
+
+dwi generate after a task change:
+  prints generated 6 task(s), leaves .dwi/worker_manifest.json untouched (old hash,
+  "compiled": true); `dwi check` then reports the manifest hash mismatch.
+  build_test.dart line 34 asserts that generation-only writes no manifest, while
+  docs/automatic-workers.md and the pipeline diagram say it does.

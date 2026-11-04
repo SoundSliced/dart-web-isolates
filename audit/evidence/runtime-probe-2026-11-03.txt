@@ -1,0 +1,37 @@
+DWI v0.3 browser runtime probe (Chrome 156, Dart 3.13.5, dart2js)
+Served at http://127.0.0.1:8794/ (main probe) and /index2.html (codec probe).
+
+main probe (taskTimeout 700ms, maxWorkers 2, maxQueuedTasks 2):
+echo=OK:42
+typed=OK:7
+unknown=ERR:DwiUnknownTaskException: unknown task "missing"
+remote=ERR:DwiRemoteException: DwiRemoteException(StateError): Bad state: boom: x
+badResult=OK:{}                      <-- closure returned as {}
+timeout=ERR:DwiTimeoutException: task "slow" exceeded 700 ms
+afterTimeout=OK:alive                <-- recovery works
+concurrent=OK:0,1,2,3                <-- concurrent tasks work
+nonCooperative=ERR:DwiTimeoutException: task "spin" exceeded 700 ms
+afterSpin=OK:alive2                  <-- terminate recovers
+badInput=OK:{}                       <-- closure input silently {}
+afterBadInput=OK:alive3
+queueOverflow=ERR:TimeoutException after 6s (harness guard)  <-- waiters starve
+echoSet=ERR:DwiRemoteException(_TypeError): JSArray is not Set<int>
+echoMap=ERR:DwiRemoteException(_TypeError): JsLinkedHashMap<Object?,Object?> is not Map<String,int>
+echoNullableList=ERR:TimeoutException after 6s  <-- starvation poisoned later calls
+echoFutureOr=OK:5
+proxyPoint=OK:{}                     <-- typed proxy accepted an empty JS object as Point
+proxyColor=OK:{index: 1, _name: green} <-- typed proxy accepted a plain object as Color
+rawPoint=OK:{}
+rawColor=OK:{index: 1, _name: green}
+afterClose=OK:1                      <-- close() then run() re-creates a backend
+DONE
+
+codec probe (maxWorkers 1, no timeouts):
+rawListInput=OK:JSArray<dynamic>:[1, 2]
+rawMapInput=OK:JsLinkedHashMap<Object?, Object?>:{a: 1}
+rawSetInput=OK:JSArray<dynamic>:[1, 2]
+listTyped=ERR:DwiResultTypeException: returned JSArray<dynamic>, expected List<int>
+nullableList=ERR:DwiRemoteException(_TypeError): JSArray is not List<int>?
+setTyped=ERR:DwiRemoteException(_TypeError): JSArray is not Set<int>
+mapTyped=ERR:DwiRemoteException(_TypeError): JsLinkedHashMap<Object?,Object?> is not Map<String,int>
+DONE
