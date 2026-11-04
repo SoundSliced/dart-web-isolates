@@ -49,6 +49,18 @@ class DwiWorkerDispatcher {
     switch (envelope.type) {
       case DwiMessageType.request:
         return _handleRequest(envelope);
+      case DwiMessageType.heartbeat:
+        // Liveness probe from the host. Echo the nonce so a late reply cannot
+        // be mistaken for a fresh one (ADR-010 §10.3).
+        return DwiEnvelope(
+          type: DwiMessageType.heartbeat,
+          id: envelope.id,
+          payload: null,
+          meta: <String, Object?>{
+            ..._meta(),
+            if (envelope.meta['nonce'] != null) 'nonce': envelope.meta['nonce'],
+          },
+        );
       case DwiMessageType.shutdown:
         _closed = true;
         return DwiEnvelope(

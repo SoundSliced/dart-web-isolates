@@ -199,10 +199,10 @@ caps.cancellation;   // 'queued' | 'running' | 'none'
 DwiConfig(heartbeatInterval: Duration(seconds: 5), heartbeatMisses: 2);
 ```
 
-Heartbeats ping **idle** workers only. A busy worker cannot answer a ping while
-it runs synchronous CPU code; its work is bounded by `taskTimeout` instead. A
-slot is dead after `heartbeatMisses` consecutive missed replies and is replaced
-lazily, with startup retries bounded by three consecutive failures.
+Heartbeats ping **idle** workers only — implemented. A busy worker cannot answer
+a ping while it runs synchronous CPU code; its work is bounded by `taskTimeout`
+instead. A slot is dead after `heartbeatMisses` consecutive missed replies and is
+replaced lazily, with startup retries bounded by three consecutive failures.
 
 Until each item's "Implementation status" in ADR-010 says implemented, the
 corresponding surface is a proposal and must not be documented as available.

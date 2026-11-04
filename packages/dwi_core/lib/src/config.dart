@@ -13,6 +13,8 @@ class DwiConfig {
     this.queueTimeout = const Duration(seconds: 30),
     this.maxQueuedTasks = 64,
     this.maxPayloadBytes = 64 * 1024 * 1024,
+    this.heartbeatInterval = const Duration(seconds: 5),
+    this.heartbeatMisses = 2,
   });
 
   /// Conventional served path for the generated worker.
@@ -49,6 +51,15 @@ class DwiConfig {
   /// Upper bound on an encoded payload, in bytes.
   final int maxPayloadBytes;
 
+  /// How often an idle worker is pinged (ADR-010 §10.3).
+  ///
+  /// Only idle workers are pinged: a worker running synchronous CPU code cannot
+  /// answer until it finishes, so busy work is bounded by [taskTimeout] instead.
+  final Duration heartbeatInterval;
+
+  /// Consecutive unanswered pings after which an idle worker is considered dead.
+  final int heartbeatMisses;
+
   /// Returns a copy with validated values or throws [ArgumentError].
   DwiConfig validated() {
     if (maxWorkers < 1) {
@@ -83,6 +94,20 @@ class DwiConfig {
         maxPayloadBytes,
         'maxPayloadBytes',
         'must be positive',
+      );
+    }
+    if (heartbeatInterval <= Duration.zero) {
+      throw ArgumentError.value(
+        heartbeatInterval,
+        'heartbeatInterval',
+        'must be positive',
+      );
+    }
+    if (heartbeatMisses < 1) {
+      throw ArgumentError.value(
+        heartbeatMisses,
+        'heartbeatMisses',
+        'must be >= 1',
       );
     }
     return this;

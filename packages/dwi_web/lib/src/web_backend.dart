@@ -19,6 +19,10 @@ class _WorkerSlot {
   final Completer<void> ready = Completer<void>();
   bool busy = false;
   bool failed = false;
+
+  /// Consecutive heartbeats not answered while idle (ADR-010 §10.3).
+  int missedHeartbeats = 0;
+  Timer? heartbeat;
 }
 
 /// One caller waiting for pool capacity.
@@ -336,6 +340,8 @@ class WebBackend implements DwiBackend {
 
     slot.worker.onmessage = ((web.MessageEvent event) {
       if (slot.failed || _closed) return;
+      // Any inbound message proves the worker is alive.
+      slot.missedHeartbeats = 0;
       final data = (event.data as JSObject?)?.dartify();
       if (data is! Map) {
         _fail(slot, 'worker sent a non-object message');
@@ -384,7 +390,47 @@ class WebBackend implements DwiBackend {
         '${_config.startupTimeout.inMilliseconds} ms',
       );
     }
+    _startHeartbeat(slot);
     return slot;
+  }
+
+  /// Pings an idle worker so a silently dead one is replaced instead of handed
+  /// the next request (ADR-010 §10.3).
+  ///
+  /// Busy workers are never pinged: a synchronous task cannot answer until it
+  /// returns, so its liveness is bounded by `taskTimeout` instead. Detection
+  /// takes up to `heartbeatMisses + 1` intervals.
+  void _startHeartbeat(_WorkerSlot slot) {
+    slot.heartbeat?.cancel();
+    slot.heartbeat = Timer.periodic(_config.heartbeatInterval, (timer) {
+      if (_closed || slot.failed) {
+        timer.cancel();
+        return;
+      }
+      if (slot.busy) {
+        // Normal for long CPU work: not a missed heartbeat.
+        slot.missedHeartbeats = 0;
+        return;
+      }
+      if (slot.missedHeartbeats >= _config.heartbeatMisses) {
+        timer.cancel();
+        _fail(slot, 'worker w${slot.id} stopped answering heartbeats');
+        return;
+      }
+      slot.missedHeartbeats++;
+      try {
+        slot.worker.postMessage(
+          DwiEnvelope(
+            type: DwiMessageType.heartbeat,
+            id: null,
+            payload: null,
+            meta: <String, Object?>{'nonce': slot.missedHeartbeats},
+          ).toMap().jsify(),
+        );
+      } catch (_) {
+        // A post that throws counts as an unanswered ping.
+      }
+    });
   }
 
   void _fail(_WorkerSlot slot, String message) {
@@ -404,6 +450,8 @@ class WebBackend implements DwiBackend {
   /// the freed capacity to queued callers.
   void _terminate(_WorkerSlot slot, [DwiException? cause]) {
     slot.failed = true;
+    slot.heartbeat?.cancel();
+    slot.heartbeat = null;
     _slots.remove(slot);
     final error =
         cause ??

@@ -463,8 +463,14 @@ read).
 **Config additions.** `DwiConfig.heartbeatInterval` and
 `DwiConfig.heartbeatMisses`; both must be positive.
 
-**Implementation status.** Not implemented in v0.3.1. `onerror`,
-`onmessageerror`, timeout and bounded startup failure already exist.
+**Implementation status.** Implemented in v0.4. `DwiConfig.heartbeatInterval`
+(5 s) and `DwiConfig.heartbeatMisses` (2) are validated; idle slots are pinged,
+a busy slot is never treated as a missed heartbeat, any inbound message resets
+the miss count, and a dead idle slot is terminated and replaced lazily.
+`onerror`, `onmessageerror`, timeout and bounded startup failure keep their
+existing behaviour. Covered by a Chrome case where a worker closes its own
+global scope after answering (`dieAfter`) and the next call succeeds without
+waiting for a task timeout, plus a bounded-restart case with a missing script.
 
 ### 10.4 Acceptance criteria for v0.4
 

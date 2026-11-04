@@ -8,10 +8,16 @@ import 'support/browser_probe.dart';
 import 'support/fixture.dart';
 
 const String lifecycleTasks = r'''
+import 'dart:async';
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 import 'dart:typed_data';
 
 import 'package:dwi_annotations/dwi_annotations.dart';
 import 'package:dwi_core/dwi_core.dart';
+
+@JS('self')
+external JSObject get _self;
 
 @DwiTask()
 Future<String> slow(int milliseconds) async {
@@ -38,6 +44,21 @@ DwiTransferableBytes echoBytes(DwiTransferableBytes input) => input;
 DwiTransferableBytes makeBytes(int length) {
   final data = Uint8List(length)..fillRange(0, length, 7);
   return DwiTransferableBytes(data);
+}
+
+@DwiTask()
+String dieAfter(String value) {
+  // Answer first, then close the worker's global scope. The delay lets the
+  // result reach the host before the worker disappears, so the host is left
+  // with an idle slot that can never answer again.
+  Timer(const Duration(milliseconds: 100), () {
+    try {
+      _self.callMethod('close'.toJS);
+    } catch (_) {
+      // Already closing.
+    }
+  });
+  return value;
 }
 ''';
 
@@ -278,6 +299,44 @@ Future<void> main() async {
     result['iReturnedAllSeven'] = iReturned.bytes.every((value) => value == 7);
     result['iTransferables'] = (await Dwi.capabilities()).transferables;
 
+    // J: an idle worker that dies silently is detected by heartbeat, and the
+    // next call gets a fresh worker instead of waiting for a task timeout.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        maxWorkers: 1,
+        heartbeatInterval: Duration(milliseconds: 200),
+        heartbeatMisses: 2,
+        taskTimeout: Duration(seconds: 5),
+      ),
+    );
+    result['jFirst'] = await _outcome(Dwi.run<Object?>('dieAfter', 'alive'));
+    // Two missed pings plus scheduling slack.
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    final jWatch = Stopwatch()..start();
+    result['jNext'] = await _outcome(Dwi.run<Object?>('echo', 'next'));
+    result['jNextMs'] = jWatch.elapsedMilliseconds;
+    result['jWorkers'] = (await Dwi.capabilities()).workerCount;
+
+    // K: a worker that cannot start is retried a bounded number of times and
+    // every caller still settles with a typed error.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: 'missing/worker.dart.js',
+        startupTimeout: Duration(milliseconds: 300),
+        queueTimeout: Duration(seconds: 5),
+      ),
+    );
+    result['k'] = await _settle(<Future<Object?>>[
+      Dwi.run<Object?>('echo', 'k1'),
+      Dwi.run<Object?>('echo', 'k2'),
+      Dwi.run<Object?>('echo', 'k3'),
+      Dwi.run<Object?>('echo', 'k4'),
+    ], guardMs: 8000);
+    result['kWorkers'] = (await Dwi.capabilities()).workerCount;
+
     result['ok'] = true;
   } catch (error, stack) {
     result['ok'] = false;
@@ -400,6 +459,23 @@ void main() {
         expect(decoded['iReturnedLength'], 6);
         expect(decoded['iReturnedAllSeven'], isTrue);
         expect(decoded['iTransferables'], isTrue);
+
+        expect(decoded['jFirst'], 'OK:alive');
+        expect(decoded['jNext'], 'OK:next');
+        expect(
+          decoded['jNextMs'],
+          lessThan(3000),
+          reason: 'the dead worker must be replaced, not timed out',
+        );
+        expect(decoded['jWorkers'], lessThanOrEqualTo(1));
+
+        expect(decoded['k'], <String>[
+          'DwiStartupException',
+          'DwiStartupException',
+          'DwiStartupException',
+          'DwiStartupException',
+        ]);
+        expect(decoded['kWorkers'], 0);
       } finally {
         await server.close(force: true);
       }

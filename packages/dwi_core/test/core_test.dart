@@ -30,6 +30,20 @@ void main() {
         () => const DwiConfig(maxPayloadBytes: 0).validated(),
         throwsA(isA<ArgumentError>()),
       );
+      expect(
+        () => const DwiConfig(heartbeatInterval: Duration.zero).validated(),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(
+        () => const DwiConfig(heartbeatMisses: 0).validated(),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('has heartbeat defaults', () {
+      const config = DwiConfig();
+      expect(config.heartbeatInterval, const Duration(seconds: 5));
+      expect(config.heartbeatMisses, 2);
     });
 
     test('defaults to the generated worker path', () {
