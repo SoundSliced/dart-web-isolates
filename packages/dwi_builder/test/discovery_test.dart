@@ -189,8 +189,10 @@ int broken( {
     },
   );
 
-  test('rejects types that do not round-trip and allows untyped collections', () async {
+  test('accepts typed collections and rejects non-transferable types', () async {
     project.write('lib/tasks.dart', r'''
+import 'dart:typed_data';
+
 import 'package:dwi_annotations/dwi_annotations.dart';
 
 class Point {
@@ -216,6 +218,9 @@ Map<String, int> typedMap(Map<String, int> input) => input;
 Set<int> typedSet(Set<int> input) => input;
 
 @DwiTask()
+Uint8List echoBytes(Uint8List input) => input;
+
+@DwiTask()
 Point point(Point input) => input;
 
 @DwiTask()
@@ -231,13 +236,9 @@ DateTime when(DateTime input) => input;
     final typeErrors = result.diagnostics
         .where((item) => item.code == 'DWI001')
         .toList(growable: false);
-    expect(typeErrors.length, greaterThanOrEqualTo(6));
     expect(
       typeErrors.map((item) => item.message).join('\n'),
       allOf(
-        contains('List<int>'),
-        contains('Map<String, int>'),
-        contains('Set<int>'),
         contains('Point'),
         contains('Color'),
         contains('DateTime'),
@@ -245,8 +246,62 @@ DateTime when(DateTime input) => input;
     );
     expect(
       result.tasks.map((task) => task.name),
-      containsAll(<String>['okList', 'okMap']),
+      containsAll(<String>[
+        'okList',
+        'okMap',
+        'typedList',
+        'typedMap',
+        'typedSet',
+        'echoBytes',
+      ]),
     );
+
+    final typedList = result.tasks.singleWhere(
+      (task) => task.name == 'typedList',
+    );
+    expect(typedList.inputType, 'List<int>');
+    expect(typedList.outputType, 'List<int>');
+    final bytes = result.tasks.singleWhere(
+      (task) => task.name == 'echoBytes',
+    );
+    expect(bytes.inputType, 'Uint8List');
+    expect(bytes.input!.libraryUri, 'dart:typed_data');
+  });
+
+  test('rejects map keys that are not strings', () async {
+    project.write('lib/tasks.dart', r'''
+import 'package:dwi_annotations/dwi_annotations.dart';
+
+@DwiTask()
+Map<int, String> badKeys(Map<int, String> input) => input;
+''');
+
+    final result = await discoverTasks(project.config());
+
+    expect(result.hasErrors, isTrue);
+    expect(
+      result.diagnostics
+          .where((item) => item.code == 'DWI001')
+          .map((item) => item.message)
+          .join('\n'),
+      contains('map keys must be String'),
+    );
+  });
+
+  test('ignores an unrelated annotation named DwiTask', () async {
+    project.write('lib/tasks.dart', r'''
+class DwiTask {
+  const DwiTask();
+}
+
+@DwiTask()
+int notATask(int value) => value;
+''');
+
+    final result = await discoverTasks(project.config());
+
+    expect(result.tasks, isEmpty);
+    expect(result.hasErrors, isFalse);
   });
 
   test('warns when no task is found', () async {

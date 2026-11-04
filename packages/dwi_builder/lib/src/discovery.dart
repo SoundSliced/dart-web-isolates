@@ -4,6 +4,7 @@ import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:analyzer/source/line_info.dart';
@@ -331,20 +332,6 @@ DwiTaskDescriptor? _readFunction({
     );
   }
 
-  void warning(String code, String message, {String? hint}) {
-    diagnostics.add(
-      DwiDiagnostic(
-        code: code,
-        severity: DwiDiagnosticSeverity.warning,
-        message: message,
-        file: display,
-        line: line,
-        column: column,
-        hint: hint,
-      ),
-    );
-  }
-
   if (functionName == 'main') {
     error('DWI003', '@DwiTask cannot annotate `main`.');
     return null;
@@ -420,17 +407,25 @@ DwiTaskDescriptor? _readFunction({
   }
 
   final element = declaration.declaredFragment?.element;
-  final parameterElement = element?.formalParameters.isNotEmpty ?? false
-      ? element!.formalParameters.first
+  if (element == null) {
+    error(
+      'DWI005',
+      'Could not resolve the signature of `$functionName`.',
+      hint: 'Make sure the file and its imports resolve without errors.',
+    );
+    return null;
+  }
+  final parameterElement = element.formalParameters.isNotEmpty
+      ? element.formalParameters.first
       : null;
-  final parameterTypeSource = parameters.isEmpty
+  final input = parameterElement == null
       ? null
-      : parameters.single is SimpleFormalParameter
-      ? (parameters.single as SimpleFormalParameter).type?.toSource() ??
-            'dynamic'
-      : 'dynamic';
-  final returnTypeSource = declaration.returnType?.toSource() ?? 'dynamic';
-  final parsedReturn = _parseReturnSource(returnTypeSource);
+      : _describeType(parameterElement.type);
+  final returnType = _unwrapReturnType(element.returnType);
+  final output = _describeType(returnType);
+  final returnsFuture =
+      element.returnType.isDartAsyncFuture ||
+      element.returnType.isDartAsyncFutureOr;
 
   if (parameterElement != null) {
     final issues = <_TypeIssue>[];
@@ -441,48 +436,29 @@ DwiTaskDescriptor? _readFunction({
       issues: issues,
     );
     for (final issue in issues) {
-      if (issue.isError) {
-        error(
-          'DWI001',
-          'Task `$taskName` input cannot cross the worker '
-              'boundary: ${issue.message}',
-          hint: issue.hint,
-        );
-      } else {
-        warning(
-          'DWI001',
-          'Task `$taskName` input: ${issue.message}',
-          hint: issue.hint,
-        );
-      }
+      error(
+        'DWI001',
+        'Task `$taskName` input cannot cross the worker '
+            'boundary: ${issue.message}',
+        hint: issue.hint,
+      );
     }
   }
 
-  if (element != null) {
-    final returnType = _unwrapReturnType(element.returnType);
-    final issues = <_TypeIssue>[];
-    _collectTypeIssues(
-      returnType,
-      isReturn: true,
-      label: 'result',
-      issues: issues,
+  final issues = <_TypeIssue>[];
+  _collectTypeIssues(
+    returnType,
+    isReturn: true,
+    label: 'result',
+    issues: issues,
+  );
+  for (final issue in issues) {
+    error(
+      'DWI001',
+      'Task `$taskName` result cannot cross the worker '
+          'boundary: ${issue.message}',
+      hint: issue.hint,
     );
-    for (final issue in issues) {
-      if (issue.isError) {
-        error(
-          'DWI001',
-          'Task `$taskName` result cannot cross the worker '
-              'boundary: ${issue.message}',
-          hint: issue.hint,
-        );
-      } else {
-        warning(
-          'DWI001',
-          'Task `$taskName` result: ${issue.message}',
-          hint: issue.hint,
-        );
-      }
-    }
   }
 
   final importUri = _importUri(
@@ -509,10 +485,31 @@ DwiTaskDescriptor? _readFunction({
     sourcePath: file,
     line: line,
     column: column,
-    inputType: parameterTypeSource,
-    outputType: parsedReturn.type,
-    returnsFuture: parsedReturn.returnsFuture,
+    input: input,
+    output: output,
+    returnsFuture: returnsFuture,
   );
+}
+
+/// Captures a resolved type as a library-qualified descriptor.
+///
+/// Typedefs are transparent: the analyzer keeps the underlying type's element
+/// and type arguments when an alias is present, so a typedef resolves to the
+/// shape the generator can decode.
+DwiTypeDescriptor _describeType(DartType type) {
+  if (type is DynamicType) return DwiTypeDescriptor.dynamicType;
+  if (type is VoidType) return const DwiTypeDescriptor(name: 'void');
+  if (type is InterfaceType) {
+    return DwiTypeDescriptor(
+      name: type.element.name ?? 'Object',
+      libraryUri: type.element.library.uri.toString(),
+      nullable: type.nullabilitySuffix == NullabilitySuffix.question,
+      arguments: type.typeArguments
+          .map(_describeType)
+          .toList(growable: false),
+    );
+  }
+  return DwiTypeDescriptor.dynamicType;
 }
 
 const _invalidTaskName = '\u0000';
@@ -555,32 +552,22 @@ String? _readTaskName(
 bool _hasDwiTask(NodeList<Annotation> metadata) =>
     metadata.any(_isDwiTaskAnnotation);
 
+/// Whether [annotation] resolves to `package:dwi_annotations`' `DwiTask`.
+///
+/// Matching the simple name alone would treat an unrelated annotation called
+/// `DwiTask` from another package as a task. When the analyzer could not
+/// resolve the annotation, the syntactic name is the only available signal.
 bool _isDwiTaskAnnotation(Annotation annotation) {
-  final name = annotation.name.toSource();
-  final simpleName = name.split('.').last;
-  return simpleName == 'DwiTask';
-}
-
-class _ReturnSource {
-  const _ReturnSource(this.type, this.returnsFuture);
-
-  final String type;
-  final bool returnsFuture;
-}
-
-_ReturnSource _parseReturnSource(String source) {
-  var type = source.trim();
-  if (type.isEmpty) type = 'dynamic';
-  for (final prefix in const ['FutureOr<', 'Future<']) {
-    if (type.startsWith(prefix) && type.endsWith('>')) {
-      final inner = type.substring(prefix.length, type.length - 1).trim();
-      return _ReturnSource(inner.isEmpty ? 'dynamic' : inner, true);
-    }
+  final element = annotation.element;
+  if (element == null) {
+    final name = annotation.name.toSource();
+    return name.split('.').last == 'DwiTask';
   }
-  if (type == 'FutureOr' || type == 'Future') {
-    return const _ReturnSource('dynamic', true);
-  }
-  return _ReturnSource(type, false);
+  final enclosing = element.enclosingElement;
+  if (enclosing is! InterfaceElement) return false;
+  return enclosing.name == 'DwiTask' &&
+      enclosing.library.uri.toString() ==
+          'package:dwi_annotations/dwi_annotations.dart';
 }
 
 DartType _unwrapReturnType(DartType type) {
@@ -594,12 +581,27 @@ DartType _unwrapReturnType(DartType type) {
 }
 
 class _TypeIssue {
-  const _TypeIssue(this.message, {this.isError = true, this.hint});
+  const _TypeIssue(this.message, {this.hint});
 
   final String message;
-  final bool isError;
   final String? hint;
 }
+
+const Set<String> _supportedTypedData = <String>{
+  'ByteBuffer',
+  'ByteData',
+  'Int8List',
+  'Uint8List',
+  'Uint8ClampedList',
+  'Int16List',
+  'Uint16List',
+  'Int32List',
+  'Uint32List',
+  'Int64List',
+  'Uint64List',
+  'Float32List',
+  'Float64List',
+};
 
 void _collectTypeIssues(
   DartType type, {
@@ -675,24 +677,39 @@ void _collectTypeIssues(
       type.isDartCoreBool) {
     return;
   }
-  if (type.isDartCoreList || type.isDartCoreMap || type.isDartCoreSet) {
-    // Dart's web compilers erase collection element types when a value crosses
-    // a Web Worker boundary: `List<int>` arrives as `List<dynamic>` and
-    // `Map<String, int>` arrives as `Map<Object?, Object?>`. A generated cast to
-    // the declared type therefore fails at runtime. v0.3 only supports untyped
-    // (dynamic/Object) collections; a type-directed codec belongs to v0.4.
-    for (final argument in (type as InterfaceType).typeArguments) {
-      if (argument is DynamicType || argument.isDartCoreObject) continue;
-      issues.add(
-        _TypeIssue(
-          'collection type `${type.getDisplayString()}` is not preserved '
-          'across the worker boundary by DWI v0.3.',
-          hint:
-              'Use `dynamic` or `Object?` collection elements for now, or send '
-              'primitives and decode them in the task.',
-        ),
+  if (type.isDartCoreList || type.isDartCoreSet) {
+    final arguments = (type as InterfaceType).typeArguments;
+    if (arguments.length == 1) {
+      _collectTypeIssues(
+        arguments.first,
+        isReturn: isReturn,
+        label: label,
+        issues: issues,
       );
-      return;
+    }
+    return;
+  }
+  if (type.isDartCoreMap) {
+    final arguments = (type as InterfaceType).typeArguments;
+    if (arguments.length == 2) {
+      final key = arguments[0];
+      if (!(key is DynamicType ||
+          key.isDartCoreObject ||
+          key.isDartCoreString)) {
+        issues.add(
+          _TypeIssue(
+            'map keys must be String; `${key.getDisplayString()}` cannot be '
+            'preserved across the worker boundary.',
+            hint: 'Use Map<String, V> so keys survive structured cloning.',
+          ),
+        );
+      }
+      _collectTypeIssues(
+        arguments[1],
+        isReturn: isReturn,
+        label: label,
+        issues: issues,
+      );
     }
     return;
   }
@@ -773,12 +790,18 @@ void _collectTypeIssues(
   }
   if (library == 'dart:typed_data') {
     if (name.endsWith('List') || name == 'ByteBuffer' || name == 'ByteData') {
+      if (_supportedTypedData.contains(name)) return;
+      issues.add(
+        _TypeIssue(
+          '`$name` is not a supported transferable typed-data type.',
+          hint: 'Use Uint8List, another typed list, ByteData or ByteBuffer.',
+        ),
+      );
       return;
     }
     issues.add(
       _TypeIssue(
         '`$name` is not a known transferable typed-data type.',
-        isError: false,
       ),
     );
     return;
