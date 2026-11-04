@@ -543,6 +543,145 @@ requests immediately with `DwiUnsupportedException`; it is idempotent, and
 repeated worker-startup failures are capped at three before remaining callers
 receive the terminal startup error.
 
+## ADR-013 — Long-lived worker handles (v0.5, ACCEPTED)
+
+**Status.** Accepted for v0.5 implementation (2026-11-04). This ADR defines the
+public contract and the lifecycle rules for one dedicated execution context per
+caller. It is the design that ADR-003 left as "pooled by default later".
+
+**Public surface.**
+
+```dart
+import 'package:dwi/dwi.dart';
+
+final worker = await DwiWorker.spawn();
+try {
+  final first = await worker.run<int>('calculate', 10);
+  final second = await worker.run<int>('calculate', 20);
+} finally {
+  await worker.close();
+}
+```
+
+`DwiWorker.spawn()` takes no positional argument. On web the worker artefact is
+`DwiConfig.workerScript` (default `dwi/worker.dart.js`); on native there is no
+URL. The task table comes from the same sources as `Dwi.run`: the native
+`DwiTaskRegistry` for the isolate, and the generated worker entrypoint's static
+`Map<String, DwiWorkerTask>` for the Web Worker.
+
+**Decision 1 — Ownership.** One `DwiWorker` owns exactly one dedicated
+execution context for its whole lifetime. It never borrows a slot from the
+`Dwi.run` pool, and `Dwi.run` never uses a dedicated handle. A handle is created
+only by `spawn()` and released only by `close()` (or backend teardown). Creating
+a handle does not count against `DwiConfig.maxWorkers`, which bounds the pool.
+
+**Decision 2 — Identity and state.** Every call through a healthy handle reaches
+the same isolate or worker. Task implementations may keep local state between
+calls: a counter increments across calls, a parser cache stays warm. Two handles
+have two contexts and never share mutable state. This is worker-local state, not
+shared memory: payloads are still copied or transferred (ADR-010 §10.2).
+
+**Decision 3 — Concurrency.** A handle runs **one task at a time**. Additional
+calls are queued in FIFO order. The queue is bounded by
+`DwiConfig.maxQueuedTasks` (default 64; a full queue fails with
+`DwiUnsupportedException`, matching `Dwi.run`), and a queued call that waits
+longer than `DwiConfig.queueTimeout` fails with `DwiTimeoutException`. Ordering
+is enforced by the handle, not by the worker's message handler. Parallel calls
+inside one context are not part of this release; a task that needs parallelism
+creates more handles.
+
+**Decision 4 — Close.** `close()` is immediate and idempotent. It cancels the
+running call and every queued call, settles each with
+`DwiWorkerClosedException`, terminates the context exactly once, and moves the
+handle to `closed`. There is no graceful-drain variant in this release: a caller
+that wants to finish current work awaits it before calling `close()`. Repeated
+`close()` is a no-op. `Dwi.close()` closes every handle the backend owns before
+releasing the pool, so page or application teardown cannot leak a dedicated
+context.
+
+**Decision 5 — Failure.** The following failures move a handle from `ready` to
+`failed`: a task timeout (the call gets `DwiTimeoutException`), a worker
+`error`/`messageerror`, an undecodable or malformed message, an isolate exit
+that the handle did not cause, a heartbeat failure (web), and cancellation of a
+running call (`DwiCancelledException`). Calls that were queued behind the failed
+call settle with `DwiWorkerFailedException`; they are not retried. A remote task
+exception, an unknown task name or a serialization rejection fails only that
+call and leaves the handle `ready`, because the context is still healthy.
+
+**Decision 6 — Replacement.** A failed handle stays failed. Recovery is
+explicit: `restart()` (allowed only from `failed`) or a new `spawn()`. A restart
+starts a fresh isolate/worker with fresh local state; it never replays a task,
+and no caller's future is re-attached to the new context. `restart()` on any
+state other than `failed` throws `DwiWorkerStateException`. Calls made while
+`starting` or `closing` throw `DwiWorkerStateException`; calls on `closed` throw
+`DwiWorkerClosedException`; calls on `failed` throw `DwiWorkerFailedException`.
+
+**Decision 7 — Cancellation.** `DwiWorker.runCancellable` reuses
+`DwiCancellableTask` unchanged. Cancelling a **queued** call removes it from the
+handle's queue, leaves the context running, and settles the call with
+`DwiCancelledException`. Cancelling a **running** call terminates the dedicated
+context (native `Isolate.kill`, web `Worker.terminate`) because a synchronous
+task cannot observe a cancel message; the call settles with
+`DwiCancelledException` and the handle moves to `failed`. Cancelling after
+settlement returns `false` and changes nothing.
+
+**Decision 8 — Transferables.** Argument and result ownership follows ADR-010
+§10.2 unchanged. The sender's wrapper is marked detached only after the
+transport accepted the transfer. If the transfer succeeds and the context then
+fails before replying, the bytes belong to the failed context and are gone; the
+caller must create a new `DwiTransferableBytes`. DWI never retries a transfer.
+
+**Decision 9 — Backend closure.** The backend keeps an explicit set of live
+handles. `Dwi.close()` closes them before closing the pool. A handle closed by
+the caller is removed from that set. No handle outlives its backend.
+
+**Decision 10 — Native mapping.** One `Isolate.spawn` per handle with a
+persistent receive loop. The registry snapshot and a reply `SendPort` are sent
+at startup; the isolate creates its own `ReceivePort`, answers with its
+`SendPort`, and dispatches requests by their registry names. Tasks registered
+after `spawn()` are not visible to that handle. A per-task `Isolate.spawn` would
+pay startup on every call and could not retain state, so it is not the mapping.
+
+**Decision 11 — Capabilities.** Available on both supported backends (native and
+web JS): spawn, persistent identity and state, one-at-a-time FIFO, close,
+restart, cancellable calls, typed errors, transferable bytes. Not available:
+parallel calls inside one handle, cooperative cancellation, ports/streams,
+state surviving a restart, and any claim of `dart:isolate` parity. Web Wasm is
+not implemented.
+
+**State machine.**
+
+```
+new ──spawn──▶ starting ──ready──▶ ready ──close──▶ closing ──▶ closed
+                   │                 │
+                   └──▶ failed ◀─────┘
+                          │
+                    restart()
+                          ▼
+                       starting
+```
+
+| Transition | Trigger | Queued calls | In-flight call |
+| --- | --- | --- | --- |
+| `new → starting` | `spawn()` / `restart()` | n/a (calls rejected) | n/a |
+| `starting → ready` | isolate started / `ready` envelope | run after ready only | n/a |
+| `starting → failed` | startup timeout or spawn error | none exist | none exist |
+| `ready → ready` | remote exception, unknown task, serialization rejection | unaffected | that call fails only |
+| `ready → failed` | timeout, crash, malformed message, heartbeat, running cancel | `DwiWorkerFailedException` | timeout/cancel/remote error |
+| `ready → closing` | `close()` | `DwiWorkerClosedException` | `DwiWorkerClosedException` |
+| `failed → closing` | `close()` | already settled | already settled |
+| `closing → closed` | context terminated | settled | settled |
+| `closed → closed` | repeated `close()` | n/a | n/a |
+| `failed → starting` | `restart()` | none (all settled) | none (all settled) |
+
+**Forbids.** Making a pooled slot look dedicated; implicitly respawning or
+retrying; implying state survived a restart; adding port-like messaging to the
+handle API; exposing `Worker`, `MessagePort`, `Isolate` or `SendPort`.
+
+**Implementation status.** Implemented in v0.5 for native and web JS. Covered by
+`dwi_native` VM tests, `dwi` facade tests, and the browser integration harness
+(Chrome; other engines unverified).
+
 ## Consequences
 
 - The first release is deliberately narrow: named tasks, one worker pool, typed

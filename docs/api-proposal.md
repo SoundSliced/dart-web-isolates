@@ -207,20 +207,79 @@ replaced lazily, with startup retries bounded by three consecutive failures.
 Until each item's "Implementation status" in ADR-010 says implemented, the
 corresponding surface is a proposal and must not be documented as available.
 
-## Lifecycle (later levels, not shipped yet)
+## Long-lived worker handles (v0.5, ADR-013 implemented)
+
+A handle owns one dedicated execution context for its whole lifetime. It is
+separate from the `Dwi.run` pool and does not consume a `maxWorkers` slot.
 
 ```dart
-final worker = await DwiWorker.spawn('dwi/worker.dart.js');
-await worker.run('parseJson', payload);
-await worker.close();
-
-final pool = DwiPool(workers: 4);
-final task = pool.submit('imageTransform', bytes);
-task.cancel();  // cooperative first, terminate only on explicit escalation
+final worker = await DwiWorker.spawn();
+try {
+  final first = await worker.run<int>('counter', null);
+  final second = await worker.run<int>('counter', null);
+  // first == 1, second == 2: worker-local state persists between calls.
+} finally {
+  await worker.close();
+}
 ```
 
-These are **proposals**; they are not implemented in v0.3 and must not be
-documented as available.
+Public surface:
+
+```dart
+abstract final class DwiWorker {
+  static Future<DwiWorker> spawn();
+
+  DwiWorkerState get state;      // new | starting | ready | closing | closed | failed
+  bool get isUsable;             // state == ready
+
+  Future<R> run<R>(String task, [Object? input]);
+  DwiCancellableTask<R> runCancellable<R>(String task, [Object? input]);
+
+  Future<void> restart();        // only from failed; fresh context, fresh state
+  Future<void> close();          // immediate, idempotent
+}
+```
+
+Rules (normative, ADR-013):
+
+- **One task at a time, FIFO.** Extra calls queue up to
+  `DwiConfig.maxQueuedTasks`; a full queue throws
+  `DwiUnsupportedException`, and waiting longer than `DwiConfig.queueTimeout`
+  throws `DwiTimeoutException`.
+- **Identity.** Repeated calls reach the same worker/isolate. `restart()` and a
+  new `spawn()` start with fresh state; a lost state is never restored.
+- **Close.** `close()` cancels queued and running calls with
+  `DwiWorkerClosedException`, terminates the context once, and is idempotent.
+  `Dwi.close()` closes every live handle.
+- **Failure.** Timeout, crash, malformed message, heartbeat failure, or
+  cancelling a running call moves the handle to `failed`. The in-flight call
+  gets the specific error (`DwiTimeoutException`, `DwiCancelledException`,
+  `DwiRemoteException`); queued calls get `DwiWorkerFailedException`. Recovery
+  is explicit via `restart()` or a new `spawn()`, never an automatic retry.
+- **Healthy errors.** A remote task exception, unknown task name, or
+  serialization rejection fails only that call; the handle stays `ready`.
+- **Cancellation.** Queued cancellation removes the call and keeps the context;
+  running cancellation terminates the context and fails the handle.
+- **Transferables.** ADR-010 §10.2 ownership is unchanged. A transfer that
+  succeeds followed by a failure loses the bytes.
+
+New public types (AGENTS.md rule 2, recorded here before implementation):
+
+```dart
+enum DwiWorkerState { new, starting, ready, closing, closed, failed }
+
+abstract interface class DwiWorkerHandle { /* backend-facing contract */ }
+
+class DwiWorkerClosedException extends DwiException {}  // call on a closed handle
+class DwiWorkerFailedException extends DwiException {}  // call on a failed handle / queued call at failure
+class DwiWorkerStateException extends DwiException {}   // call during starting/closing, or invalid restart()
+```
+
+`DwiBackend.spawnHandle()` creates a handle; it is backend API, not application
+API. No `Worker`, `MessagePort`, `Isolate`, or `SendPort` type is exposed.
+
+The earlier `DwiPool` sketch is **not** part of this release; `Dwi.run` remains
+the pooled API.
 
 ## Native mapping
 
