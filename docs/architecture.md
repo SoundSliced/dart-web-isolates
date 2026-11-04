@@ -161,7 +161,11 @@ is wrong for Flutter 3.47. Re-probing the installed SDK (3.47.6, engine
   explicitly `{native, web}` (`targets/native_assets.dart:31`).
 - A `flutter build web --release -v` log contains
   `Running build hooks for web`, compiles `hook/build.dart` with the
-  application's `.dart_tool/package_config.json`, and runs it before `dart2js`.
+  application's `.dart_tool/package_config.json`, and runs it in the web build.
+  The hook is a **separate build target**: in the measured 3.47.6 build the
+  hook and `dart2js` started concurrently, so the hook does **not** run before
+  application compilation in a guaranteed order (see the fresh-build limitation
+  below).
 - `flutter run -d web-server` runs the same hooks in debug mode.
 - A hook may call `Process.run` (observed: `dart --version`), read the package
   root, and write files (observed: a marker and a compiled worker).
@@ -204,12 +208,25 @@ apps, CI checks and diagnostics. Generated files remain gitignored.
   are not resolved yet; use the CLI there.
 - The hook runs before app compilation, so it cannot hot-patch a worker already
   running in a page. Reload the page (or hot restart) after a task change.
+- **Fresh-project ordering is not guaranteed (measured 2026-11-04).** Flutter
+  schedules `build_hooks` and `dart2js` as independent web targets. On a project
+  that has never generated `lib/dwi_tasks.g.dart`, the compiler can start
+  before the hook writes the proxy; the first `flutter build web` then fails
+  with "Error when reading 'lib/dwi_tasks.g.dart'". The hook's output is valid,
+  and the next build succeeds. The supported workflow is to generate the
+  proxies once before the first Flutter build:
+  `dart run dwi_builder:dwi build` (or `dwi build --flutter-build`), after which
+  ordinary Flutter commands keep the worker fresh. The hook prints an explicit
+  diagnostic when it creates proxies during a build. This is a Flutter build
+  graph ordering gap, not a discovery or compilation failure; the CLI wrapper
+  remains the supported fallback.
 - A hook failure fails the Flutter build; this is intentional and preserves the
   "no main-thread fallback" rule.
 - The resolver is conservative: zero or multiple matching app packages means
   "skip", not "guess".
 
-**Evidence.** `audit/evidence/flutter-web-hook-2026-11-03.txt`; probe logs
+**Evidence.** `audit/evidence/flutter-web-hook-2026-11-03.txt` and
+`audit/evidence/flutter-fresh-build-ordering-2026-11-04.txt`; probe logs
 `hook-build-cli.log`, `hook-build-inc1.log`, `hook-build-lib.log`,
 `hook-build-real.log` (scratch, reproduced by the commands in the audit report).
 Unit tests for the resolver: `packages/dwi_builder/test/hook_support_test.dart`.

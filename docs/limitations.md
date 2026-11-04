@@ -22,10 +22,14 @@ limitation is not here or in `compatibility-matrix.md`, that is a bug.
 
 ## Engineering limitations
 
-7. **Worker compilation is automatic for Flutter web on Flutter 3.47+.** A
-   `dwi_builder/hook/build.dart` build hook runs during `flutter run -d chrome`
-   and `flutter build web` when `dwi_builder` is a normal dependency (ADR-009).
-   Older Flutter versions, plain Dart web apps and CI checks use
+7. **Worker compilation is automatic for Flutter web on Flutter 3.47+, with one
+   ordering caveat.** A `dwi_builder/hook/build.dart` build hook runs during
+   `flutter run -d chrome` and `flutter build web` when `dwi_builder` is a
+   normal dependency (ADR-009). On a project with no generated proxies yet,
+   Flutter may start `dart2js` before the hook writes
+   `lib/dwi_tasks.g.dart`; run `dart run dwi_builder:dwi build` once (or
+   `dwi build --flutter-build`) before the first Flutter build. Older Flutter
+   versions, plain Dart web apps and CI checks use
    `dart run dwi_builder:dwi build`; `--flutter-build` wraps the Flutter build
    after the worker step for that path. Web build hooks do not expose the target
    OS, so a multi-platform app with `web/index.html` also runs the (cached)

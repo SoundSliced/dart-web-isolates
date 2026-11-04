@@ -24,7 +24,27 @@ void main(List<String> args) async {
     );
     if (root == null) return;
 
+    final proxies = File(
+      '$root${separator}lib${separator}dwi_tasks.g.dart',
+    );
+    final hadProxies = proxies.existsSync();
     final result = await DwiBuilder(DwiBuildConfig(projectRoot: root)).build();
+
+    // Flutter schedules the web build hook and `dart2js` as independent targets,
+    // so on a project that has never generated proxies the compiler can start
+    // before this hook writes them. The generated files are usable immediately;
+    // the current build may still fail to resolve the import. Say so instead of
+    // leaving only an unexplained "No such file or directory" from the
+    // compiler.
+    if (!hadProxies) {
+      stderr.writeln(
+        'dwi_builder: generated lib/dwi_tasks.g.dart during this build. '
+        'Flutter may have started the Dart compiler before this hook ran; if '
+        'the build failed to resolve the generated proxies, rerun the build, '
+        'or run `dart run dwi_builder:dwi build` before the first Flutter '
+        'build.',
+      );
+    }
 
     // Declare everything that changes the worker so Flutter's build system
     // re-runs this hook instead of serving a stale artefact. Unchanged builds

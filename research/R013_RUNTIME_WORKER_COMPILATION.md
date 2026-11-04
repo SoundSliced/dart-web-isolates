@@ -5,6 +5,15 @@
 > on `flutter build web` and `flutter run -d web-server`, and a hook can invoke
 > `DwiBuilder` directly. The §4.3 conclusion below ("no web build hook") is
 > superseded by ADR-009. The rest of this report remains valid.
+>
+> **Fresh-build ordering (2026-11-04).** A clean-room Flutter 3.47.6 app with no
+> generated proxies failed its first `flutter build web`: `dart2js` started
+> concurrently with `build_hooks` and could not resolve
+> `lib/dwi_tasks.g.dart`, which the hook wrote seconds later. The hook
+> generates and packages correctly, and a second build succeeds. A hook cannot
+> guarantee that generated sources exist before application compilation, so
+> DWI requires one `dwi build` (or a rerun) before the first Flutter build.
+> See `audit/evidence/flutter-fresh-build-ordering-2026-11-04.txt`.
 
 Status: decision report for v0.3. Evidence is R001–R010, the local Dart/Flutter
 SDK, and the probes recorded in §6. No claim here is based on “it is well known

@@ -1,0 +1,87 @@
+Flutter web build hooks — fresh-project ordering probe (2026-11-04)
+
+Environment
+  macOS arm64
+  Flutter 3.47.6 stable, framework revision 5fc346839b5d0eef006ed8404392afb4dfae428d
+  Engine 692136cb6582dbfc5af3fb33c2515a069f2f66d0 (content hash b8c8d3d8d5d0)
+  Dart 3.13.5
+  Google Chrome 156.0.8078.80 (headless, CDP)
+  SDK source was not modified. A writable shadow root was created by
+  symlinking the installed SDK and copying the small stamp/lock files into a
+  writable bin/cache (the installed Flutter cache is read-only here).
+
+Fixture (clean room)
+  flutter create --no-pub --platforms=web --project-name dwi_consumer
+  pubspec: dwi and dwi_builder as normal path dependencies
+  lib/tasks.dart: @DwiTask() int countPrimes(int limit)
+  lib/main.dart: imports package:dwi_consumer/dwi_tasks.g.dart before it exists
+  Before the first build: no lib/dwi_tasks.g.dart, no .dwi/, no web/dwi/,
+  no build/web/.
+
+Command
+  flutter build web --release --base-href /sub/app/ -v
+
+First build: exit 1 (proxy ordering)
+  [ +289 ms] build_hooks: Starting due to {}
+  [   +1 ms] web_static_assets: Starting due to {...}
+  [   +4 ms] Running build hooks for web.
+  [  +12 ms] web_entrypoint: Complete
+  [   +1 ms] dart2js: Starting due to {}
+  [+2607 ms] lib/main.dart:7:8:
+             Error: Error when reading 'lib/dwi_tasks.g.dart':
+             Error reading 'lib/dwi_tasks.g.dart' (No such file or directory)
+             Error: Undefined name 'DwiTasks'.
+  [+4716 ms] input.json contents: package_name = dwi_builder, package_root =
+             <dwi_builder>, user_defines = {}
+  [+7661 ms] output.json: status = success, dependencies include
+             <app>/lib/tasks.dart, <app>/.dart_tool/package_config.json,
+             DWI runtime and generator sources, <app>/pubspec.yaml/.lock
+  [  +24 ms] Running build hooks for web done.
+  [  +2 ms] build_hooks: Complete
+  [ +4 ms] Error: Failed to compile application for the Web.
+
+  The hook and dart2js are independent targets: the hook started first but
+  its process (compile kernel + build) finished about 5 s after dart2js had
+  already failed. Writing proxies is not ordered before app compilation.
+
+Artifacts produced by that hook run
+  lib/dwi_tasks.g.dart                       1,532 B
+  .dwi/generated_worker.dart                   799 B
+  .dwi/worker_manifest.json                    489 B (hash fb7cc57403d9..., digest 2788cadcc98d...)
+  web/dwi/worker.dart.js                    270,187 B
+
+Second build: exit 0 (warm project)
+  ✓ Built build/web
+  build/web/dwi/worker.dart.js              270,187 B
+  build/web/main.dart.js                  1,753,672 B
+  build/web/index.html: <base href="/sub/app/">
+
+Runtime probe (serve build/web at /sub/app/, headless Chrome + CDP)
+  {"count":348513,"backend":"worker","ticks":11,"elapsedMs":174,
+   "baseUri":"http://127.0.0.1:53870/sub/app/","ok":true}
+
+  `ticks` counts 10 ms UI-isolate timer callbacks during the worker task:
+  the UI isolate stayed responsive and Dwi selected the worker backend.
+
+Rebuild behaviour
+  Added lib/helper.dart (primeOffset => 0) and imported it from the task:
+    build exit 0, result {"count":348513,...}
+  Changed helper to primeOffset => 1:
+    build exit 0, result {"count":348514,...}
+    => hook re-ran on a dependency outside lib/tasks.dart and the app used the
+       rebuilt worker.
+  Unchanged build, verbose:
+    [ +7 ms] Skipping target: build_hooks
+    => cached hook is skipped when declared inputs are unchanged.
+
+Conclusion
+  VERIFIED: hook discovers the app and task, compiles the worker, writes the
+  proxy/manifest, packages web/dwi/worker.dart.js into build/web, resolves the
+  worker under /sub/app/, runs the task off the UI thread, invalidates on task
+  and helper edits, and is skipped when unchanged.
+  NOT VERIFIED / BLOCKED: a fresh project cannot rely on the hook alone for
+  the first build, because Flutter does not order generated proxies before
+  dart2js. The supported workflow is one `dart run dwi_builder:dwi build` (or
+  `dwi build --flutter-build`) before the first Flutter build; afterwards the
+  hook keeps the worker fresh. Flutter run/hot-reload replacement of a running
+  worker was not probed.

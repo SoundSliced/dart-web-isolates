@@ -192,6 +192,23 @@ Flutter re-runs it only when they change. See ADR-009 in
 `docs/architecture.md` for evidence and limitations. The hook is skipped for
 packages without a `dwi` dependency or without `web/index.html`.
 
+**Fresh projects need one generation step.** Flutter runs `build_hooks` and
+`dart2js` as independent targets; on a project that has no
+`lib/dwi_tasks.g.dart` yet, the compiler can start before the hook writes it and
+the first build fails with
+`Error when reading 'lib/dwi_tasks.g.dart': No such file or directory`. The
+generated files are valid and the next build succeeds, but the supported
+workflow is to generate them once first:
+
+```bash
+dart run dwi_builder:dwi build      # or: dwi build --flutter-build
+flutter build web --release --base-href /sub/app/
+```
+
+After that, ordinary Flutter commands keep the worker current. This ordering
+gap is a Flutter build-graph limitation, measured on Flutter 3.47.6; it is not
+covered by a hook-only promise.
+
 The separate `dwi build` command remains supported for older Flutter versions,
 plain Dart web apps, CI `check`, and diagnostics.
 

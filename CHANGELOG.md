@@ -49,6 +49,14 @@ Dart API was removed; `DwiConfig.queueTimeout` is additive (ADR-012).
 - Compilation publishes by rename, so a failed compile never overwrites a
   previously valid artefact.
 
+### Known limitations
+
+- Flutter 3.47.6 runs web build hooks concurrently with `dart2js`. A fresh
+  project with no `lib/dwi_tasks.g.dart` can fail its first
+  `flutter build web` before the hook writes the proxy; generate once with
+  `dart run dwi_builder:dwi build` (or `dwi build --flutter-build`) first.
+  Evidence: `audit/evidence/flutter-fresh-build-ordering-2026-11-04.txt`.
+
 ## [0.3.0] - unreleased
 
 ### Added
