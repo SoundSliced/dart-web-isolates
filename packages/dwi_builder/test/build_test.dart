@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:dwi_builder/dwi_builder.dart';
+import 'package:dwi_builder/src/toolchain.dart';
+import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 import 'support/fixture.dart';
@@ -58,6 +60,7 @@ void main() {
       expect(manifest, contains('"protocol": 1'));
       expect(manifest, contains('"artifact": "dwi/worker.dart.js"'));
       expect(manifest, contains('"compiled": true'));
+      expect(manifest, contains('"artifactDigest": "'));
       expect(manifest, contains('"tasks": ['));
       expect(manifest, contains('"twice"'));
 
@@ -120,4 +123,84 @@ void main() {
     expect(forced.compiled, isTrue);
     expect(forced.cacheHit, isFalse);
   }, timeout: const Timeout(Duration(minutes: 2)));
+
+  test('generated output is byte-identical for identical inputs', () async {
+    project.write('lib/tasks.dart', goodTasks);
+
+    await DwiBuilder(project.config()).build();
+    final worker = project.read('.dwi/generated_worker.dart');
+    final proxies = project.read('lib/dwi_tasks.g.dart');
+
+    await DwiBuilder(project.config()).build();
+
+    expect(project.read('.dwi/generated_worker.dart'), worker);
+    expect(project.read('lib/dwi_tasks.g.dart'), proxies);
+  }, timeout: const Timeout(Duration(minutes: 2)));
+
+  test('rejects a corrupt artefact and rebuilds it', () async {
+    project.write('lib/tasks.dart', simpleTasks);
+    final first = await DwiBuilder(project.config(compile: true)).build();
+    File(first.artifactPath).writeAsStringSync('corrupt artefact');
+
+    final corrupt = await DwiBuilder(project.config()).check();
+    expect(corrupt.ok, isFalse);
+    expect(
+      corrupt.issues.join('\n'),
+      contains('artefact digest does not match'),
+    );
+
+    final rebuilt = await DwiBuilder(project.config(compile: true)).build();
+    expect(rebuilt.compiled, isTrue);
+    expect(rebuilt.cacheHit, isFalse);
+
+    final after = await DwiBuilder(project.config()).check();
+    expect(after.ok, isTrue, reason: after.issues.join('\n'));
+  }, timeout: const Timeout(Duration(minutes: 3)));
+
+  test('rejects a deleted artefact and rebuilds it', () async {
+    project.write('lib/tasks.dart', simpleTasks);
+    final first = await DwiBuilder(project.config(compile: true)).build();
+    File(first.artifactPath).deleteSync();
+
+    final missing = await DwiBuilder(project.config()).check();
+    expect(missing.ok, isFalse);
+    expect(missing.issues.join('\n'), contains('artefact is missing'));
+
+    final rebuilt = await DwiBuilder(project.config(compile: true)).build();
+    expect(rebuilt.compiled, isTrue);
+    expect(
+      (await DwiBuilder(project.config()).check()).ok,
+      isTrue,
+    );
+  }, timeout: const Timeout(Duration(minutes: 3)));
+
+  test('a failed compilation leaves the previous artefact intact', () async {
+    project.write('lib/tasks.dart', simpleTasks);
+    final built = await DwiBuilder(project.config(compile: true)).build();
+    final before = await fileDigest(built.artifactPath);
+
+    project.write('.dwi/generated_worker.dart', 'void main( {');
+    await expectLater(
+      compileWorker(project.config(compile: true)),
+      throwsA(isA<DwiBuildException>()),
+    );
+
+    expect(await fileDigest(built.artifactPath), before);
+  }, timeout: const Timeout(Duration(minutes: 3)));
+
+  test('package-resolution changes invalidate the cache', () async {
+    project.write('lib/tasks.dart', simpleTasks);
+    await DwiBuilder(project.config(compile: true)).build();
+
+    final packageConfig = File(
+      p.join(project.root.path, '.dart_tool', 'package_config.json'),
+    );
+    packageConfig.writeAsStringSync(
+      '${packageConfig.readAsStringSync()}\n',
+    );
+
+    final check = await DwiBuilder(project.config()).check();
+    expect(check.ok, isFalse);
+    expect(check.issues.join('\n'), contains('Manifest hash does not match'));
+  }, timeout: const Timeout(Duration(minutes: 3)));
 }

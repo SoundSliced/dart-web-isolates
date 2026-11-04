@@ -32,6 +32,13 @@ void main(List<String> args) async {
     for (final path in result.discovery.dependencyFiles) {
       output.dependencies.add(Uri.file(path));
     }
+    // Runtime sources and package resolution are compilation inputs too.
+    for (final path in await collectRuntimeDependencies(
+      DwiBuildConfig(projectRoot: root),
+    )) {
+      output.dependencies.add(Uri.file(path));
+    }
     output.dependencies.add(Uri.file('$root${separator}pubspec.yaml'));
+    output.dependencies.add(Uri.file('$root${separator}pubspec.lock'));
   });
 }

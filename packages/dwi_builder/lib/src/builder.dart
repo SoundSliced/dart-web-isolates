@@ -113,11 +113,15 @@ class DwiBuilder {
       discovery.sortedTasks,
       workerId: cfg.workerId,
     );
+    final dependencies = <String>{
+      ...discovery.dependencyFiles,
+      ...await collectRuntimeDependencies(cfg),
+    };
     final hash = await computeWorkerHash(
       config: cfg,
       workerSource: sources.worker,
       proxiesSource: sources.proxies,
-      dependencyFiles: discovery.dependencyFiles,
+      dependencyFiles: dependencies,
     );
 
     await _writeIfChanged(cfg.absoluteWorkerSource, sources.worker);
@@ -127,15 +131,24 @@ class DwiBuilder {
     var cacheHit = false;
     if (cfg.compile) {
       final existing = await _readManifest(cfg.absoluteManifest);
+      final existingDigest = existing?['artifactDigest'];
       cacheHit =
           !cfg.force &&
           existing != null &&
           existing['hash'] == hash &&
           existing['compiled'] == true &&
-          File(cfg.absoluteArtifact).existsSync();
+          existingDigest is String &&
+          existingDigest.isNotEmpty &&
+          existingDigest == await fileDigest(cfg.absoluteArtifact);
       if (!cacheHit) {
         await compileWorker(cfg);
         compiled = true;
+      }
+      final artifactDigest = await fileDigest(cfg.absoluteArtifact);
+      if (artifactDigest.isEmpty) {
+        throw DwiBuildException(
+          'Compilation produced no artefact at ${cfg.absoluteArtifact}.',
+        );
       }
       await _writeIfChanged(
         cfg.absoluteManifest,
@@ -144,6 +157,7 @@ class DwiBuilder {
           hash: hash,
           tasks: discovery.sortedTasks,
           compiled: true,
+          artifactDigest: artifactDigest,
         ),
       );
     }
@@ -190,11 +204,15 @@ class DwiBuilder {
       discovery.sortedTasks,
       workerId: cfg.workerId,
     );
+    final dependencies = <String>{
+      ...discovery.dependencyFiles,
+      ...await collectRuntimeDependencies(cfg),
+    };
     final hash = await computeWorkerHash(
       config: cfg,
       workerSource: sources.worker,
       proxiesSource: sources.proxies,
-      dependencyFiles: discovery.dependencyFiles,
+      dependencyFiles: dependencies,
     );
 
     await _checkContent(
@@ -211,6 +229,8 @@ class DwiBuilder {
     );
 
     final manifest = await _readManifest(cfg.absoluteManifest);
+    final artifact = File(cfg.absoluteArtifact);
+    final artifactExists = await artifact.exists();
     if (manifest == null) {
       issues.add('Manifest is missing: ${cfg.absoluteManifest}');
     } else {
@@ -220,8 +240,18 @@ class DwiBuilder {
       if (manifest['compiled'] != true) {
         issues.add('Manifest does not record a successful compilation.');
       }
+      final digest = manifest['artifactDigest'];
+      if (digest is! String || digest.isEmpty) {
+        issues.add('Manifest does not record the compiled artefact digest.');
+      } else if (artifactExists &&
+          digest != await fileDigest(cfg.absoluteArtifact)) {
+        issues.add(
+          'Worker artefact digest does not match the manifest; the artefact is '
+          'missing, truncated or corrupt.',
+        );
+      }
     }
-    if (!File(cfg.absoluteArtifact).existsSync()) {
+    if (!artifactExists) {
       issues.add('Worker artefact is missing: ${cfg.absoluteArtifact}');
     }
 
@@ -285,6 +315,7 @@ class DwiBuilder {
     required String hash,
     required List<DwiTaskDescriptor> tasks,
     required bool compiled,
+    required String artifactDigest,
   }) {
     final data = <String, Object?>{
       'protocol': dwiWorkerManifestProtocol,
@@ -294,6 +325,7 @@ class DwiBuilder {
       'target': 'js',
       'optimization': config.optimization,
       'compiled': compiled,
+      'artifactDigest': artifactDigest,
       'workers': <String, Object?>{
         config.workerId: <String, Object?>{
           'artifact': _artifactUrl(config),

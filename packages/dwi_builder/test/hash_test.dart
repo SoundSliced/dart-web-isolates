@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:dwi_builder/dwi_builder.dart';
-import 'package:dwi_builder/src/hasher.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
@@ -68,5 +67,54 @@ void main() {
       dependencies: <String>[second.path, dependency.path, dependency.path],
     );
     expect(one, two);
+  });
+
+  test('changes with the selected compiler identity', () async {
+    final withDart = await hash(
+      buildConfig: DwiBuildConfig(
+        projectRoot: root.path,
+        dartExecutable: Platform.resolvedExecutable,
+      ),
+    );
+    final withOther = await hash(
+      buildConfig: DwiBuildConfig(
+        projectRoot: root.path,
+        dartExecutable: '/bin/false',
+      ),
+    );
+    expect(withOther, isNot(withDart));
+  });
+
+  test('collects runtime sources and package resolution', () async {
+    final lib = Directory(p.join(root.path, 'lib'))..createSync(recursive: true);
+    final packages = Directory(p.join(root.path, '.dart_tool'))
+      ..createSync(recursive: true);
+    final dwiWeb = Directory(p.join(Directory.current.parent.path, 'dwi_web'));
+    File(p.join(packages.path, 'package_config.json')).writeAsStringSync(
+      '{"configVersion":2,"packages":['
+      '{"name":"dwi_web","rootUri":"${dwiWeb.uri}","packageUri":"lib/",'
+      '"languageVersion":"3.13"}]}',
+    );
+
+    final dependencies = await collectRuntimeDependencies(
+      DwiBuildConfig(projectRoot: root.path),
+    );
+
+    expect(lib.existsSync(), isTrue);
+    expect(
+      dependencies.any((path) => path.endsWith('worker_runtime.dart')),
+      isTrue,
+    );
+    expect(
+      dependencies.any((path) => path.endsWith('package_config.json')),
+      isTrue,
+    );
+  });
+
+  test('fileDigest distinguishes content', () async {
+    final first = await fileDigest(dependency.path);
+    dependency.writeAsStringSync('int twice(int value) => value + 1;\n');
+    expect(await fileDigest(dependency.path), isNot(first));
+    expect(await fileDigest(p.join(root.path, 'missing.dart')), '');
   });
 }

@@ -278,6 +278,7 @@ Future<int> _clean(ArgResults command) async {
 Future<int> _watch(ArgResults command) async {
   final config = _config(command, compile: true);
   final builder = DwiBuilder(config);
+  var dependencies = <String>{};
 
   Future<void> rebuild() async {
     try {
@@ -292,6 +293,10 @@ Future<int> _watch(ArgResults command) async {
         'DWI: worker $state in ${result.duration.inMilliseconds} ms '
         '(${result.discovery.tasks.length} task(s)).',
       );
+      dependencies = <String>{
+        ...result.discovery.dependencyFiles,
+        ...await collectRuntimeDependencies(config),
+      };
     } on DwiBuildException catch (error) {
       stderr.writeln('DWI: ${error.summary}');
       _printDiagnostics(error.diagnostics);
@@ -299,21 +304,27 @@ Future<int> _watch(ArgResults command) async {
   }
 
   await rebuild();
-  var previous = _snapshot(config);
+  var previous = _snapshot(config, dependencies);
   stdout.writeln(
-    'DWI: watching ${config.includePaths.join(', ')} for changes. '
-    'Reload the page after a worker rebuild; existing workers keep the old '
-    'script.',
+    'DWI: watching ${config.includePaths.join(', ')} and the task dependency '
+    'closure for changes. Reload the page after a worker rebuild; existing '
+    'workers keep the old script.',
   );
 
   while (true) {
     await Future<void>.delayed(const Duration(milliseconds: 500));
-    final current = _snapshot(config);
+    var current = _snapshot(config, dependencies);
     if (_sameSnapshot(previous, current)) continue;
-    previous = current;
     stdout.writeln('DWI: change detected, rebuilding worker...');
-    await rebuild();
-    previous = _snapshot(config);
+    // Edits that land while a build is running must trigger another build.
+    do {
+      final before = current;
+      await rebuild();
+      current = _snapshot(config, dependencies);
+      if (_sameSnapshot(before, current)) break;
+      stdout.writeln('DWI: inputs changed during the build, rebuilding...');
+    } while (true);
+    previous = current;
   }
 }
 
@@ -347,7 +358,10 @@ String _flutterExecutable() {
   return 'flutter';
 }
 
-Map<String, String> _snapshot(DwiBuildConfig config) {
+Map<String, String> _snapshot(
+  DwiBuildConfig config,
+  Iterable<String> dependencies,
+) {
   final entries = <String, String>{};
   for (final include in config.absoluteIncludePaths) {
     final type = FileSystemEntity.typeSync(include);
@@ -362,10 +376,31 @@ Map<String, String> _snapshot(DwiBuildConfig config) {
       if (entity is File) _addSnapshot(entries, entity.path, config);
     }
   }
-  final pubspec = File(p.join(config.absoluteProjectRoot, 'pubspec.yaml'));
-  if (pubspec.existsSync()) {
-    final stat = pubspec.statSync();
-    entries[pubspec.path] =
+  // The task closure can reach files outside --include (other packages,
+  // helpers) and the DWI runtime sources compiled into the worker.
+  for (final dependency in dependencies) {
+    final file = File(dependency);
+    final normalised = p.normalize(dependency);
+    if (!file.existsSync()) {
+      entries[normalised] = 'missing';
+      continue;
+    }
+    final stat = file.statSync();
+    entries[normalised] =
+        '${stat.modified.millisecondsSinceEpoch}:${stat.size}';
+  }
+  for (final path in <String>[
+    p.join(config.absoluteProjectRoot, 'pubspec.yaml'),
+    p.join(config.absoluteProjectRoot, 'pubspec.lock'),
+    p.join(config.absoluteProjectRoot, '.dart_tool', 'package_config.json'),
+  ]) {
+    final file = File(path);
+    if (!file.existsSync()) {
+      entries[p.normalize(path)] = 'missing';
+      continue;
+    }
+    final stat = file.statSync();
+    entries[p.normalize(path)] =
         '${stat.modified.millisecondsSinceEpoch}:${stat.size}';
   }
   return entries;
