@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dwi_builder/dwi_builder.dart';
@@ -6,6 +7,17 @@ import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 import 'support/fixture.dart';
+
+/// Files left behind by a failed or interrupted atomic write.
+List<String> leftoverTemporaryFiles(Directory root) {
+  if (!root.existsSync()) return const <String>[];
+  return root
+      .listSync(recursive: true)
+      .whereType<File>()
+      .map((file) => file.path)
+      .where((path) => path.endsWith('.tmp') || path.endsWith('.bak'))
+      .toList(growable: false);
+}
 
 const String simpleTasks = r'''
 import 'package:dwi_annotations/dwi_annotations.dart';
@@ -186,10 +198,171 @@ void main() {
     );
 
     expect(await fileDigest(built.artifactPath), before);
+    expect(leftoverTemporaryFiles(project.root), isEmpty);
   }, timeout: const Timeout(Duration(minutes: 3)));
 
-  test('package-resolution changes invalidate the cache', () async {
-    project.write('lib/tasks.dart', simpleTasks);
+  test(
+    'a publication failure keeps the previous artefact and manifest',
+    () async {
+      project.write('lib/tasks.dart', simpleTasks);
+      final built = await DwiBuilder(project.config(compile: true)).build();
+      final beforeArtifact = await fileDigest(built.artifactPath);
+      final beforeManifest = project.read('.dwi/worker_manifest.json');
+
+      // A valid, different worker source forces a real compilation whose
+      // publication then fails.
+      project.write(
+        '.dwi/generated_worker.dart',
+        '${project.read('.dwi/generated_worker.dart')}\n// changed\n',
+      );
+
+      debugPublishOverride = (temporary, artifact) async {
+        throw const FileSystemException('simulated publication failure');
+      };
+      addTearDown(() => debugPublishOverride = null);
+
+      await expectLater(
+        compileWorker(project.config(compile: true)),
+        throwsA(
+          isA<DwiBuildException>().having(
+            (error) => error.summary,
+            'summary',
+            contains('Could not publish'),
+          ),
+        ),
+      );
+
+      expect(await fileDigest(built.artifactPath), beforeArtifact);
+      expect(project.read('.dwi/worker_manifest.json'), beforeManifest);
+      expect(leftoverTemporaryFiles(project.root), isEmpty);
+    },
+    timeout: const Timeout(Duration(minutes: 3)),
+  );
+
+  test(
+    'a builder publication failure leaves the last verified state',
+    () async {
+      project.write('lib/tasks.dart', simpleTasks);
+      final built = await DwiBuilder(project.config(compile: true)).build();
+      final beforeArtifact = await fileDigest(built.artifactPath);
+      final beforeManifest = project.read('.dwi/worker_manifest.json');
+
+      debugPublishOverride = (temporary, artifact) async {
+        throw const FileSystemException('simulated publication failure');
+      };
+      addTearDown(() => debugPublishOverride = null);
+
+      await expectLater(
+        DwiBuilder(project.config(compile: true, force: true)).build(),
+        throwsA(isA<DwiBuildException>()),
+      );
+
+      expect(await fileDigest(built.artifactPath), beforeArtifact);
+      expect(project.read('.dwi/worker_manifest.json'), beforeManifest);
+      expect(leftoverTemporaryFiles(project.root), isEmpty);
+
+      final check = await DwiBuilder(project.config()).check();
+      expect(check.ok, isTrue, reason: check.issues.join('\n'));
+    },
+    timeout: const Timeout(Duration(minutes: 3)),
+  );
+
+  test(
+    'a published build exposes a complete artefact and matching digest',
+    () async {
+      project.write('lib/tasks.dart', simpleTasks);
+      final built = await DwiBuilder(project.config(compile: true)).build();
+
+      final artifact = File(built.artifactPath);
+      final content = await artifact.readAsString();
+      expect(content, isNotEmpty);
+      expect(content, contains('dart2js'));
+      expect(leftoverTemporaryFiles(project.root), isEmpty);
+
+      final manifest = jsonDecode(project.read('.dwi/worker_manifest.json'))
+          as Map<String, Object?>;
+      expect(manifest['artifactDigest'], await fileDigest(built.artifactPath));
+
+      final check = await DwiBuilder(project.config()).check();
+      expect(check.ok, isTrue, reason: check.issues.join('\n'));
+      expect(check.hash, built.hash);
+    },
+    timeout: const Timeout(Duration(minutes: 3)),
+  );
+
+  test(
+    'overlapping builds publish one consistent set of outputs',
+    () async {
+      project.write('lib/tasks.dart', simpleTasks);
+
+      final results = await Future.wait(<Future<DwiBuildResult>>[
+        DwiBuilder(project.config(compile: true)).build(),
+        DwiBuilder(project.config(compile: true)).build(),
+        DwiBuilder(project.config(compile: true)).build(),
+      ]);
+
+      // Serialized builds: the first compiles and the rest reuse its outputs.
+      expect(results.where((result) => result.compiled).length, 1);
+      final hashes = results.map((result) => result.hash).toSet();
+      expect(hashes, hasLength(1));
+
+      final check = await DwiBuilder(project.config()).check();
+      expect(check.ok, isTrue, reason: check.issues.join('\n'));
+
+      final manifest = jsonDecode(project.read('.dwi/worker_manifest.json'))
+          as Map<String, Object?>;
+      expect(manifest['hash'], check.hash);
+      expect(
+        manifest['artifactDigest'],
+        await fileDigest(project.config().absoluteArtifact),
+      );
+
+      final proxies = project.read('lib/dwi_tasks.g.dart');
+      final worker = project.read('.dwi/generated_worker.dart');
+      for (final name in <String>['twice', 'hello']) {
+        expect(proxies, contains(name));
+        expect(worker, contains(name));
+      }
+
+      expect(leftoverTemporaryFiles(project.root), isEmpty);
+    },
+    timeout: const Timeout(Duration(minutes: 3)),
+  );
+
+  test(
+    'editing a dependency of the task file invalidates the cache',
+    () async {
+      project.write('lib/helper.dart', 'int offset() => 1;\n');
+      project.write('lib/tasks.dart', r'''
+import 'helper.dart';
+import 'package:dwi_annotations/dwi_annotations.dart';
+
+@DwiTask()
+int shifted(int value) => value + offset();
+''');
+
+      final first = await DwiBuilder(project.config(compile: true)).build();
+      expect(first.compiled, isTrue);
+
+      final hit = await DwiBuilder(project.config(compile: true)).build();
+      expect(hit.cacheHit, isTrue);
+      expect(hit.compiled, isFalse);
+
+      project.write('lib/helper.dart', 'int offset() => 2;\n');
+      final stale = await DwiBuilder(project.config()).check();
+      expect(stale.ok, isFalse);
+
+      final rebuilt = await DwiBuilder(project.config(compile: true)).build();
+      expect(rebuilt.compiled, isTrue);
+      expect(rebuilt.hash, isNot(first.hash));
+
+      final after = await DwiBuilder(project.config()).check();
+      expect(after.ok, isTrue, reason: after.issues.join('\n'));
+    },
+    timeout: const Timeout(Duration(minutes: 3)),
+  );
+
+  test('package-resolution changes invalidate the cache', () async {    project.write('lib/tasks.dart', simpleTasks);
     await DwiBuilder(project.config(compile: true)).build();
 
     final packageConfig = File(

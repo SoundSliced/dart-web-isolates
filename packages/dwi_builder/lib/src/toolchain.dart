@@ -2,6 +2,13 @@ import 'dart:io';
 
 import 'config.dart';
 import 'diagnostics.dart';
+import 'publication.dart';
+
+/// Test seam: replaces the publication step in [compileWorker].
+///
+/// Tests use it to exercise publication failure without depending on
+/// platform-specific filesystem permissions. Application code never sets it.
+Future<void> Function(File temporary, File artifact)? debugPublishOverride;
 
 /// Result of one compiler invocation.
 class DwiCompileResult {
@@ -18,14 +25,15 @@ class DwiCompileResult {
 
 /// Compiles the generated worker entrypoint with `dart compile js`.
 ///
-/// The compiler writes to a temporary sibling file first. A failing
+/// The compiler writes to a unique temporary sibling file first. A failing
 /// compilation therefore never truncates or replaces a previously valid
-/// artefact, and a successful one is published by rename so readers never see a
-/// partial file. Concurrent compilations use distinct temporary names; the last
-/// successful rename wins.
+/// artefact. A successful compilation is published by an atomic replace, so a
+/// reader never sees a partial file and the last valid artefact survives any
+/// publication failure. Concurrent compilations use distinct temporary names;
+/// the serialized build in [DwiBuilder] decides which result is published.
 ///
-/// Throws [DwiBuildException] when the compiler is missing, exits non-zero, or
-/// produces no artefact.
+/// Throws [DwiBuildException] when the compiler is missing, exits non-zero,
+/// produces no artefact, or the artefact cannot be published.
 Future<DwiCompileResult> compileWorker(DwiBuildConfig config) async {
   final source = File(config.absoluteWorkerSource);
   if (!source.existsSync()) {
@@ -79,8 +87,15 @@ Future<DwiCompileResult> compileWorker(DwiBuildConfig config) async {
     );
   }
 
-  if (await artifact.exists()) await artifact.delete();
-  await temporary.rename(artifact.path);
+  try {
+    final publish = debugPublishOverride ?? replaceFile;
+    await publish(temporary, artifact);
+  } on Object catch (error) {
+    await _deleteIfExists(temporary);
+    throw DwiBuildException(
+      'Could not publish the compiled worker to ${artifact.path}: $error',
+    );
+  }
 
   return DwiCompileResult(
     exitCode: result.exitCode,

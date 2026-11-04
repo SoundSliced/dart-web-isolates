@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -9,6 +10,7 @@ import 'diagnostics.dart';
 import 'discovery.dart';
 import 'generator.dart';
 import 'hasher.dart';
+import 'publication.dart';
 import 'toolchain.dart';
 import 'version.dart';
 
@@ -87,11 +89,23 @@ class DwiBuilder {
   /// Generates sources and, when [DwiBuildConfig.compile] is true, compiles the
   /// worker unless the content hash is unchanged.
   ///
+  /// Builds for the same project are serialized by an exclusive file lock
+  /// (`.dwi/build.lock`). The CLI and the Flutter build hook can therefore
+  /// overlap safely: whichever build runs second observes the first build's
+  /// manifest and artefacts, and an older computation can never publish over a
+  /// newer one. Generated files and the artefact are published by atomic
+  /// replace, so a failed build always leaves the last verified output
+  /// available.
+  ///
   /// Throws [DwiBuildException] with diagnostics when discovery fails, no task
   /// is found, or compilation fails.
   Future<DwiBuildResult> build() async {
-    final stopwatch = Stopwatch()..start();
     final cfg = config.validated();
+    return _withBuildLock(cfg, () => _buildLocked(cfg));
+  }
+
+  Future<DwiBuildResult> _buildLocked(DwiBuildConfig cfg) async {
+    final stopwatch = Stopwatch()..start();
     final discovery = await discoverTasks(cfg);
 
     if (discovery.tasks.isEmpty) {
@@ -350,13 +364,84 @@ class DwiBuilder {
 }
 
 Future<void> _writeIfChanged(String path, String content) async {
-  final file = File(path);
-  if (await file.exists() && await file.readAsString() == content) return;
-  await file.parent.create(recursive: true);
-  final temporary = File('$path.tmp');
-  await temporary.writeAsString(content, flush: true);
-  if (await file.exists()) await file.delete();
-  await temporary.rename(path);
+  await writeFileAtomically(path, content);
+}
+
+/// In-process build queues keyed by absolute project root.
+///
+/// `File.lock` is per process on some platforms (macOS observed: a second
+/// handle in the same process can acquire a lock the first handle holds), so
+/// the file lock alone does not serialize two builds started in one isolate.
+final Map<String, Future<void>> _buildQueues = <String, Future<void>>{};
+
+/// Runs [body] while holding the project-wide build lock.
+///
+/// Two mechanisms cooperate:
+///
+/// * an in-process FIFO queue per project root, so builds started by the same
+///   isolate (for example a widget-test harness) run one at a time;
+/// * an advisory exclusive lock on `.dwi/build.lock`, taken with a non-blocking
+///   syscall and retried, so the CLI and the Flutter hook — separate processes —
+///   are serialized too. The operating system releases it if the process dies,
+///   and a stale lock file on disk is inert: only the held lock, never its
+///   presence, serializes builds.
+Future<T> _withBuildLock<T>(
+  DwiBuildConfig config,
+  Future<T> Function() body,
+) {
+  final key = config.absoluteProjectRoot;
+  final previous = _buildQueues[key];
+  final released = Completer<void>();
+  _buildQueues[key] = released.future;
+
+  Future<T> run() async {
+    if (previous != null) await previous;
+    try {
+      return await _withFileLock(config, body);
+    } finally {
+      released.complete();
+      if (identical(_buildQueues[key], released.future)) {
+        _buildQueues.remove(key);
+      }
+    }
+  }
+
+  return run();
+}
+
+Future<T> _withFileLock<T>(
+  DwiBuildConfig config,
+  Future<T> Function() body,
+) async {
+  final directory = Directory(p.join(config.absoluteProjectRoot, '.dwi'));
+  await directory.create(recursive: true);
+  final lockFile = File(p.join(directory.path, 'build.lock'));
+  final handle = await lockFile.open(mode: FileMode.append);
+  try {
+    final deadline = DateTime.now().add(const Duration(minutes: 10));
+    while (true) {
+      try {
+        await handle.lock(FileLock.exclusive);
+        break;
+      } on FileSystemException {
+        if (DateTime.now().isAfter(deadline)) {
+          throw DwiBuildException(
+            'Timed out waiting for another DWI build to finish. The lock file '
+            'is ${lockFile.path}.',
+          );
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+    }
+    return await body();
+  } finally {
+    try {
+      await handle.unlock();
+    } on FileSystemException {
+      // Closing the handle releases the lock even if unlock fails.
+    }
+    await handle.close();
+  }
 }
 
 String _relative(String path, String root) {
