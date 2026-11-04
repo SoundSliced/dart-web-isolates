@@ -92,16 +92,27 @@ Future<DwiCompileResult> compileWorker(DwiBuildConfig config) async {
     await publish(temporary, artifact);
   } on Object catch (error) {
     await _deleteIfExists(temporary);
+    await _deleteCompanions(temporary);
     throw DwiBuildException(
       'Could not publish the compiled worker to ${artifact.path}: $error',
     );
   }
+  await _deleteCompanions(temporary);
 
   return DwiCompileResult(
     exitCode: result.exitCode,
     stdout: result.stdout as String,
     stderr: result.stderr as String,
   );
+}
+
+/// `dart compile js` writes `<output>.deps` and `<output>.map` next to its
+/// output. Those companions of the temporary artefact are not part of the
+/// published worker and must not leak into the project.
+Future<void> _deleteCompanions(File temporary) async {
+  for (final suffix in const <String>['.deps', '.map']) {
+    await _deleteIfExists(File('${temporary.path}$suffix'));
+  }
 }
 
 Future<void> _deleteIfExists(File file) async {

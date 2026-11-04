@@ -11,11 +11,16 @@ import 'support/fixture.dart';
 /// Files left behind by a failed or interrupted atomic write.
 List<String> leftoverTemporaryFiles(Directory root) {
   if (!root.existsSync()) return const <String>[];
+  final temporary = RegExp(r'\.tmp(\.|$)');
   return root
       .listSync(recursive: true)
       .whereType<File>()
       .map((file) => file.path)
-      .where((path) => path.endsWith('.tmp') || path.endsWith('.bak'))
+      .where(
+        (path) =>
+            path.endsWith('.bak') ||
+            temporary.hasMatch(p.basename(path)),
+      )
       .toList(growable: false);
 }
 
