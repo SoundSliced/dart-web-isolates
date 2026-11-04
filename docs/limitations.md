@@ -25,10 +25,15 @@ limitation is not here or in `compatibility-matrix.md`, that is a bug.
 7. **Worker compilation is automatic for Flutter web on Flutter 3.47+, with one
    ordering caveat.** A `dwi_builder/hook/build.dart` build hook runs during
    `flutter run -d chrome` and `flutter build web` when `dwi_builder` is a
-   normal dependency (ADR-009). On a project with no generated proxies yet,
-   Flutter may start `dart2js` before the hook writes
-   `lib/dwi_tasks.g.dart`; run `dart run dwi_builder:dwi build` once (or
-   `dwi build --flutter-build`) before the first Flutter build. Older Flutter
+   normal dependency (ADR-009). Flutter compiles the application before, or
+   concurrently with, the hook: `dart2js` does not depend on the web
+   `build_hooks` target, and hook outputs feed linking only. On a project with
+   no generated proxies yet, `dart2js` can therefore start before the hook
+   writes `lib/dwi_tasks.g.dart`; run `dart run dwi_builder:dwi build` once (or
+   `dwi build --flutter-build`) before the first Flutter build. A fresh project
+   that calls `Dwi.run` and imports no generated proxy compiles on the first
+   ordinary Flutter command (measured 2026-11-04, root and `/sub/app/`), but
+   typed `DwiTasks` proxies need that one pre-build step. Older Flutter
    versions, plain Dart web apps and CI checks use
    `dart run dwi_builder:dwi build`; `--flutter-build` wraps the Flutter build
    after the worker step for that path. Web build hooks do not expose the target

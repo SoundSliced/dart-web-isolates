@@ -208,18 +208,26 @@ apps, CI checks and diagnostics. Generated files remain gitignored.
   are not resolved yet; use the CLI there.
 - The hook runs before app compilation, so it cannot hot-patch a worker already
   running in a page. Reload the page (or hot restart) after a task change.
-- **Fresh-project ordering is not guaranteed (measured 2026-11-04).** Flutter
-  schedules `build_hooks` and `dart2js` as independent web targets. On a project
-  that has never generated `lib/dwi_tasks.g.dart`, the compiler can start
-  before the hook writes the proxy; the first `flutter build web` then fails
-  with "Error when reading 'lib/dwi_tasks.g.dart'". The hook's output is valid,
-  and the next build succeeds. The supported workflow is to generate the
-  proxies once before the first Flutter build:
-  `dart run dwi_builder:dwi build` (or `dwi build --flutter-build`), after which
-  ordinary Flutter commands keep the worker fresh. The hook prints an explicit
-  diagnostic when it creates proxies during a build. This is a Flutter build
-  graph ordering gap, not a discovery or compilation failure; the CLI wrapper
-  remains the supported fallback.
+- **Fresh-project ordering is not guaranteed (re-measured 2026-11-04 on
+  Flutter 3.47.6 stable / Dart 3.13.5).** Flutter schedules `build_hooks` and
+  `dart2js` as independent web targets: `Dart2WebTarget.dependencies` is only
+  `[WebEntrypointTarget, GenerateLocalizationsTarget]`, and the web
+  `BuildHooks` target is a dependency of `LinkHooks`, which itself runs after
+  the compile targets. On a project that has never generated
+  `lib/dwi_tasks.g.dart`, the compiler can start before the hook writes the
+  proxy; the first `flutter build web` then fails with "Error when reading
+  'lib/dwi_tasks.g.dart'". The hook's output is valid and the next build
+  succeeds, and the worker it produced is already packaged into `build/web` by
+  the same build. The supported workflow is to generate the proxies once before
+  the first Flutter build: `dart run dwi_builder:dwi build` (or
+  `dwi build --flutter-build`), after which ordinary Flutter commands keep the
+  worker fresh. A fresh project that calls `Dwi.run` directly and imports no
+  generated proxy does build and run in a worker on a single ordinary command
+  (measured at the root and under `/sub/app/`); typed `DwiTasks` proxies need
+  the one pre-build step. The hook prints an explicit diagnostic when it
+  creates proxies during a build. This is a Flutter build graph ordering gap,
+  not a discovery or compilation failure; the CLI wrapper remains the supported
+  fallback. See `audit/evidence/flutter-fresh-build-gate-2026-11-04.txt`.
 - A hook failure fails the Flutter build; this is intentional and preserves the
   "no main-thread fallback" rule.
 - The resolver is conservative: zero or multiple matching app packages means
@@ -231,71 +239,244 @@ apps, CI checks and diagnostics. Generated files remain gitignored.
 `hook-build-real.log` (scratch, reproduced by the commands in the audit report).
 Unit tests for the resolver: `packages/dwi_builder/test/hook_support_test.dart`.
 
-## ADR-010 — v0.4 proposal: cancellation, transferables, crash recovery (PROPOSED, NOT IMPLEMENTED)
+## ADR-010 — v0.4: cancellation, transferable bytes, crash detection (ACCEPTED)
 
-**Status.** Proposed. This ADR records the design required before any v0.4 public
-API changes. Only the resource-safety subset described at the end is implemented
-in the v0.3.1 patch; cancellation and transfer semantics are **not shipped** and
-must not be reported as complete.
+**Status.** Accepted for v0.4 implementation (2026-11-04). This ADR supersedes
+the earlier proposal in this section. It settles three design gaps *before* code:
+cancellation, transferable bytes, and heartbeat/crash detection. Each decision
+below is normative; the "Implementation status" line at the end of each part is
+updated as code lands, and a part must not be reported as shipped before its
+line says so.
 
-**Problem.** v0.3 has backpressure (bounded queue) and timeout-based recovery,
-but:
+`Dwi.run` keeps its current signature and semantics. Every addition is
+additive, and every new type is a public API change recorded here and in
+`docs/api-proposal.md` (AGENTS.md rule 2).
 
-- a caller cannot cancel a queued or running task;
-- binary payloads are copied, with no ownership/transfer contract;
-- `maxPayloadBytes` was declared but unenforced (now enforced approximately);
-- a worker killed without an `error` event is only detected by a timeout;
-- there are no committed browser concurrency/stress or performance benchmarks.
+### 10.1 Cancellation
 
-**Proposed public API (additive; needs approval).**
+**Public surface.**
 
 ```dart
-// dwi_web / dwi facade
+// package:dwi (implemented by each backend)
 final task = Dwi.runCancellable<int>('primes', 5_000_000);
-final value = await task.result;      // Future<int>
-final cancelled = await task.cancel(); // true if it was queued or terminated
+final value = await task.result;        // Future<int>, settles exactly once
+final cancelled = await task.cancel();  // Future<bool>, never throws
 
-// dwi_core
+// package:dwi_core, re-exported by package:dwi
 class DwiCancelledException extends DwiException { ... }
-
-// Explicit binary ownership; the sender's buffer is detached after send.
-await Dwi.run('hash', DwiTransferableBytes(bytes));
 ```
+
+`DwiCancellableTask<R>` exposes `Future<R> result`, `Future<bool> cancel()` and
+`bool get isDone`. `cancel()` reports whether *this call* changed the outcome.
+
+**State model.** A task is in exactly one of: `queued`, `running`, `done`.
+Completion is decided by a single per-task completer; the first transition to
+`done` wins (JavaScript is single-threaded, so the check and the termination
+happen in one turn of the event loop).
+
+**Web semantics.**
+
+| Call made while… | Effect on `task.result` | `cancel()` returns | Worker |
+| --- | --- | --- | --- |
+| `queued` | completes with `DwiCancelledException` | `true` | none started |
+| `running` | completes with `DwiCancelledException` | `true` | that slot is terminated |
+| `done` (result/error already delivered) | unchanged | `false` | untouched |
+| result envelope in flight, not yet delivered | unchanged, result wins | `false` | untouched |
 
 Rules:
 
-1. `Dwi.run` keeps its current signature and semantics.
-2. `cancel()` on a queued task removes it from the host queue and completes
-   `result` with `DwiCancelledException`; no worker is started.
-3. `cancel()` on a running non-cooperative task calls `Worker.terminate()`,
-   fails the task with `DwiCancelledException`, and replaces the worker. This is
-   the only reliable mechanism on the web.
-4. Cooperative cancellation, if added, must be additive: a task may opt into a
-   `DwiCancellationToken` argument (a new task shape) so the dispatcher can stop
-   between iterations. It must not change the `DwiTaskFunction` typedef.
-5. Transferables use a wrapper type, not an implicit flag, so ownership is
-   explicit. The host passes a transfer list to `postMessage`; the worker checks
-   that the buffer is not detached. `DwiCapabilities.transferables` becomes
-   `true` only when this path exists.
-6. Crash detection adds `onmessageerror`, a heartbeat/ping envelope, and a
-   bounded restart policy. Every failure still ends in a typed error.
+1. **Queued cancellation** removes the caller's waiter from the pool queue
+   before any worker is acquired and completes `result` with
+   `DwiCancelledException`. It decrements nothing else and does not disturb
+   FIFO order for the remaining waiters.
+2. **Running cancellation terminates the worker.** A synchronous Dart task
+   cannot read a `cancel` envelope until it returns, so termination is the only
+   reliable mechanism on the web. The protocol still carries a `cancel` message
+   (protocol v1 already defines the type), but the host does not wait for it:
+   it calls `Worker.terminate()` and settles the pending call immediately.
+3. **Only `task.result` receives `DwiCancelledException`.** `cancel()` itself
+   never throws for races or repeats; it returns `false`.
+4. **Deterministic race rule.** If the result has already completed the
+   completer when `cancel()` runs, the result stands and `cancel()` returns
+   `false`. If cancel wins, the late `result`/`error` envelope is ignored
+   (the completer is already settled) and must not become an unhandled error.
+5. **Timeout race.** `taskTimeout` and `cancel()` both terminate the same slot.
+   Whichever settles the completer first decides the outcome: a timeout yields
+   `DwiTimeoutException` and a later `cancel()` returns `false`; a cancel yields
+   `DwiCancelledException` and the timer is cancelled.
+6. **Repeated cancellation** is a no-op returning `false` after the first
+   successful cancel.
+7. **Worker replacement.** A terminated slot is removed from the pool
+   immediately and its capacity is offered to queued callers (the existing
+   `_terminate` → `_drainWaiters` path). Replacement is lazy: the next request
+   that needs capacity spawns a new worker. There is no eager respawn, and no
+   request is retried on the caller's behalf.
+8. **Not cooperative, and not advertised as cooperative.** A `cancel` envelope
+   is advisory only; adding a cooperative token is a separate, later change and
+   must not alter `DwiTaskFunction`. `DwiCapabilities` gains no
+   `cooperativeCancellation` claim in v0.4.
 
-**Acceptance criteria.** Browser tests for: cancel queued, cancel running
-(non-cooperative), cancel after completion (no-op), transfer ownership/detach,
-worker crash and restart, 100-task concurrency with bounded queue, and no leaked
-workers or pending completers. Before/after benchmarks for transfer vs copy and
-for cancellation latency. Chrome, Firefox, Safari and Edge must be measured
-separately; unmeasured engines stay "unverified".
+**Native semantics.** Native cancellation is *not* the same mechanism and must
+not be described as parity.
 
-**Implemented now (non-breaking).** `validateDwiPayload` enforces an approximate
-`maxPayloadBytes` budget from `DwiConfig`; the host sends the limit in request
-metadata and the worker applies it to results, so an oversized payload fails with
-`DwiSerializationException` instead of crossing the boundary. The queue already
-wakes waiters after termination/failure (v0.3.1 fix).
+- `Isolate.run` keeps no handle, so it cannot be cancelled. v0.4 therefore
+  replaces the native execution path with `Isolate.spawn` plus a retained
+  `Isolate` handle and a `SendPort` for the result/error. `run()` keeps its
+  observable behaviour (one isolate per call, typed errors, timeout).
+- `cancel()` while the isolate has not started yet: the call is not started and
+  `result` completes with `DwiCancelledException` (`true`).
+- `cancel()` while running: `isolate.kill(priority: Isolate.immediate)` and
+  `result` completes with `DwiCancelledException` (`true`). This is a real
+  termination, not an abandoned future.
+- `cancel()` after completion, repeated cancellation, and races follow the web
+  rules above.
+- If the spawn-based path is not implemented, native `cancel()` on a running
+  task must return `false` and the documentation must say cancellation is
+  queued-only on native. It must never silently pretend to cancel.
 
-**Explicitly not implemented.** Cancellation, cooperative tokens, transferables,
-heartbeat, restart policy, and the multi-browser benchmark matrix. v0.5–v1.0
-remain proposals.
+**Capability reporting.** `DwiCapabilities` gains `cancellation` with values
+`queued`, `running`, or `none`, so callers can see the actual contract instead
+of assuming parity.
+
+**Implementation status.** Not implemented in v0.3.1.
+
+### 10.2 Transferable bytes
+
+**Public surface.**
+
+```dart
+// package:dwi_core, re-exported by package:dwi
+class DwiTransferableBytes {
+  DwiTransferableBytes(TypedData data);          // copies a view into exact bytes
+  DwiTransferableBytes.fromBuffer(ByteBuffer b); // takes ownership of b
+  int get lengthInBytes;
+  bool get isDetached;                           // true after a successful send
+  Uint8List get bytes;                           // throws once detached
+}
+
+await Dwi.run<DwiTransferableBytes>('hash', DwiTransferableBytes(payload));
+```
+
+**Wire representation.** A `DwiTransferableBytes` travels as the `ArrayBuffer`
+(`ByteBuffer`) itself, with `meta['payloadKind'] = 'transferableBytes'`, and the
+buffer is listed in the `postMessage` transfer list. The receiver wraps the
+received buffer without copying. A task may return `DwiTransferableBytes`; the
+worker runtime applies the same representation and transfer list on the result
+path, so return values are transferred rather than copied.
+
+**Rules.**
+
+1. **Accepted inputs** are `TypedData` (all typed lists and `ByteData`) and
+   `ByteBuffer`. `List<int>` and strings are not accepted; they are ordinary
+   copied payloads.
+2. **Views with offsets are copied at construction.** If the input view does not
+   span its whole buffer (non-zero `offsetInBytes`, or `lengthInBytes` smaller
+   than `buffer.lengthInBytes`), the constructor copies the referenced bytes into
+   an exact-size buffer. The transfer unit is then exactly what the caller
+   passed, and transferring it never detaches unrelated memory. This is stated
+   in the dartdoc; it is the only copying the wrapper performs.
+3. **Ownership and sender detachment.** After a successful send the sender's
+   buffer is detached on the web (`byteLength == 0`) and `isDetached` becomes
+   `true`. On native, `TransferableTypedData` does not detach the sender's
+   memory, so `isDetached` is a DWI bookkeeping flag only: the wrapper refuses a
+   second send, but the bytes remain readable through the wrapper's own
+   reference. This difference is documented rather than hidden.
+4. **Repeated transfer throws.** Sending an already-sent wrapper throws
+   `DwiSerializationException` before `postMessage`; this is a caller bug, not a
+   transport failure.
+5. **Failure before send** (validation, unknown task, no capacity) leaves the
+   wrapper usable and not detached.
+6. **Failure after a successful transfer** (timeout, cancel, worker crash) means
+   the bytes belong to the terminated worker and are gone. The caller must not
+   reuse the wrapper; `isDetached` remains `true`. Retrying requires a fresh
+   `DwiTransferableBytes`.
+7. **Native semantics.** On native the wrapper maps to
+   `TransferableTypedData.fromList([bytes])` on send and `materialize()` on
+   receipt, so the payload is transferred rather than copied. Detachment is
+   DWI-level only (rule 3).
+8. **Capability reporting.** `DwiCapabilities.transferables` becomes `true` only
+   when this path works end to end for both arguments and results. On web it
+   stays `false` until browser tests cover send, return, offsets, repeated
+   transfer and post-transfer failure. Native keeps `true`, because
+   `TransferableTypedData` is a real transfer.
+
+**Implementation status.** Not implemented in v0.3.1; `transferables` is
+reported as `false` on web.
+
+### 10.3 Heartbeats and crash detection
+
+**Worker states.** A slot is `starting` (spawned, no `ready` yet), `idle`
+(ready, no in-flight request), `busy` (request in flight), or `dead`.
+
+**Heartbeat policy.**
+
+1. **Only idle slots are pinged.** A `busy` slot is executing a task that may be
+   synchronous CPU code; it cannot process a ping until it returns, so treating a
+   late reply as a crash would kill healthy long-running work. Busy work is
+   already bounded by `taskTimeout`.
+2. **Ping shape.** An idle slot receives a `heartbeat` envelope with a nonce in
+   `meta['nonce']`; the worker answers with `heartbeat` echoing the nonce. Any
+   other inbound message from that worker also proves liveness and resets the
+   miss counter.
+3. **A miss is a missing reply.** Each tick increments the slot's miss counter;
+   a valid reply resets it to zero. `heartbeatMisses` consecutive misses mark the
+   slot dead. Defaults: `heartbeatInterval` 5 s, `heartbeatMisses` 2 (both
+   validated positive, configurable in `DwiConfig`).
+4. **A dead idle slot has no in-flight call**, so it is terminated and removed
+   without settling anything. Any *pending* work for that worker can only exist
+   if the slot was busy, which is not pinged; those calls settle through
+   `taskTimeout`, a cancel, or an `onerror`/`onmessageerror` failure.
+5. **Failure detection is unchanged for busy slots**: `onerror`,
+   `onmessageerror`, an undecodable message, and `taskTimeout` terminate the slot
+   and settle every pending completer with a typed error.
+
+**Bounded restart.**
+
+- Replacement stays **lazy**: a dead slot is removed and capacity is offered to
+  queued callers; the next request that needs capacity spawns a fresh worker.
+- Restart attempts are bounded globally by `maxConsecutiveSpawnFailures` (3).
+  A successful spawn resets the counter; the third consecutive startup failure
+  fails every queued caller with `DwiStartupException` and stops retrying.
+- No caller is retried automatically. A caller whose worker died settles with a
+  typed error and decides for itself whether to call again.
+
+**Queue and in-flight settlement.** Every pending call settles exactly once:
+
+- queued callers after a death: remain queued against the replacement; they
+  fail only through `queueTimeout`, a full queue, close, or the bounded startup
+  failure above;
+- in-flight callers at termination: `DwiCancelledException` (cancel),
+  `DwiTimeoutException` (timeout), `DwiRemoteException` (protocol/decoding) or
+  `DwiStartupException` (failed start);
+- close: queued callers first, then every slot.
+
+**Config additions.** `DwiConfig.heartbeatInterval` and
+`DwiConfig.heartbeatMisses`; both must be positive.
+
+**Implementation status.** Not implemented in v0.3.1. `onerror`,
+`onmessageerror`, timeout and bounded startup failure already exist.
+
+### 10.4 Acceptance criteria for v0.4
+
+- Browser tests: cancel queued, cancel running, cancel after completion,
+  cancel/timeout race, repeated cancel, pool recovery after termination,
+  transfer with detach, views with offsets, returned buffers, repeated transfer
+  rejection, post-transfer failure, idle-worker death detected by heartbeat,
+  active-worker failure, startup failure, late messages, queue settlement, and
+  sustained concurrency.
+- Native tests: queued/not-yet-started cancel, running cancel via
+  `Isolate.kill`, completion race, repeated cancel, and recovery after cancel.
+- Benchmarks: transfer versus copy at several payload sizes, and cancellation
+  latency, with environment details and repeated measurements.
+- Browser results are per engine. An engine that was not run is **unverified**.
+
+### 10.5 Not implemented by this ADR
+
+Cooperative cancellation tokens, long-lived worker handles, port-like
+messaging/streams, a dart2wasm worker path, and any parity claim with
+`dart:isolate`.
+
+
 
 ## ADR-011 — Generated proxies own native dispatch and payload decoding (v0.3.1)
 

@@ -155,6 +155,58 @@ class DwiRemoteException extends DwiException {
 `remoteStackTrace` is whatever the worker runtime captured; it is never presented
 as a local stack trace.
 
+## v0.4 surface (ADR-010, accepted; implementation tracked per item)
+
+Cancellation:
+
+```dart
+final task = Dwi.runCancellable<int>('primes', 5_000_000);
+final value = await task.result;        // Future<int>, settles exactly once
+final cancelled = await task.cancel();  // Future<bool>, never throws
+```
+
+- `DwiCancellableTask<R>`: `Future<R> result`, `Future<bool> cancel()`,
+  `bool get isDone`.
+- `cancel()` on a queued task removes it from the queue and completes `result`
+  with `DwiCancelledException`; on a running web task it terminates the worker
+  and completes `result` with the same exception; after completion it returns
+  `false` and changes nothing.
+- `DwiCancelledException extends DwiException` is delivered through `result`
+  only. `cancel()` itself never throws.
+- Native parity requires replacing `Isolate.run` with a retained
+  `Isolate.spawn` handle (ADR-010 §10.1). Until that is implemented, native
+  cancellation must be documented as narrower, not as parity.
+
+Transferable bytes:
+
+```dart
+await Dwi.run<DwiTransferableBytes>('hash', DwiTransferableBytes(payload));
+```
+
+- `DwiTransferableBytes(TypedData)` / `.fromBuffer(ByteBuffer)`,
+  `lengthInBytes`, `isDetached`, `bytes`.
+- Views that do not span their whole buffer are copied into exact-size bytes at
+  construction; the transfer unit is exactly what the caller passed.
+- After a successful send the wrapper is detached and a second send throws
+  `DwiSerializationException`. Native detachment is DWI bookkeeping only.
+- `DwiCapabilities.transferables` stays `false` on web until the path is
+  verified end to end for arguments and results.
+
+Capabilities and config:
+
+```dart
+caps.cancellation;   // 'queued' | 'running' | 'none'
+DwiConfig(heartbeatInterval: Duration(seconds: 5), heartbeatMisses: 2);
+```
+
+Heartbeats ping **idle** workers only. A busy worker cannot answer a ping while
+it runs synchronous CPU code; its work is bounded by `taskTimeout` instead. A
+slot is dead after `heartbeatMisses` consecutive missed replies and is replaced
+lazily, with startup retries bounded by three consecutive failures.
+
+Until each item's "Implementation status" in ADR-010 says implemented, the
+corresponding surface is a proposal and must not be documented as available.
+
 ## Lifecycle (later levels, not shipped yet)
 
 ```dart
