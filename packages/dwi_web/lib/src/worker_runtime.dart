@@ -2,12 +2,13 @@ import 'dart:async';
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 
+import 'package:dwi_core/dwi_core.dart';
 import 'package:dwi_protocol/dwi_protocol.dart';
 
 import 'worker_dispatcher.dart';
 
 @JS('postMessage')
-external void _postMessage(JSAny? message);
+external void _postMessage(JSAny? message, [JSObject transfer]);
 
 @JS('self')
 external JSObject get _self;
@@ -100,8 +101,33 @@ abstract final class DwiWorkerRuntime {
   }
 
   static void _send(DwiEnvelope envelope) {
+    JSObject? transfer;
+    final map = envelope.toMap();
+    final payload = envelope.payload;
+    if (payload is DwiTransferableBytes) {
+      if (payload.isDetached) {
+        // Nothing was sent yet, so a typed error can still reach the host.
+        _sendError(
+          envelope.id,
+          DwiErrorCode.serialization,
+          'worker tried to transfer bytes it had already sent',
+        );
+        return;
+      }
+      map['payload'] = payload.buffer;
+      map['meta'] = <String, Object?>{
+        ...envelope.meta,
+        'payloadKind': 'transferableBytes',
+      };
+      transfer = <JSObject>[payload.buffer.toJS].toJS;
+      payload.markSent();
+    }
     try {
-      _postMessage(envelope.toMap().jsify());
+      if (transfer == null) {
+        _postMessage(map.jsify());
+      } else {
+        _postMessage(map.jsify(), transfer);
+      }
     } catch (error) {
       // A result payload that cannot be structured-cloned must not disappear.
       // Send a typed serialization error instead; if that also fails, close the

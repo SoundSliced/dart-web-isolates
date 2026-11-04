@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:dwi_core/dwi_core.dart';
 import 'package:dwi_protocol/dwi_protocol.dart';
@@ -91,10 +92,14 @@ class DwiWorkerDispatcher {
     try {
       final limit = envelope.meta['maxPayloadBytes'];
       final maxBytes = limit is int && limit > 0 ? limit : null;
-      validateDwiPayload(envelope.payload, path: 'input', maxBytes: maxBytes);
-      final result = await Future<Object?>.sync(
-        () => implementation(envelope.payload),
-      );
+      Object? input = envelope.payload;
+      if (envelope.meta['payloadKind'] == 'transferableBytes' &&
+          input is ByteBuffer) {
+        // The host transferred ownership of the buffer to this worker.
+        input = DwiTransferableBytes.fromBuffer(input);
+      }
+      validateDwiPayload(input, path: 'input', maxBytes: maxBytes);
+      final result = await Future<Object?>.sync(() => implementation(input));
       validateDwiPayload(result, path: 'result', maxBytes: maxBytes);
       return DwiEnvelope(
         type: DwiMessageType.result,

@@ -739,6 +739,13 @@ void _collectTypeIssues(
   final name = element.name ?? 'value';
   final library = element.library.uri.toString();
 
+  // The DWI transferable-bytes wrapper is a plain object whose payload is moved
+  // rather than copied; it is not a user class and needs no codec.
+  if (library.startsWith('package:dwi_core/') &&
+      name == 'DwiTransferableBytes') {
+    return;
+  }
+
   if (library.startsWith('dart:html') ||
       library == 'dart:ui' ||
       library.startsWith('package:flutter/')) {

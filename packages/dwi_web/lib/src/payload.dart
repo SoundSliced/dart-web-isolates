@@ -27,6 +27,12 @@ void validateDwiPayload(
 void _validate(Object? value, String path, _ByteBudget budget) {
   budget.add(8, path);
   if (value == null || value is num || value is bool) return;
+  if (value is DwiTransferableBytes) {
+    // Detached wrappers throw here, before anything reaches postMessage.
+    budget.add(value.lengthInBytes, path);
+    value.buffer;
+    return;
+  }
   if (value is String) {
     budget.add(value.length, path);
     return;

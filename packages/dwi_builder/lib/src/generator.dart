@@ -398,6 +398,20 @@ abstract final class DwiGenerator {
       return _typedDataBody(type, element, prefixes);
     }
 
+    if (type.name == 'DwiTransferableBytes' &&
+        (type.libraryUri?.startsWith('package:dwi_core/') ?? false)) {
+      // Already wrapped by the transport; only the type has to hold.
+      final prefix = prefixes[type.libraryUri!] ?? '';
+      final name = prefix.isEmpty
+          ? 'DwiTransferableBytes'
+          : '$prefix.DwiTransferableBytes';
+      return <String>[
+        '  if (value is $name) return value;',
+        "  throw DwiSerializationException("
+        "'\$path: expected DwiTransferableBytes, got \${value.runtimeType}');",
+      ];
+    }
+
     return <String>[
       '  if (value is ${type.render(prefixes)}) return value;',
       "  throw DwiSerializationException("

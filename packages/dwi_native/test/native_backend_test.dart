@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dwi_core/dwi_core.dart';
 import 'package:dwi_native/dwi_native.dart';
 import 'package:test/test.dart';
@@ -36,6 +38,12 @@ void main() {
         final until = DateTime.now().add(const Duration(seconds: 5));
         while (DateTime.now().isBefore(until)) {}
         return 'spun';
+      })
+      ..register('echoTransferable', (Object? input) => input)
+      ..register('makeTransferable', (Object? input) {
+        final length = input! as int;
+        final data = Uint8List(length)..fillRange(0, length, 7);
+        return DwiTransferableBytes(data);
       });
     backend = NativeBackend(registry);
   });
@@ -159,6 +167,63 @@ void main() {
       expect(
         await backend.run('primes', <String, Object?>{'limit': 1000}),
         168,
+      );
+    });
+  });
+
+  group('transferable bytes', () {
+    test('transfers an argument and detaches the sender', () async {
+      await backend.configure(const DwiConfig());
+      final bytes = DwiTransferableBytes(
+        Uint8List.fromList(<int>[1, 2, 3]),
+      );
+
+      final result = await backend.run('echoTransferable', bytes);
+
+      expect(result, isA<DwiTransferableBytes>());
+      final echoed = result! as DwiTransferableBytes;
+      expect(echoed.lengthInBytes, 3);
+      expect(echoed.bytes, <int>[1, 2, 3]);
+      expect(bytes.isDetached, isTrue);
+    });
+
+    test('a second send of the same wrapper fails before it leaves', () async {
+      await backend.configure(const DwiConfig());
+      final bytes = DwiTransferableBytes(Uint8List(4));
+
+      await backend.run('echoTransferable', bytes);
+      await expectLater(
+        backend.run('echoTransferable', bytes),
+        throwsA(isA<DwiSerializationException>()),
+      );
+    });
+
+    test('the worker can return a transferred buffer', () async {
+      await backend.configure(const DwiConfig());
+      final result = await backend.run('makeTransferable', 5);
+
+      final bytes = result! as DwiTransferableBytes;
+      expect(bytes.lengthInBytes, 5);
+      expect(bytes.bytes, <int>[7, 7, 7, 7, 7]);
+      expect(bytes.isDetached, isFalse);
+    });
+
+    test('failure after the transfer leaves the bytes detached', () async {
+      await backend.configure(const DwiConfig());
+      final bytes = DwiTransferableBytes(Uint8List(8));
+
+      final task = backend.start('spin', bytes);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(await task.cancel(), isTrue);
+
+      await expectLater(
+        task.result,
+        throwsA(isA<DwiCancelledException>()),
+      );
+      expect(bytes.isDetached, isTrue);
+      expect(
+        () => bytes.bytes,
+        throwsA(isA<DwiSerializationException>()),
       );
     });
   });

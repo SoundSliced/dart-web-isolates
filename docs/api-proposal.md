@@ -177,7 +177,7 @@ final cancelled = await task.cancel();  // Future<bool>, never throws
   `Isolate.spawn` handle (ADR-010 §10.1). Until that is implemented, native
   cancellation must be documented as narrower, not as parity.
 
-Transferable bytes:
+Transferable bytes — **implemented** (`Dwi.run` with `DwiTransferableBytes`):
 
 ```dart
 await Dwi.run<DwiTransferableBytes>('hash', DwiTransferableBytes(payload));

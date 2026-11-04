@@ -8,7 +8,10 @@ import 'support/browser_probe.dart';
 import 'support/fixture.dart';
 
 const String lifecycleTasks = r'''
+import 'dart:typed_data';
+
 import 'package:dwi_annotations/dwi_annotations.dart';
+import 'package:dwi_core/dwi_core.dart';
 
 @DwiTask()
 Future<String> slow(int milliseconds) async {
@@ -27,10 +30,20 @@ String spin(int milliseconds) {
   }
   return 'spun';
 }
+
+@DwiTask()
+DwiTransferableBytes echoBytes(DwiTransferableBytes input) => input;
+
+@DwiTask()
+DwiTransferableBytes makeBytes(int length) {
+  final data = Uint8List(length)..fillRange(0, length, 7);
+  return DwiTransferableBytes(data);
+}
 ''';
 
 const String lifecycleMain = r'''
 import 'dart:async';
+import 'dart:typed_data';
 import 'dart:convert';
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
@@ -241,6 +254,30 @@ Future<void> main() async {
 
     result['hCaps'] = (await Dwi.capabilities()).cancellation.name;
 
+    // I: transferable bytes — argument detach, returned buffer, repeated send.
+    final iBytes = DwiTransferableBytes(Uint8List.fromList(<int>[1, 2, 3, 4]));
+    final iEcho = await Dwi.run<DwiTransferableBytes>('echoBytes', iBytes);
+    result['iEchoLength'] = iEcho.lengthInBytes;
+    result['iEchoFirst'] = iEcho.bytes.first;
+    result['iEchoLast'] = iEcho.bytes.last;
+    result['iDetached'] = iBytes.isDetached;
+    try {
+      iBytes.bytes;
+      result['iSenderRead'] = 'readable';
+    } catch (error) {
+      result['iSenderRead'] = _classify(error);
+    }
+    try {
+      await Dwi.run<DwiTransferableBytes>('echoBytes', iBytes);
+      result['iRepeat'] = 'accepted';
+    } catch (error) {
+      result['iRepeat'] = _classify(error);
+    }
+    final iReturned = await Dwi.run<DwiTransferableBytes>('makeBytes', 6);
+    result['iReturnedLength'] = iReturned.lengthInBytes;
+    result['iReturnedAllSeven'] = iReturned.bytes.every((value) => value == 7);
+    result['iTransferables'] = (await Dwi.capabilities()).transferables;
+
     result['ok'] = true;
   } catch (error, stack) {
     result['ok'] = false;
@@ -353,6 +390,16 @@ void main() {
         expect(decoded['hRaceCancel'], isTrue);
         expect(decoded['hRaceResult'], 'DwiCancelledException');
         expect(decoded['hCaps'], 'running');
+
+        expect(decoded['iEchoLength'], 4);
+        expect(decoded['iEchoFirst'], 1);
+        expect(decoded['iEchoLast'], 4);
+        expect(decoded['iDetached'], isTrue);
+        expect(decoded['iSenderRead'], 'DwiSerializationException');
+        expect(decoded['iRepeat'], 'DwiSerializationException');
+        expect(decoded['iReturnedLength'], 6);
+        expect(decoded['iReturnedAllSeven'], isTrue);
+        expect(decoded['iTransferables'], isTrue);
       } finally {
         await server.close(force: true);
       }

@@ -32,6 +32,7 @@ export 'package:dwi_core/dwi_core.dart'
         DwiTaskFunction,
         DwiTaskRegistry,
         DwiTimeoutException,
+        DwiTransferableBytes,
         DwiUnknownTaskException,
         DwiUnsupportedException;
 

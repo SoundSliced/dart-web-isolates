@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:isolate';
+import 'dart:typed_data';
 
 import 'package:dwi_core/dwi_core.dart';
 
@@ -27,9 +28,10 @@ class _IsolateJob {
 /// Entry point of a task isolate. Sends `[ok, value]` or
 /// `[failed, message, type, stack]`.
 void _isolateMain(_IsolateJob job) {
-  Future<Object?>.sync(() => job.implementation(job.input)).then(
+  final input = _decodeFromIsolate(job.input);
+  Future<Object?>.sync(() => job.implementation(input)).then(
     (value) {
-      job.reply.send(<Object?>[true, value]);
+      job.reply.send(<Object?>[true, _encodeForIsolate(value)]);
     },
     onError: (Object error, StackTrace stack) {
       job.reply.send(<Object?>[
@@ -40,6 +42,27 @@ void _isolateMain(_IsolateJob job) {
       ]);
     },
   );
+}
+
+/// Converts transferable bytes into a real native transfer.
+///
+/// `TransferableTypedData.fromList` may copy, so the sender's memory stays
+/// valid: DWI records ownership with [DwiTransferableBytes.markSent] instead
+/// (ADR-010 §10.2, rule 3).
+Object? _encodeForIsolate(Object? value) {
+  if (value is DwiTransferableBytes) {
+    return TransferableTypedData.fromList(<Uint8List>[
+      value.buffer.asUint8List(),
+    ]);
+  }
+  return value;
+}
+
+Object? _decodeFromIsolate(Object? value) {
+  if (value is TransferableTypedData) {
+    return DwiTransferableBytes.fromBuffer(value.materialize());
+  }
+  return value;
 }
 
 /// Executes registered tasks on real Dart isolates.
@@ -88,19 +111,27 @@ class NativeBackend implements DwiBackend {
       final reply = Completer<Object?>();
       state.reply = reply;
 
+      final transferable = input is DwiTransferableBytes ? input : null;
+      final isolateInput = transferable == null
+          ? input
+          : _encodeForIsolate(transferable);
+
       final isolate = await Isolate.spawn(
         _isolateMain,
-        _IsolateJob(implementation, input, port.sendPort),
+        _IsolateJob(implementation, isolateInput, port.sendPort),
         debugName: 'dwi:$task',
       );
       state.isolate = isolate;
+      // Ownership moves only once the isolate exists; a spawn failure leaves
+      // the wrapper usable for a retry (ADR-010 §10.2, rule 5).
+      transferable?.markSent();
 
       port.listen(
         (message) {
           if (reply.isCompleted) return;
           final fields = message as List<Object?>;
           if (fields[0] == true) {
-            reply.complete(fields[1]);
+            reply.complete(_decodeFromIsolate(fields[1]));
             return;
           }
           reply.completeError(

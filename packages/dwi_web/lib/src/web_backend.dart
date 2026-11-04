@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:js_interop';
+import 'dart:typed_data';
 
 import 'package:dwi_core/dwi_core.dart';
 import 'package:dwi_protocol/dwi_protocol.dart';
@@ -122,17 +123,29 @@ class WebBackend implements DwiBackend {
       slot.pending[id] = completer;
 
       try {
+        final transferable = input is DwiTransferableBytes ? input : null;
         final envelope = DwiEnvelope(
           type: DwiMessageType.request,
           id: id,
           task: task,
-          payload: input,
+          payload: transferable?.buffer ?? input,
           meta: <String, Object?>{
             'workerId': 'w${slot.id}',
             'maxPayloadBytes': _config.maxPayloadBytes,
+            if (transferable != null) 'payloadKind': 'transferableBytes',
           },
         );
-        slot.worker.postMessage(envelope.toMap().jsify());
+        if (transferable != null) {
+          slot.worker.postMessage(
+            envelope.toMap().jsify(),
+            <JSObject>[transferable.buffer.toJS].toJS,
+          );
+          // Ownership leaves the caller only after the browser accepted the
+          // transfer; a DataCloneError above keeps it usable.
+          transferable.markSent();
+        } else {
+          slot.worker.postMessage(envelope.toMap().jsify());
+        }
       } catch (error) {
         // A synchronous postMessage failure (for example DataCloneError) must
         // not leave the slot busy forever.
@@ -152,12 +165,18 @@ class WebBackend implements DwiBackend {
           taskId: id,
         );
       }
+      Object? payload = response.payload;
+      if (response.meta['payloadKind'] == 'transferableBytes' &&
+          payload is ByteBuffer) {
+        // The worker transferred ownership; the caller receives the buffer.
+        payload = DwiTransferableBytes.fromBuffer(payload);
+      }
       validateDwiPayload(
-        response.payload,
+        payload,
         path: 'result',
         maxBytes: _config.maxPayloadBytes,
       );
-      handle.complete(response.payload);
+      handle.complete(payload);
     } on TimeoutException {
       final error = DwiTimeoutException(
         'task "$task" exceeded ${_config.taskTimeout.inMilliseconds} ms',
@@ -213,9 +232,9 @@ class WebBackend implements DwiBackend {
     return DwiCapabilities(
       backend: _closed ? DwiBackendKind.unsupported : DwiBackendKind.worker,
       protocolVersion: dwiProtocolVersion,
-      // v0.3 copies every payload. Transfer semantics arrive in a later
-      // version, so advertising them here would be a false claim.
-      transferables: false,
+      // Transfer semantics are implemented for arguments and results
+      // (`DwiTransferableBytes`), and covered by the Chrome lifecycle test.
+      transferables: true,
       workerCount: _slots.length,
       // Queued and running cancellation are implemented here; the value is
       // reported even when closed so the contract stays readable.

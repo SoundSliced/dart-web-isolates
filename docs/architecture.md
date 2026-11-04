@@ -405,8 +405,13 @@ path, so return values are transferred rather than copied.
    transfer and post-transfer failure. Native keeps `true`, because
    `TransferableTypedData` is a real transfer.
 
-**Implementation status.** Not implemented in v0.3.1; `transferables` is
-reported as `false` on web.
+**Implementation status.** Implemented in v0.4. `DwiTransferableBytes` is public
+and travels as the `ArrayBuffer` with a transfer list on web and
+`TransferableTypedData` on native, for both arguments and results.
+`DwiCapabilities.transferables` is `true` on both backends. Covered by
+`dwi_core` wrapper tests, `dwi_native` VM tests, a builder type test, and the
+Chrome lifecycle test (`echoBytes`, `makeBytes`, repeated send, post-detach
+read).
 
 ### 10.3 Heartbeats and crash detection
 
