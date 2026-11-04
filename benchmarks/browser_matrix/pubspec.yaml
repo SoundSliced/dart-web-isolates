@@ -1,0 +1,15 @@
+name: dwi_browser_matrix
+description: Reproducible browser stress and benchmark harness for DWI.
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  dwi:
+    path: ../../packages/dwi
+  dwi_annotations:
+    path: ../../packages/dwi_annotations
+  dwi_builder:
+    path: ../../packages/dwi_builder
+  path: ^1.9.1

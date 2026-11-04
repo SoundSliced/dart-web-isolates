@@ -99,6 +99,34 @@ limitation is not here or in `compatibility-matrix.md`, that is a bug.
     missing worker fails with a typed startup error. DWI never silently falls
     back to the main thread.
 
+## v0.4 limitations
+
+22. **Cancellation is termination, not cooperation.** A web task cannot observe
+    a cancel message while it runs synchronous code, so `cancel()` on a running
+    task terminates the worker and settles the call with
+    `DwiCancelledException`. There is no cancellation token and no partial
+    result. Native cancellation kills the isolate for the same reason.
+23. **Native detachment is bookkeeping.** `DwiTransferableBytes` moves bytes
+    with `TransferableTypedData`, which does not detach the sender's memory.
+    `isDetached` is a DWI flag there, so a second send is refused by DWI rather
+    than by the VM. On web the detach is real (`byteLength == 0`).
+24. **A transfer is one-way.** After a successful send the bytes belong to the
+    worker. A timeout, cancel or crash means they are gone; retrying needs a new
+    `DwiTransferableBytes`.
+25. **Heartbeats only cover idle workers.** A busy worker is never pinged,
+    because a synchronous task cannot answer until it returns. A worker that
+    hangs while busy is still bounded by `taskTimeout`, not by the heartbeat.
+26. **The heartbeat is a liveness probe, not a health check.** It detects a
+    worker that can no longer reply (closed, crashed without an `error` event).
+    It does not detect a worker that answers but computes wrongly.
+27. **v0.4 is measured in Chrome only.** Cancellation, transfer and heartbeat
+    behaviour in Safari, Firefox and Edge is **unverified**; Safari automation
+    needs "Allow remote automation", and Firefox/Edge were not installed on the
+    measurement machine (`docs/browser-matrix.md`).
+28. **No long-lived worker handles and no port-like messaging.** A worker is
+    owned by the pool; there is no `DwiWorker.spawn` handle and no `SendPort`
+    emulation.
+
 ## Research debt (unresolved, tracked)
 
 - Generated-registry tree shaking for every library shape (the tested shapes

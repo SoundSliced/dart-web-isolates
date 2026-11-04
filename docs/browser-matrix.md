@@ -57,6 +57,53 @@ Safari or Edge remains unverified (AGENTS.md rule 8).
 5. Chrome's behaviour says nothing about Firefox/Safari/Edge. Their cells remain
    open.
 
+## v0.4 runtime matrix (DWI API level)
+
+Measured 2026-11-04 with `benchmarks/browser_matrix` (committed harness, see its
+README for methodology). One page load = one run; medians are inside a run and
+the table reports median (min–max) over three runs. Dart 3.13.5, macOS arm64
+26.5.1, Apple M2, 8 GiB RAM.
+
+| Engine | Version | Status |
+| --- | --- | --- |
+| Chrome | 156.0.8078.80 (headless) | **measured**, 3/3 runs clean |
+| Safari | 26.5 | **unverified** — `safaridriver` answers `/status` but refuses a session: "You must enable 'Allow remote automation' in the Developer section of Safari Settings" |
+| Firefox | — | **unverified** — not installed |
+| Edge | — | **unverified** — not installed |
+
+Feature and performance cells for Chrome 156 only:
+
+| Measurement | Chrome 156 median (min–max) | Cell for Safari / Firefox / Edge |
+| --- | --- | --- |
+| Cold start (first call, worker spawn + ready) | 33 ms (26–35) | unverified |
+| Warm dispatch (round trip) | 0.2 ms (0.101–0.2) | unverified |
+| 64 KiB copy / transfer | 0.3 ms / 0.3 ms | unverified |
+| 1 MiB copy / transfer | 1.5 ms (1.199–1.599) / 1.0 ms (0.9–1.099) | unverified |
+| 8 MiB copy / transfer | 10.0 ms (9.3–10.1) / 6.399 ms (6.0–6.599) | unverified |
+| Queued cancellation | 0.1 ms (0.1–0.101) | unverified |
+| Running cancellation | 0.199 ms (0.101–0.2) | unverified |
+| 100 tasks through 4 workers | 66 ms (43–97), 100/100 settled, results correct | unverified |
+| Dead idle worker → next call | 11 ms (10–13) after heartbeat detection | unverified |
+| UI timer ticks during 300 ms worker CPU | 29 | unverified |
+| UI timer ticks during 300 ms main-thread CPU | 0 | unverified |
+
+What this establishes, for Chrome only:
+
+1. Worker round trips cost sub-millisecond time once warm; cold start is tens of
+   milliseconds, so pooling matters for bursty workloads.
+2. Transferring is never slower than copying and sells its cost at size: at
+   8 MiB it is ~36% faster on this machine, at 64 KiB the difference is noise.
+3. Cancellation is cheap on both paths because running cancellation terminates
+   the worker instead of waiting for it.
+4. A silently dead idle worker is replaced in ~11 ms, well below `taskTimeout`.
+5. Running CPU work in a worker keeps the page's event loop alive (29 ticks vs
+   0 for the same work on the main thread).
+
+Full data: `audit/evidence/browser-matrix-chrome-2026-11-04.json`.
+
+**These numbers are Chrome's.** They say nothing about Safari, Firefox or Edge
+(AGENTS.md rule 8), whose cells stay unverified until the harness is run there.
+
 ## Open items
 
 - Firefox headless profile creation (blocked in this sandbox; needs a normal

@@ -35,3 +35,8 @@ Thumbs.db
 **/lib/dwi_tasks.g.dart
 **/web/dwi/
 examples/automatic_worker/web/main.dart.js
+
+# Benchmark harness output (benchmarks/browser_matrix)
+benchmarks/browser_matrix/web/main.dart.js
+benchmarks/browser_matrix/web/main.dart.js.deps
+benchmarks/browser_matrix/web/main.dart.js.map

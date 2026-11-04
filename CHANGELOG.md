@@ -5,6 +5,47 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - unreleased
+
+Cancellation, transferable bytes and crash detection, under ADR-010. All
+additive: `Dwi.run` keeps its signature and semantics.
+
+### Added
+
+- `Dwi.runCancellable<R>(task, input)` returning `DwiCancellableTask<R>`
+  (`result`, `cancel()`, `isDone`). Queued cancellation removes the waiter;
+  running cancellation terminates the web worker or kills the native isolate.
+  `DwiCancelledException` is delivered through `result` only, and `cancel()`
+  never throws (ADR-010 §10.1).
+- `DwiTransferableBytes`: binary payloads move instead of copying, for arguments
+  and for values returned by the worker. Views that do not span their buffer are
+  copied to exact size at construction; a successful send detaches the sender
+  and a second send throws `DwiSerializationException` (ADR-010 §10.2).
+- Heartbeat-based crash detection: idle workers are pinged, a worker that misses
+  `DwiConfig.heartbeatMisses` consecutive pings is replaced lazily, and startup
+  retries stay bounded (ADR-010 §10.3).
+- `DwiConfig.heartbeatInterval` (5 s) and `DwiConfig.heartbeatMisses` (2).
+- `DwiCapabilities.cancellation` (`none`/`queued`/`running`) and
+  `transferables: true` on web.
+- `dwi_builder` accepts `DwiTransferableBytes` as a task parameter and result.
+- Committed browser harness `benchmarks/browser_matrix` with methodology, and
+  Chrome evidence in `audit/evidence/browser-matrix-chrome-2026-11-04.json`.
+
+### Changed
+
+- The native backend now keeps an `Isolate.spawn` handle per call so a task can
+  be cancelled and a timeout can kill the isolate instead of abandoning it.
+- Web capability reporting: `transferables` is `true` (it was `false` while the
+  copy-only path was the only one).
+
+### Fixed
+
+- `dart compile js` companion files (`<temp>.deps`, `<temp>.map`) no longer leak
+  next to the published worker or into `build/web`.
+- Worker artefacts and generated files are published atomically, and builds for
+  one project are serialized, so an overlapping CLI and Flutter hook build
+  cannot lose the last valid artefact or publish stale outputs.
+
 ## [0.3.1] - unreleased
 
 Correctness and lifecycle pass over the automatic-worker pipeline. No public

@@ -13,8 +13,10 @@ v0.3 unless marked proposed.** No cell claims parity.
 | `ReceivePort` | proposed | emulated (proposed) | routed over one transport with logical IDs | R003 §5 |
 | Message = arbitrary object graph | yes (same group copy) | **no** | structured clone loses prototypes and rejects functions | R001 §4, R003 §3 |
 | Shared immutable objects | yes (canonical) | no | every message is independent | R001 §2 |
-| `TransferableTypedData` | yes | `ArrayBuffer` transfer | source is detached after transfer | R001 §4, R003 §4 |
+| `TransferableTypedData` | yes (`TransferableTypedData`) | `ArrayBuffer` transfer via `DwiTransferableBytes` | source is detached after transfer (web); native detachment is a DWI flag | R001 §4, R003 §4, ADR-010 §10.2 |
 | `Isolate.kill` | yes | `Worker.terminate()` | abrupt; queued and in-flight work lost | R001 §5, R003 §6 |
+| Cancel a running task | `Isolate.kill` on a retained handle | `Worker.terminate()` | non-cooperative; no partial result | ADR-010 §10.1 |
+| Detect a dead idle worker | port error / explicit state | heartbeat envelope | heartbeat pings idle workers only | ADR-010 §10.3 |
 | Pause / resume / ping | yes | **no** | no browser equivalent | R003 §1 |
 | `onExit` / `onError` listeners | yes | envelope events | `error` events are coarse; promises rejections vanish | R003 §6 |
 | `RemoteError` + stack | yes | `DwiRemoteException` | stack captured by the worker, not the host | R001 §5 |
@@ -29,6 +31,7 @@ v0.3 unless marked proposed.** No cell claims parity.
 | DWI-0 | background worker, ad-hoc messaging | demonstrated by M001 |
 | DWI-1 | typed named tasks, correlated, typed errors, timeouts | shipped in v0.2 |
 | DWI-1.5 | annotation-driven worker generation, typed proxies, automatic compilation, typed payload codecs | shipped in v0.3.1 |
+| DWI-1.6 | cancellation, transferable bytes, heartbeat crash detection | shipped in v0.4 (Chrome-verified; other engines unverified) |
 | DWI-2 | long-lived workers, pooled scheduling | proposed |
 | DWI-3 | port-like messaging | proposed |
 | DWI-4 | high `dart:isolate` API similarity | research |
