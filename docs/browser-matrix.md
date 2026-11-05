@@ -109,12 +109,13 @@ Full data: `audit/evidence/browser-matrix-chrome-2026-11-04.json`.
 | App compiler | Worker | Result |
 | --- | --- | --- |
 | dart2js (`flutter build web --release`) | dart2js | **pass** — `DWI_RUN value=v1 backend=worker` |
-| dart2wasm (`flutter build web --wasm --release`) | dart2js | **fail** — `DwiProtocolException: message.v must be an int`; the worker is fetched and packaged, the wasm host cannot decode the envelope |
+| dart2wasm (`flutter build web --wasm --release`) | dart2js | **pass since 2026-11-05** — `DWI_RUN value=v1 backend=worker`; before the integral-double fix the app failed with `message.v must be an int` |
 
-The wasm row is a DWI limitation, not a Flutter or packaging failure: the build
-succeeds and the identical app on dart2js runs the task. Evidence:
-`audit/evidence/flutter-run-hot-restart-and-wasm-2026-11-05.txt`. Firefox,
-Safari and Edge were not measured for either compiler.
+The wasm row is measured on Flutter 3.47.6 stable / Chrome 156 only. The worker
+in both rows is a dart2js artefact; DWI has no wasm worker. Evidence:
+`audit/evidence/flutter-run-modes-and-wasm-fix-2026-11-05.txt` (fix and re-run)
+and `audit/evidence/flutter-run-hot-restart-and-wasm-2026-11-05.txt` (original
+failure). Firefox, Safari and Edge were not measured for either compiler.
 
 ## Open items
 

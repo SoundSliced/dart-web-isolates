@@ -24,6 +24,10 @@ Rules:
 
 - `v` is mandatory on every message. A receiver that sees an unknown major
   version replies with `error {code: "protocol", fatal: true}` and stops.
+- `v`, `id` and `error.taskId` may arrive as an integral `double`, for example
+  across a dart2wasm/dart2js boundary where `dartify()` surfaces a JS number as
+  `double`. Receivers coerce integral values and still reject fractional ones;
+  they never coerce a value to a different integer.
 - `id` is a monotonically increasing positive integer chosen by the host and
   echoed by the worker. `0` and `null` are reserved for worker-initiated
   messages (`ready`, `heartbeat`, `closed`).

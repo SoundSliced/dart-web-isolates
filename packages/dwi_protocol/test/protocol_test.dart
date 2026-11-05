@@ -91,5 +91,55 @@ void main() {
       final decoded = DwiEnvelope.fromMap(envelope.toMap());
       expect(decoded.meta['workerId'], 'w1');
     });
+
+    test('accepts an integral double for v and id (dart2wasm host)', () {
+      // A dart2wasm host receives JS numbers; `dartify()` can surface an
+      // integral value as double. Rejecting it broke the wasm/JS boundary
+      // entirely (limitations §29).
+      final decoded = DwiEnvelope.fromMap(<Object?, Object?>{
+        'v': dwiProtocolVersion.toDouble(),
+        'type': 'result',
+        'id': 7.0,
+      });
+
+      expect(decoded.version, dwiProtocolVersion);
+      expect(decoded.id, 7);
+    });
+
+    test('accepts an integral double for error.taskId', () {
+      final payload = DwiErrorPayload.fromMap(<Object?, Object?>{
+        'code': 'remote',
+        'message': 'boom',
+        'taskId': 3.0,
+      });
+
+      expect(payload.taskId, 3);
+    });
+
+    test('still rejects numbers that are not integral', () {
+      expect(
+        () => DwiEnvelope.fromMap(<Object?, Object?>{
+          'v': 1.5,
+          'type': 'ready',
+        }),
+        throwsA(isA<DwiProtocolException>()),
+      );
+      expect(
+        () => DwiEnvelope.fromMap(<Object?, Object?>{
+          'v': dwiProtocolVersion,
+          'type': 'result',
+          'id': 2.5,
+        }),
+        throwsA(isA<DwiProtocolException>()),
+      );
+      expect(
+        () => DwiErrorPayload.fromMap(<Object?, Object?>{
+          'code': 'remote',
+          'message': 'boom',
+          'taskId': 1.5,
+        }),
+        throwsA(isA<DwiProtocolException>()),
+      );
+    });
   });
 }

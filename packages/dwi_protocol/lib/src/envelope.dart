@@ -72,8 +72,9 @@ class DwiErrorPayload {
     if (message is! String) {
       throw const DwiProtocolException('error.message must be a string');
     }
-    final taskId = map['taskId'];
-    if (taskId != null && taskId is! int) {
+    final rawTaskId = map['taskId'];
+    final taskId = rawTaskId == null ? null : _asInt(rawTaskId);
+    if (rawTaskId != null && taskId == null) {
       throw const DwiProtocolException('error.taskId must be an int or null');
     }
     return DwiErrorPayload(
@@ -83,7 +84,7 @@ class DwiErrorPayload {
       remoteStack:
           map['remoteStack'] is String ? map['remoteStack']! as String : '',
       fatal: map['fatal'] == true,
-      taskId: taskId as int?,
+      taskId: taskId,
     );
   }
 }
@@ -123,8 +124,8 @@ class DwiEnvelope {
   ///
   /// Throws [DwiProtocolException] for malformed or unsupported messages.
   factory DwiEnvelope.fromMap(Map<Object?, Object?> map) {
-    final version = map['v'];
-    if (version is! int) {
+    final version = _asInt(map['v']);
+    if (version == null) {
       throw const DwiProtocolException('message.v must be an int');
     }
     if (version != dwiProtocolVersion) {
@@ -140,8 +141,9 @@ class DwiEnvelope {
     if (type == null) {
       throw DwiProtocolException('unknown message type "$typeName"');
     }
-    final id = map['id'];
-    if (id != null && (id is! int || id < 0)) {
+    final rawId = map['id'];
+    final id = rawId == null ? null : _asInt(rawId);
+    if (rawId != null && (id == null || id < 0)) {
       throw const DwiProtocolException('message.id must be a non-negative int');
     }
     final task = map['task'];
@@ -159,7 +161,7 @@ class DwiEnvelope {
     return DwiEnvelope(
       version: version,
       type: type,
-      id: id as int?,
+      id: id,
       task: task as String?,
       payload: map['payload'],
       error: rawError == null
@@ -183,4 +185,18 @@ class DwiProtocolException implements Exception {
 
   @override
   String toString() => 'DwiProtocolException: $message';
+}
+
+/// Reads a wire integer that may arrive as an integral `double`.
+///
+/// A dart2wasm host and a dart2js worker exchange JS numbers, and `dartify()`
+/// can surface an integral value as `double` on the wasm side. Rejecting that
+/// made the two compilers unable to talk at all (limitations §29). A
+/// non-integral number is still a protocol error.
+int? _asInt(Object? value) {
+  if (value is int) return value;
+  if (value is double && value.isFinite && value == value.truncateToDouble()) {
+    return value.toInt();
+  }
+  return null;
 }

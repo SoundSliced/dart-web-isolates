@@ -1,0 +1,77 @@
+DWI — flutter run modes, and the dart2wasm host fix (2026-11-05)
+
+Environment
+  macOS arm64 26.5.1, Apple M2, 8 GiB RAM
+  Flutter 3.47.6 stable, framework revision 5fc346839b5d0eef006ed8404392afb4dfae428d
+  Engine 692136cb6582dbfc5af3fb33c2515a069f2f66d0, Dart 3.13.5
+  Google Chrome 156.0.8078.80
+  Read-only Flutter cache, so the same writable shadow SDK root as earlier probes
+  was used; PUB_CACHE was a writable copy. `flutter run -d chrome` needed
+  CHROME_EXECUTABLE pointing at a wrapper that appends --no-sandbox (Flutter's
+  direct launch fails sandbox init here). No SDK file was modified.
+
+Fixture
+  flutter create --no-pub --platforms=web, path dependencies on dwi,
+  dwi_annotations and dwi_builder.
+  lib/tasks.dart: @DwiTask() String marker(int unused) => 'v1';   (later 'v2')
+  lib/main.dart: Dwi.run<String>('marker', 0), writes document.title and
+  beacons the result to a local collector on 127.0.0.1:8913, so the measurement
+  never needs a debugger attached to Flutter's Chrome.
+
+Probe A — flutter run -d web-server --web-port 8914
+  The app was loaded in a headless Chrome 156 launched by the probe itself
+  (`lib/main.dart is being served at http://localhost:8914`).
+
+  1. Initial load, 02:25:29.026: run value=v1 backend=worker base=/
+  2. tasks.dart changed 'v1' -> 'v2', then 'r':
+       "Performing hot reload...  2,602ms"
+       worker sha256 web/dwi/worker.dart.js: bbfb25e4e10e -> b2708f0eb3ea
+       After a 20 s quiet window the only report was still the v1 one.
+       => the hook rebuilt the worker; the running page kept the old worker.
+  3. 'R':
+       "Performing hot restart...  120ms"
+       New report 02:25:52.178: run value=v2 backend=worker base=/
+       => the restart reloaded the page and the app used the rebuilt worker.
+
+  Conclusion: identical semantics to `-d chrome` in debug mode (measured
+  earlier): hot reload rebuilds the artefact but not the live worker; hot
+  restart replaces it. `-d web-server` is therefore a usable development loop
+  for DWI as long as a restart follows a task change.
+
+Probe B — flutter run -d chrome --release --web-port 8915
+  Report received, 02:26:02.748: run value=v2 backend=worker base=/
+  => the release-mode debug loop serves the app and the worker runs there too.
+
+  Flutter still prints the "Flutter run key commands" block, including
+  "r Hot reload" and "R Hot restart". Pressing them in release mode:
+    'r' -> "Performing hot reload..."
+    'R' -> "Performing hot reload...  1,041ms"
+  No new beacon report followed either key, i.e. the page was not re-run.
+  => in release mode the keys are printed but hot reload/restart do not reload
+  the application; a worker change needs a manual page reload.
+
+Probe C — dart2wasm host after the protocol fix
+  DwiEnvelope.fromMap now reads `v`, `id` and `error.taskId` through a helper
+  that accepts an integral `double` and still rejects non-integral numbers;
+  `packages/dwi_protocol/test/protocol_test.dart` covers both directions.
+
+  Before the fix (2026-11-04, same fixture, Chrome 156):
+    flutter build web --wasm --release -> exit 0, worker packaged
+    page result: DWI_ERR minified:Class391: message.v must be an int
+  After the fix (2026-11-05):
+    flutter build web --wasm --release -> exit 0 in 7.6 s
+    build/web/main.dart.wasm (263,212 B), main.dart.mjs, dwi/worker.dart.js
+    (274,936 B) packaged
+    page result: DWI_RUN value=v1 backend=worker base=/
+    resources fetched: main.dart.mjs, main.dart.wasm, dwi/worker.dart.js
+    JS control (flutter build web --release, same source): DWI_RUN value=v1
+    backend=worker
+
+  Conclusion: a dart2wasm application can now host DWI. The worker is still a
+  dart2js artefact; no wasm worker exists. Measured only in Chrome 156 on
+  Flutter 3.47.6 stable; Firefox, Safari and Edge were not measured for either
+  compiler.
+
+Not probed
+  `flutter run` in profile mode; worker replacement without any page reload;
+  Safari, Firefox and Edge for any of the above.

@@ -40,6 +40,12 @@ additive: `Dwi.run` keeps its signature and semantics.
 
 ### Fixed
 
+- A **dart2wasm application can now host DWI**. `flutter build web --wasm`
+  packaged the worker correctly, but the app failed at the first envelope with
+  `message.v must be an int` because an integral JS number can arrive as
+  `double` across the wasm/JS boundary. `DwiEnvelope.fromMap` now coerces
+  integral doubles for `v`, `id` and `error.taskId` and still rejects
+  fractional numbers; measured in Chrome 156 on Flutter 3.47.6 stable.
 - `dart compile js` companion files (`<temp>.deps`, `<temp>.map`) no longer leak
   next to the published worker or into `build/web`.
 - Worker artefacts and generated files are published atomically, and builds for
@@ -48,14 +54,11 @@ additive: `Dwi.run` keeps its signature and semantics.
 
 ### Known limitations measured in this release
 
-- A **dart2wasm application cannot host DWI**: `flutter build web --wasm`
-  succeeds and packages the dart2js worker, but the app fails at the first
-  envelope with `message.v must be an int`. The same app built without `--wasm`
-  works. See `docs/limitations.md` §29.
 - **Flutter hot reload does not replace a running worker**: it rebuilds the
   artefact on disk, but the page keeps its existing `Worker`. Hot restart
-  reloads the page and picks the new worker up. Measured on Flutter 3.47.6
-  stable; see `docs/limitations.md` §16.
+  reloads the page and picks the new worker up, and in release mode neither key
+  reloads the page at all. Measured on Flutter 3.47.6 stable with `-d chrome`
+  and `-d web-server`; see `docs/limitations.md` §16.
 
 ## [0.3.1] - unreleased
 
