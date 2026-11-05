@@ -44,6 +44,25 @@ Safari or Edge remains unverified (AGENTS.md rule 8).
 | `SharedArrayBuffer` | unavailable | `typeof SharedArrayBuffer === 'undefined'` under non-isolated context |
 | CPU baseline in worker | 20.8 ms | sieve to 2,000,000 → 148,933 primes |
 
+## v0.5 handle matrix (DWI API level)
+
+Harness: `packages/dwi_builder/test/browser_handle_test.dart` (committed). It
+drives the public `DwiWorker` API against a generated worker artefact in one page
+load, including state retention, handle isolation, close during queued/running
+work, timeout, running and queued cancellation, transferables, startup failure,
+idle crash detected by heartbeat, crash with a call pending, a malformed
+non-object message, restart with fresh state, and repeated spawn/close.
+
+| Engine | Version | Status |
+| --- | --- | --- |
+| Chrome | 156.0.8078.80 (headless, CDP) | **pass**, 2026-11-05 |
+| Safari | 26.5 | **unverified for handles** — the handle harness is CDP-driven; no Safari/WebDriver driver was written for it |
+| Firefox | — | **unverified** — not installed |
+| Edge | — | **unverified** — not installed |
+
+No Chrome result is copied into another engine's cell. The v0.4 runtime matrix
+above is separate evidence and does not cover the handle lifecycle.
+
 ## What this establishes
 
 1. A dedicated worker can start in ~60 ms on this machine and is worth pooling
