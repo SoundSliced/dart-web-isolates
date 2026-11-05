@@ -385,7 +385,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
     }
     // Any inbound message proves the worker is alive.
     _missedHeartbeats = 0;
-    final data = (event.data as JSObject?)?.dartify();
+    final data = event.data?.dartify();
     if (data is! Map) {
       _fail(
         const DwiWorkerFailedException(
