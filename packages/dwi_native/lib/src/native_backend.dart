@@ -4,6 +4,8 @@ import 'dart:typed_data';
 
 import 'package:dwi_core/dwi_core.dart';
 
+import 'native_worker_handle.dart';
+
 /// One running task: the caller-side state needed to cancel it.
 class _NativeState {
   _NativeState(this.task);
@@ -75,6 +77,7 @@ class NativeBackend implements DwiBackend {
 
   final DwiTaskRegistry registry;
   DwiConfig _config = const DwiConfig();
+  final Set<NativeWorkerHandle> _handles = <NativeWorkerHandle>{};
   bool _closed = false;
 
   @override
@@ -213,13 +216,31 @@ class NativeBackend implements DwiBackend {
 
   @override
   Future<DwiWorkerHandle> spawnHandle() async {
-    throw const DwiUnsupportedException(
-      'dedicated handles are not implemented yet',
+    if (_closed) {
+      throw const DwiUnsupportedException('backend is closed');
+    }
+    late final NativeWorkerHandle handle;
+    handle = await NativeWorkerHandle.spawn(
+      registry,
+      _config,
+      onClosed: () => _handles.remove(handle),
     );
+    if (_closed) {
+      await handle.close();
+      throw const DwiUnsupportedException('backend is closed');
+    }
+    _handles.add(handle);
+    return handle;
   }
 
   @override
   Future<void> close() async {
     _closed = true;
+    // Dedicated handles are owned by this backend (ADR-013 decision 9).
+    final handles = List<NativeWorkerHandle>.of(_handles);
+    _handles.clear();
+    for (final handle in handles) {
+      await handle.close();
+    }
   }
 }
