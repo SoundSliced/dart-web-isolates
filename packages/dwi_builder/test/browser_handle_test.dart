@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dwi_builder/dwi_builder.dart';
@@ -112,6 +113,7 @@ String _classify(Object error) {
   if (error is DwiTimeoutException) return 'DwiTimeoutException';
   if (error is DwiStartupException) return 'DwiStartupException';
   if (error is DwiUnknownTaskException) return 'DwiUnknownTaskException';
+  if (error is DwiUnsupportedException) return 'DwiUnsupportedException';
   if (error is DwiSerializationException) return 'DwiSerializationException';
   if (error is DwiCancelledException) return 'DwiCancelledException';
   if (error is DwiRemoteException) return 'DwiRemoteException';
@@ -307,14 +309,53 @@ Future<void> main() async {
     result['iState'] = i.state.name;
     await i.close();
 
-    // J: repeated spawn/close cycles all start with fresh state.
+    // J: repeated spawn/close cycles, with pool calls interleaved, all start
+    // from fresh state.
     final stress = <int>[];
-    for (var k = 0; k < 5; k++) {
+    final poolStress = <String>[];
+    for (var k = 0; k < 10; k++) {
       final handle = await DwiWorker.spawn();
       stress.add(await handle.run<int>('count', 0));
+      if (k % 3 == 0) {
+        poolStress.add(await _outcome(Dwi.run<Object?>('echo', 'pool-$k')));
+      }
       await handle.close();
     }
     result['jStress'] = stress;
+    result['jPoolStress'] = poolStress;
+
+    // K: the handle queue is bounded and a queued call has its own deadline.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        taskTimeout: Duration(seconds: 5),
+        queueTimeout: Duration(milliseconds: 150),
+        maxQueuedTasks: 1,
+      ),
+    );
+    final k = await DwiWorker.spawn();
+    final kRunning = k.run<String>('slow', 400);
+    final kQueued = k.run<int>('count', 0);
+    result['kQueueFull'] = await _outcome(k.run<int>('count', 0));
+    result['kQueued'] = await _outcome(kQueued);
+    result['kState'] = k.state.name;
+    result['kRunning'] = await _outcome(kRunning);
+    await k.close();
+
+    // L: Dwi.close() closes a live handle before releasing the pool.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        taskTimeout: Duration(seconds: 5),
+      ),
+    );
+    final l = await DwiWorker.spawn();
+    result['lBefore'] = await _outcome(l.run<int>('count', 0));
+    await Dwi.close();
+    result['lState'] = l.state.name;
+    result['lAfter'] = await _outcome(l.run<int>('count', 0));
 
     result['ok'] = true;
   } catch (error, stack) {
@@ -336,119 +377,260 @@ const String handleIndex = '''
 
 void main() {
   late FixtureProject project;
+  late HttpServer server;
+  late String url;
 
-  setUp(() => project = FixtureProject.create());
-  tearDown(() => project.dispose());
+  setUpAll(() async {
+    project = FixtureProject.create();
+    project.write('lib/tasks.dart', handleTasks);
+    project.write('web/main.dart', handleMain);
+    project.write('web/index.html', handleIndex);
 
-  test(
-    'dedicated worker handles retain state and settle every failure in Chrome',
-    () async {
-      project.write('lib/tasks.dart', handleTasks);
-      project.write('web/main.dart', handleMain);
-      project.write('web/index.html', handleIndex);
+    await DwiBuilder(project.config(compile: true)).build();
 
-      await DwiBuilder(project.config(compile: true)).build();
+    final compiled = await Process.run(
+      Platform.resolvedExecutable,
+      <String>[
+        'compile',
+        'js',
+        '-O1',
+        '-o',
+        'web/main.dart.js',
+        'web/main.dart',
+      ],
+      workingDirectory: project.root.path,
+      environment: <String, String>{
+        'PUB_CACHE': Platform.environment['PUB_CACHE'] ?? '',
+      },
+    );
+    expect(
+      compiled.exitCode,
+      0,
+      reason: '${compiled.stdout}\n${compiled.stderr}',
+    );
 
-      final compiled = await Process.run(
-        Platform.resolvedExecutable,
-        <String>[
-          'compile',
-          'js',
-          '-O1',
-          '-o',
-          'web/main.dart.js',
-          'web/main.dart',
-        ],
-        workingDirectory: project.root.path,
-        environment: <String, String>{
-          'PUB_CACHE': Platform.environment['PUB_CACHE'] ?? '',
-        },
-      );
-      expect(
-        compiled.exitCode,
-        0,
-        reason: '${compiled.stdout}\n${compiled.stderr}',
-      );
+    server = await serveDirectory(p.join(project.root.path, 'web'));
+    url = 'http://127.0.0.1:${server.port}/index.html';
+  });
 
-      final server = await serveDirectory(p.join(project.root.path, 'web'));
-      try {
-        final decoded = await probeChrome(
-          'http://127.0.0.1:${server.port}/index.html',
+  tearDownAll(() async {
+    await server.close(force: true);
+    project.dispose();
+  });
+
+  for (final engine in BrowserEngine.values) {
+    test(
+      'handle lifecycle contract in ${engine.name}',
+      () async {
+        final availability = browserAvailability(engine);
+        if (!availability.available) {
+          await _recordBlocked(engine, availability.reason!);
+          markTestSkipped(availability.reason!);
+          return;
+        }
+
+        final runs = <Map<String, Object?>>[];
+        var browserVersion = 'unknown';
+        var failures = 0;
+
+        for (var run = 1; run <= 3; run++) {
+          Map<String, dynamic>? decoded;
+          Object? lastError;
+          // Retry a transport-level failure once before classifying it.
+          for (var attempt = 1; attempt <= 2 && decoded == null; attempt++) {
+            try {
+              final result = await probeBrowser(engine, url);
+              browserVersion = result.browserVersion;
+              decoded = result.data;
+            } on BrowserBlockedException catch (error) {
+              await _recordBlocked(engine, error.reason);
+              markTestSkipped(error.reason);
+              return;
+            } catch (error) {
+              lastError = error;
+            }
+          }
+
+          if (decoded == null) {
+            failures++;
+            runs.add(<String, Object?>{
+              'run': run,
+              'status': 'error',
+              'error': '$lastError',
+            });
+            continue;
+          }
+
+          final problems = <String>[];
+          try {
+            _expectContract(decoded);
+          } catch (error) {
+            problems.add('$error');
+          }
+          if (problems.isEmpty) {
+            runs.add(<String, Object?>{'run': run, 'status': 'pass'});
+          } else {
+            failures++;
+            runs.add(<String, Object?>{
+              'run': run,
+              'status': 'fail',
+              'details': problems.join('\n'),
+            });
+          }
+        }
+
+        await _recordRun(
+          engine,
+          browserVersion: browserVersion,
+          runs: runs,
         );
         expect(
-          decoded['ok'],
-          isTrue,
-          reason: '${decoded['error']}\n${decoded['stack']}',
+          failures,
+          0,
+          reason: '$failures of ${runs.length} runs failed in ${engine.name}: '
+              '$runs',
         );
+      },
+      timeout: const Timeout(Duration(minutes: 6)),
+    );
+  }
+}
 
-        // A: identity, retained state, isolated handles, healthy errors.
-        expect(decoded['aPoolBefore'], 'OK:pool');
-        expect(decoded['aState'], 'ready');
-        expect(decoded['aUsable'], isTrue);
-        expect(decoded['aCount'], <int>[1, 2, 3]);
-        expect(decoded['aOtherCount'], 1);
-        expect(decoded['aCountAfterOther'], 4);
-        expect(decoded['aPoolDuring'], 'OK:during');
-        expect(decoded['aUnknown'], 'DwiUnknownTaskException');
-        expect(decoded['aAfterUnknown'], 'ready');
-        expect(decoded['aRemote'], 'DwiRemoteException');
-        expect(decoded['aClosed'], 'closed');
-        expect(decoded['aAfterClose'], 'DwiWorkerClosedException');
-        expect(decoded['aRepeatedClose'], 'closed');
-        expect(decoded['aPoolAfter'], 'OK:after');
+/// The assertions every engine must satisfy, unchanged across engines.
+void _expectContract(Map<String, dynamic> decoded) {
+  expect(
+    decoded['ok'],
+    isTrue,
+    reason: '${decoded['error']}\n${decoded['stack']}',
+  );
 
-        // B: close settles running and queued callers promptly.
-        expect(decoded['bRunningBefore'], 'ready');
-        expect(decoded['bRunning'], 'DwiWorkerClosedException');
-        expect(decoded['bQueued'], 'DwiWorkerClosedException');
-        expect(decoded['bState'], 'closed');
-        expect(decoded['bMs'], lessThan(2000));
+  // A: identity, retained state, isolated handles, healthy errors.
+  expect(decoded['aPoolBefore'], 'OK:pool');
+  expect(decoded['aState'], 'ready');
+  expect(decoded['aUsable'], isTrue);
+  expect(decoded['aCount'], <int>[1, 2, 3]);
+  expect(decoded['aOtherCount'], 1);
+  expect(decoded['aCountAfterOther'], 4);
+  expect(decoded['aPoolDuring'], 'OK:during');
+  expect(decoded['aUnknown'], 'DwiUnknownTaskException');
+  expect(decoded['aAfterUnknown'], 'ready');
+  expect(decoded['aRemote'], 'DwiRemoteException');
+  expect(decoded['aClosed'], 'closed');
+  expect(decoded['aAfterClose'], 'DwiWorkerClosedException');
+  expect(decoded['aRepeatedClose'], 'closed');
+  expect(decoded['aPoolAfter'], 'OK:after');
 
-        // C: timeout fails the handle, the queue settles, restart is fresh.
-        expect(decoded['cRunning'], 'DwiTimeoutException');
-        expect(decoded['cQueued'], 'DwiWorkerFailedException');
-        expect(decoded['cState'], 'failed');
-        expect(decoded['cAfterFail'], 'DwiWorkerFailedException');
-        expect(decoded['cRestartState'], 'ready');
-        expect(decoded['cFresh'], 1);
+  // B: close settles running and queued callers promptly.
+  expect(decoded['bRunningBefore'], 'ready');
+  expect(decoded['bRunning'], 'DwiWorkerClosedException');
+  expect(decoded['bQueued'], 'DwiWorkerClosedException');
+  expect(decoded['bState'], 'closed');
+  expect(decoded['bMs'], lessThan(2000));
 
-        // D: cancellation semantics.
-        expect(decoded['dQueuedCancel'], isTrue);
-        expect(decoded['dQueuedResult'], 'DwiCancelledException');
-        expect(decoded['dStateAfterQueued'], 'ready');
-        expect(decoded['dRunningValue'], 'OK:slow');
-        expect(decoded['dRunningCancel'], isTrue);
-        expect(decoded['dRunningResult'], 'DwiCancelledException');
-        expect(decoded['dStateAfterRunning'], 'failed');
-        expect(decoded['dRepeatedCancel'], isFalse);
-        expect(decoded['dFresh'], 1);
+  // C: timeout fails the handle, the queue settles, restart is fresh.
+  expect(decoded['cRunning'], 'DwiTimeoutException');
+  expect(decoded['cQueued'], 'DwiWorkerFailedException');
+  expect(decoded['cState'], 'failed');
+  expect(decoded['cAfterFail'], 'DwiWorkerFailedException');
+  expect(decoded['cRestartState'], 'ready');
+  expect(decoded['cFresh'], 1);
 
-        // E: transferables stay one-way and detach the sender.
-        expect(decoded['eLength'], 3);
-        expect(decoded['eDetached'], isTrue);
-        expect(decoded['eFirst'], 1);
-        expect(decoded['eMade'], 4);
+  // D: cancellation semantics.
+  expect(decoded['dQueuedCancel'], isTrue);
+  expect(decoded['dQueuedResult'], 'DwiCancelledException');
+  expect(decoded['dStateAfterQueued'], 'ready');
+  expect(decoded['dRunningValue'], 'OK:slow');
+  expect(decoded['dRunningCancel'], isTrue);
+  expect(decoded['dRunningResult'], 'DwiCancelledException');
+  expect(decoded['dStateAfterRunning'], 'failed');
+  expect(decoded['dRepeatedCancel'], isFalse);
+  expect(decoded['dFresh'], 1);
 
-        // F/H/I: every failure is typed and settles.
-        expect(decoded['fStartup'], 'DwiStartupException');
-        expect(decoded['hPending'], 'DwiTimeoutException');
-        expect(decoded['hState'], 'failed');
-        expect(decoded['iMalformed'], 'DwiWorkerFailedException');
-        expect(decoded['iState'], 'failed');
+  // E: transferables stay one-way and detach the sender.
+  expect(decoded['eLength'], 3);
+  expect(decoded['eDetached'], isTrue);
+  expect(decoded['eFirst'], 1);
+  expect(decoded['eMade'], 4);
 
-        // G: heartbeat detects a silently dead idle worker.
-        expect(decoded['gFirst'], 'OK:alive');
-        expect(decoded['gState'], 'failed');
-        expect(decoded['gRun'], 'DwiWorkerFailedException');
-        expect(decoded['gFresh'], 1);
+  // F/H/I: every failure is typed and settles.
+  expect(decoded['fStartup'], 'DwiStartupException');
+  expect(decoded['hPending'], 'DwiTimeoutException');
+  expect(decoded['hState'], 'failed');
+  expect(decoded['iMalformed'], 'DwiWorkerFailedException');
+  expect(decoded['iState'], 'failed');
 
-        // J: repeated spawn/close always starts from fresh state.
-        expect(decoded['jStress'], <int>[1, 1, 1, 1, 1]);
-      } finally {
-        await server.close(force: true);
-      }
+  // G: heartbeat detects a silently dead idle worker.
+  expect(decoded['gFirst'], 'OK:alive');
+  expect(decoded['gState'], 'failed');
+  expect(decoded['gRun'], 'DwiWorkerFailedException');
+  expect(decoded['gFresh'], 1);
+
+  // J: repeated spawn/close always starts from fresh state, and the pool keeps
+  // working alongside dedicated handles.
+  expect(decoded['jStress'], <int>[1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
+  expect(decoded['jPoolStress'], <String>['OK:pool-0', 'OK:pool-3', 'OK:pool-6', 'OK:pool-9']);
+
+  // K: bounded queue and caller-local queue deadline.
+  expect(decoded['kQueueFull'], 'DwiUnsupportedException');
+  expect(decoded['kQueued'], 'DwiTimeoutException');
+  expect(decoded['kState'], 'ready');
+  expect(decoded['kRunning'], 'OK:slow');
+
+  // L: Dwi.close() owns live handles.
+  expect(decoded['lBefore'], 'OK:1');
+  expect(decoded['lState'], 'closed');
+  expect(decoded['lAfter'], 'DwiWorkerClosedException');
+}
+
+/// Records one blocked engine with its exact reason (AGENTS.md rule 8).
+Future<void> _recordBlocked(BrowserEngine engine, String reason) async {
+  await _writeEvidence(engine, <String, Object?>{
+    'engine': engine.name,
+    'status': 'blocked',
+    'reason': reason,
+  });
+}
+
+/// Records the per-run outcome for [engine] when evidence is requested.
+Future<void> _recordRun(
+  BrowserEngine engine, {
+  required String browserVersion,
+  required List<Map<String, Object?>> runs,
+}) async {
+  final passed = runs.where((run) => run['status'] == 'pass').length;
+  await _writeEvidence(engine, <String, Object?>{
+    'engine': engine.name,
+    'status': passed == runs.length ? 'pass' : 'fail',
+    'browserVersion': browserVersion,
+    'harness': 'packages/dwi_builder/test/browser_handle_test.dart',
+    'command':
+        'dart test test/browser_handle_test.dart --plain-name '
+            '"handle lifecycle contract in ${engine.name}"',
+    'environment': <String, Object?>{
+      'os': Platform.operatingSystemVersion,
+      'dartVersion': Platform.version,
+      'cpuCount': Platform.numberOfProcessors,
     },
-    skip: chromeExecutable() == null ? 'Google Chrome is not installed.' : false,
-    timeout: const Timeout(Duration(minutes: 3)),
+    'runs': runs,
+    'passed': passed,
+    'failed': runs.length - passed,
+  });
+}
+
+Future<void> _writeEvidence(
+  BrowserEngine engine,
+  Map<String, Object?> report,
+) async {
+  final directory = Platform.environment['DWI_EVIDENCE_DIR'];
+  if (directory == null || directory.isEmpty) return;
+  final now = DateTime.now().toUtc();
+  String two(int value) => value.toString().padLeft(2, '0');
+  final stamp = '${now.year}${two(now.month)}${two(now.day)}';
+  final file = File(
+    p.join(directory, 'handle-matrix-${engine.name}-$stamp.json'),
+  );
+  file.parent.createSync(recursive: true);
+  file.writeAsStringSync(
+    '${const JsonEncoder.withIndent('  ').convert(report)}\n',
   );
 }
