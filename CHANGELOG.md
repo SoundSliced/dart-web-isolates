@@ -24,8 +24,11 @@ signature, pool behaviour and semantics.
   `DwiWorkerFailedException`, `DwiWorkerStateException`.
 - `DwiBackend.spawnHandle()` for backends; backends track live handles so
   `Dwi.close()` releases them.
-- Contract tests across native, the `dwi` facade and Chrome, including timeout,
-  crash, malformed message, heartbeat, cancellation and restart settlement.
+- Contract tests across native, the `dwi` facade, and Chrome, Safari and Firefox
+  (three page loads per engine from one shared assertion list), including
+  timeout, crash, malformed message, heartbeat, cancellation, queue bounds and
+  queue deadline, and restart settlement. Edge has no result: it could not be
+  installed on the measurement machine (`docs/browser-matrix.md`).
 - `examples/stateful_worker/` and a committed native benchmark comparing handles
   with `Dwi.run` for retained-state work (`benchmarks/native_handle/`).
 

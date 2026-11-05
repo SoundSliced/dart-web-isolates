@@ -30,8 +30,10 @@ runs identical CPU work on the main thread and in a worker, measured in Chrome
 | Web Worker | 680–734 ms wall | 41–44 | 0 |
 
 Same result (348,513 primes) both ways; worker errors return a typed envelope.
-**Verdict: PASS WITH LIMITATIONS** — Chrome measured; Firefox, Safari and Edge
-not verified (see [`docs/browser-matrix.md`](docs/browser-matrix.md)).
+**Verdict: PASS WITH LIMITATIONS** — M001 is Chrome-only; Firefox, Safari and
+Edge were not measured for that experiment. The v0.5 handle matrix is measured
+separately in Chrome, Safari and Firefox (Edge blocked), and the capability
+probe remains Chrome-only: see [`docs/browser-matrix.md`](docs/browser-matrix.md).
 
 ## Packages
 
@@ -42,7 +44,7 @@ not verified (see [`docs/browser-matrix.md`](docs/browser-matrix.md)).
 | `dwi_builder` | Analyzer discovery, worker/proxy/manifest generation, compile CLI, cache | implemented, 21 tests |
 | `dwi_core` | Config, capabilities, task registry, exceptions, backend and handle interfaces | implemented, 10 tests |
 | `dwi_protocol` | Protocol v1 envelopes, error payloads, validation | implemented, 8 tests |
-| `dwi_native` | Isolate backend plus dedicated persistent-isolate handles | implemented, 34 tests |
+| `dwi_native` | Isolate backend plus dedicated persistent-isolate handles | implemented, 38 tests |
 | `dwi_web` | Pooled Web Worker backend, dedicated-handle backend, generated-worker runtime | implemented, 8 tests, browser-tested |
 
 ## Zero-boilerplate workers (v0.3)

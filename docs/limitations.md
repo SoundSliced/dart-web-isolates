@@ -88,8 +88,11 @@ limitation is not here or in `compatibility-matrix.md`, that is a bug.
     `ready` handshake. `close()` settles queued and in-flight work immediately
     and is idempotent. A worker whose startup fails repeatedly stops being
     respawned after three consecutive failures.
-18. **Only Chrome has been measured.** Firefox, Safari and Edge are unverified
-    (M001_FINDINGS, docs/browser-matrix.md).
+18. **Browser coverage differs by harness.** The capability probe and the
+    compiler matrix are Chrome-only; the v0.4 runtime benchmark covers Chrome and
+    Safari; the v0.5 handle matrix covers Chrome, Safari and Firefox. Edge has no
+    measured result (it could not be installed here). `docs/browser-matrix.md`
+    records which engine each cell came from.
 19. **No Flutter `compute()` integration.** Changing Flutter's web `compute()`
     is an upstream proposal, not a package feature.
 
@@ -124,10 +127,10 @@ limitation is not here or in `compatibility-matrix.md`, that is a bug.
 26. **The heartbeat is a liveness probe, not a health check.** It detects a
     worker that can no longer reply (closed, crashed without an `error` event).
     It does not detect a worker that answers but computes wrongly.
-27. **v0.4 is measured in Chrome only.** Cancellation, transfer and heartbeat
-    behaviour in Safari, Firefox and Edge is **unverified**; Safari automation
-    needs "Allow remote automation", and Firefox/Edge were not installed on the
-    measurement machine (`docs/browser-matrix.md`).
+27. **v0.4 is measured in Chrome and Safari.** Cancellation, transfer and
+    heartbeat behaviour in Firefox and Edge is **unverified** for this level;
+    Safari automation needs "Allow remote automation", and Edge could not be
+    installed on the measurement machine (`docs/browser-matrix.md`).
 ## v0.5 limitations (dedicated handles)
 
 28. **One handle runs one task at a time.** Extra calls queue in FIFO order up to
@@ -152,9 +155,10 @@ limitation is not here or in `compatibility-matrix.md`, that is a bug.
     a snapshot of the `DwiTaskRegistry`; tasks registered or config changed after
     `spawn()` are not visible to that handle. Create a new handle to pick them
     up.
-34. **Dedicated handles are Chrome-verified only on web.** Native tests run on
-    the Dart VM; Firefox, Safari and Edge handle behaviour is **unverified**
-    (`docs/browser-matrix.md`).
+34. **Dedicated handles are verified on web in Chrome, Safari and Firefox.**
+    Each engine passes the same handle contract on three page loads; Edge
+    remains unverified because it could not be installed on the measurement
+    machine (`docs/browser-matrix.md`).
 35. **Handle memory is reported coarsely.** Only process RSS is observable in
     the benchmark, with ~16 KiB granularity; no per-handle memory figure is
     claimed (`docs/benchmarks.md`).

@@ -2,29 +2,30 @@
 
 Measured results for the browser capabilities DWI depends on. Every cell is a
 measurement or an explicit `unverified`/`blocked`; nothing is inferred from
-another engine.
+another engine (AGENTS.md rule 8).
+
+Four harnesses exist and they measure different things. A result from one
+harness never fills a cell in another, and a result from one engine never fills
+another engine's cell.
+
+| Harness | What it measures | Engines with a measured result | Last run |
+| --- | --- | --- | --- |
+| Browser capability probe (static page, `.research/browser_matrix/`, gitignored) | raw browser features: worker startup, structured clone, transfer, module workers, dart2wasm-in-worker, SAB | Chrome 156 | 2026-11-03 |
+| v0.4 runtime benchmark (`benchmarks/browser_matrix`, committed) | `Dwi.run` pool timings: cold start, dispatch, copy vs transfer, cancellation, sustained load, dead-worker recovery, UI responsiveness | Chrome 156, Safari 26.5 | 2026-11-04 / 2026-11-05 |
+| v0.5 handle lifecycle matrix (`packages/dwi_builder/test/browser_handle_test.dart`, committed) | the public `DwiWorker` handle contract at the DWI API level | Chrome 156, Safari 26.5, Firefox 159.0, Edge 156.0.4314.58 | 2026-11-05 |
+| Compiler matrix (Flutter application host) | a Flutter web app calling `Dwi.run` with a dart2js worker, built with dart2js and with dart2wasm | Chrome 156 | 2026-11-05 |
+
+## 1. Browser capability probe — Chrome 156 only (2026-11-03)
+
+**Scope of this section: Chrome 156 headless.** This probe has not been run in
+Safari, Firefox or Edge, so those cells do not exist for it. The later sections
+report different harnesses and do not extend this one.
 
 Method: static harness served from `http://127.0.0.1:8765`
-(`.research/browser_matrix/`, gitignored), results POSTed by the page and stored
+(`.research/browser_matrix/`, gitignored); results POSTed by the page and stored
 per user-agent. Harness source: `index.html`, `harness.js`, `worker.js`,
 `module_worker.mjs`, plus a trivial dart2wasm module (`hello.wasm` + `hello.mjs`,
-compiled with Dart 3.13.5).
-
-Last run: 2026-11-03, macOS arm64.
-
-## Environment status
-
-| Browser | Version | Status | Note |
-| --- | --- | --- | --- |
-| Chrome | 156.0.0.0 (headless) | **measured** | requires `--no-sandbox` in this sandbox; GPU disabled |
-| Firefox | 159.0 | **blocked** | binary runs (`--version`), but page load fails with `Could not find profile folder`; no usable profile could be created in the sandbox |
-| Safari | 26.5 | **not run** | `safaridriver` present; Safari automation is not enabled in this environment |
-| Edge | — | **not installed** | `brew install --cask` blocked: Homebrew Cellar/locks are not writable; downloading the Edge `.pkg` requires an installer with admin rights |
-
-Consequence: the matrix is **Chrome-only evidence**. Any claim about Firefox,
-Safari or Edge remains unverified (AGENTS.md rule 8).
-
-## Measurements — Chrome 156 headless
+compiled with Dart 3.13.5). macOS arm64.
 
 | Capability | Result | Detail |
 | --- | --- | --- |
@@ -44,39 +45,21 @@ Safari or Edge remains unverified (AGENTS.md rule 8).
 | `SharedArrayBuffer` | unavailable | `typeof SharedArrayBuffer === 'undefined'` under non-isolated context |
 | CPU baseline in worker | 20.8 ms | sieve to 2,000,000 → 148,933 primes |
 
-## v0.5 handle matrix (DWI API level)
-
-Harness: `packages/dwi_builder/test/browser_handle_test.dart` (committed). It
-drives the public `DwiWorker` API against a generated worker artefact in one page
-load, including state retention, handle isolation, close during queued/running
-work, timeout, running and queued cancellation, transferables, startup failure,
-idle crash detected by heartbeat, crash with a call pending, a malformed
-non-object message, restart with fresh state, and repeated spawn/close.
-
-| Engine | Version | Status |
-| --- | --- | --- |
-| Chrome | 156.0.8078.80 (headless, CDP) | **pass**, 2026-11-05 |
-| Safari | 26.5 | **unverified for handles** — the handle harness is CDP-driven; no Safari/WebDriver driver was written for it |
-| Firefox | — | **unverified** — not installed |
-| Edge | — | **unverified** — not installed |
-
-No Chrome result is copied into another engine's cell. The v0.4 runtime matrix
-above is separate evidence and does not cover the handle lifecycle.
-
-## What this establishes
+What this establishes (Chrome only):
 
 1. A dedicated worker can start in ~60 ms on this machine and is worth pooling
-   for repeated tasks (compare: task dispatch afterwards).
+   for repeated tasks.
 2. The core transfer path works: typed data can move without a copy and the
    sender loses ownership.
 3. Module workers plus dart2wasm output instantiate successfully in a worker,
    including the `js-string` builtins the compiler requires.
 4. `SharedArrayBuffer` is unavailable without cross-origin isolation, exactly as
    the spec requires; the JS backend must not depend on it.
-5. Chrome's behaviour says nothing about Firefox/Safari/Edge. Their cells remain
-   open.
 
-## v0.4 runtime matrix (DWI API level)
+## 2. v0.4 runtime benchmark — Chrome 156 and Safari 26.5
+
+**Scope of this section: the `Dwi.run` pool in Chrome 156 and Safari 26.5.**
+Firefox and Edge have no cell in this harness.
 
 Measured with `benchmarks/browser_matrix` (committed harness, see its README for
 methodology). One page load = one run; medians are inside a run and each cell is
@@ -88,8 +71,8 @@ the median (min–max) over three runs. Dart 3.13.5, macOS arm64 26.5.1, Apple M
 | --- | --- | --- |
 | Chrome | 156.0.8078.80 (headless) | **measured**, 3/3 runs clean |
 | Safari | 26.5 (safaridriver) | **measured**, 3/3 runs clean |
-| Firefox | — | **unverified** — not installed |
-| Edge | — | **unverified** — not installed |
+| Firefox | 159.0 | **unverified for this harness** — not run |
+| Edge | 156.0.4314.58 | **unverified for this harness** — not run |
 
 | Measurement | Chrome 156 median (min–max) | Safari 26.5 median (min–max) |
 | --- | --- | --- |
@@ -126,40 +109,131 @@ What this establishes, per engine:
 Full data: `audit/evidence/browser-matrix-chrome-2026-11-04.json` and
 `audit/evidence/browser-matrix-safari-2026-11-05.json`.
 
-**Firefox and Edge remain unverified** (AGENTS.md rule 8): neither is installed
-on the measurement machine, so their cells stay empty until the harness runs
-there.
+**Firefox and Edge are unverified for this benchmark** (AGENTS.md rule 8): the
+harness was not run there, so their cells stay empty.
 
-### Compiler matrix (Chrome 156, Flutter 3.47.6 stable)
+## 3. v0.5 handle lifecycle matrix (DWI API level)
 
-| App compiler | Worker | Result |
+**Scope of this section: the public `DwiWorker` handle contract, one engine per
+row, three page loads per engine.** This is not the capability probe (§1) and not
+the pool benchmark (§2).
+
+Harness: `packages/dwi_builder/test/browser_handle_test.dart` (committed). One
+shared assertion list (`_expectContract`) runs unchanged in every engine, so a
+result is comparable across engines by construction. Each engine gets three page
+loads; a transport-level failure is retried once before it is recorded. The page
+drives only the public `package:dwi` API against a generated worker artefact in
+one page load and covers:
+
+- state retention across calls, and isolation between two handles;
+- FIFO execution of queued calls, one at a time;
+- bounded queue (`maxQueuedTasks` → `DwiUnsupportedException`) and the
+  caller-local queue deadline (`queueTimeout` → `DwiTimeoutException`);
+- close during a running call and with a queued call, idempotent close, and
+  `Dwi.close()` closing a live handle;
+- task timeout, restart with fresh state, and rejection of `restart()` in other
+  states;
+- queued cancellation keeps the context; running cancellation fails the handle;
+- transferables (argument and result, sender detached);
+- startup failure (missing worker script), idle crash detected by heartbeat,
+  crash with a call pending, and a malformed non-object message;
+- repeated spawn/close cycles with `Dwi.run` calls interleaved.
+
+| Engine | Version | Automation | Status |
+| --- | --- | --- | --- |
+| Chrome | 156.0.8078.80 (headless) | CDP, private profile | **pass**, 3/3 runs, 2026-11-05 |
+| Safari | 26.5 | `safaridriver` (WebDriver) | **pass**, 3/3 runs, 2026-11-05 |
+| Firefox | 159.0 (headless) | WebDriver BiDi (`--remote-debugging-port`, `/session`) | **pass**, 3/3 runs, 2026-11-05 |
+| Edge | 156.0.4314.58 | CDP, private profile | **blocked** — not installed; unpacking the 415 MiB `.pkg` needs the package plus the ~1.1 GiB app on disk and the data volume had ~1.6 GiB free (first extraction hit `ENOSPC`: `curl: (23)` and the host reported `no space left on device`) |
+
+No result is copied between engines. A blocked engine keeps its exact reason
+instead of being omitted or guessed.
+
+Evidence (one JSON file per engine, written by the harness with
+`DWI_EVIDENCE_DIR`):
+
+- `audit/evidence/handle-matrix-chrome-20261105.json`
+- `audit/evidence/handle-matrix-safari-20261105.json`
+- `audit/evidence/handle-matrix-firefox-20261105.json`
+- `audit/evidence/handle-matrix-edge-20261105.json` (`status: blocked`)
+
+Environment for all three measured engines: macOS 26.5.1 (25F80), arm64 (Apple
+M2, 8 logical cores), Dart 3.13.5. Flutter was not used for this harness; it
+compiles the page with `dart compile js`.
+
+Engine-specific notes (setup facts, not results):
+
+- Chrome runs headless with `--no-sandbox` on this machine.
+- Safari needs “Allow Remote Automation” in Safari → Develop; without it the
+  session is refused and the harness records `blocked` with that message.
+- Firefox's own content-process sandbox cannot initialise inside this host's
+  restricted session (`sandbox_init() failed with error "Operation not
+  permitted"`), so the harness launches Firefox with
+  `MOZ_DISABLE_CONTENT_SANDBOX=1` (plus the GMP and RDD equivalents). Firefox
+  also needs a Firefox profile root it can write; the harness passes a private
+  `--profile` directory.
+- Edge is located through `DWI_EDGE_BINARY` when it is not in `/Applications`.
+  No run was possible on this machine: Edge is only distributed as a 415 MiB
+  `.pkg`, and extracting it needs more free disk than the data volume had
+  (~1.6 GiB) after the first attempt filled it. The harness records `blocked`
+  with the exact reason rather than a result.
+
+## 4. Compiler matrix (Flutter application host)
+
+**Scope of this section: a Flutter web application hosting DWI, measured in
+Chrome 156 only, with Flutter 3.47.6 stable.** The worker is a dart2js artefact
+in both rows; DWI has no wasm worker backend.
+
+| App (host) compiler | Worker compiler | Result |
 | --- | --- | --- |
 | dart2js (`flutter build web --release`) | dart2js | **pass** — `DWI_RUN value=v1 backend=worker` |
 | dart2wasm (`flutter build web --wasm --release`) | dart2js | **pass since 2026-11-05** — `DWI_RUN value=v1 backend=worker`; before the integral-double fix the app failed with `message.v must be an int` |
 
-The wasm row is measured on Flutter 3.47.6 stable / Chrome 156 only. The worker
-in both rows is a dart2js artefact; DWI has no wasm worker. Evidence:
+The wasm row is measured on Flutter 3.47.6 stable / Chrome 156 only. Evidence:
 `audit/evidence/flutter-run-modes-and-wasm-fix-2026-11-05.txt` (fix and re-run)
 and `audit/evidence/flutter-run-hot-restart-and-wasm-2026-11-05.txt` (original
 failure). Firefox, Safari and Edge were not measured for either compiler.
 
-## Open items
+## What remains unverified
 
-- Firefox headless profile creation (blocked in this sandbox; needs a normal
-  user session or a writable Firefox profile).
-- Safari automation (needs `safaridriver --enable` / Develop menu permission).
-- Edge installation (needs an installer with admin rights).
-- CSP `worker-src` behaviour per engine (not measured).
-- Wasm threads / `crossOriginIsolated` with COOP/COEP (not measured).
+- The capability probe (§1) has only ever run in Chrome.
+- The v0.4 runtime benchmark (§2) has no Firefox or Edge cell.
+- The v0.5 handle matrix (§3) has no Edge result: Edge could not be installed
+  on the measurement machine (disk capacity; exact reason in §3).
+- The compiler matrix (§4) is Chrome-only, and there is no dart2wasm **worker**
+  backend to measure.
+- CSP `worker-src` behaviour per engine.
+- Wasm threads / `crossOriginIsolated` with COOP/COEP.
 - Practical maximum workers under memory pressure (only 8 measured).
 
 ## Reproducing
 
 ```bash
-# gitignored harness
-python3 .research/browser_matrix/serve.py &
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-  --headless=new --no-sandbox --disable-gpu \
-  --user-data-dir="$TMPDIR/chrome-dwi" http://127.0.0.1:8765/index.html
-# results land in .research/browser_matrix/results/<user-agent>.json
+# §2 v0.4 runtime benchmark (one page load per run)
+cd benchmarks/browser_matrix
+dart pub get
+dart run run.dart --engine=chrome --runs=3
+dart run run.dart --engine=safari --runs=3
+
+# §3 v0.5 handle matrix (three page loads per engine)
+cd packages/dwi_builder
+DWI_EVIDENCE_DIR=../../audit/evidence \
+  dart test test/browser_handle_test.dart \
+  --plain-name "handle lifecycle contract in chrome"
+DWI_EVIDENCE_DIR=../../audit/evidence \
+  dart test test/browser_handle_test.dart \
+  --plain-name "handle lifecycle contract in safari"
+DWI_FIREFOX_BINARY="/path/to/Firefox.app/Contents/MacOS/firefox" \
+  DWI_EVIDENCE_DIR=../../audit/evidence \
+  dart test test/browser_handle_test.dart \
+  --plain-name "handle lifecycle contract in firefox"
+DWI_EDGE_BINARY="/path/to/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" \
+  DWI_EVIDENCE_DIR=../../audit/evidence \
+  dart test test/browser_handle_test.dart \
+  --plain-name "handle lifecycle contract in edge"
 ```
+
+An engine without a binary is skipped with an exact reason, never silently
+passed. `DWI_FIREFOX_BINARY` and `DWI_EDGE_BINARY` exist because the measurement
+machine runs those browsers from a temporary unpacked location; a normal install
+in `/Applications` is discovered automatically.

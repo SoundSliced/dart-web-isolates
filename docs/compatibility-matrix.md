@@ -34,8 +34,8 @@ v0.3 unless marked proposed.** No cell claims parity.
 | DWI-0 | background worker, ad-hoc messaging | demonstrated by M001 |
 | DWI-1 | typed named tasks, correlated, typed errors, timeouts | shipped in v0.2 |
 | DWI-1.5 | annotation-driven worker generation, typed proxies, automatic compilation, typed payload codecs | shipped in v0.3.1 |
-| DWI-1.6 | cancellation, transferable bytes, heartbeat crash detection | shipped in v0.4 (Chrome-verified; other engines unverified) |
-| DWI-2 | long-lived workers, pooled scheduling | handles shipped for native and web JS (Chrome-verified); `Dwi.run` pool unchanged from v0.3 |
+| DWI-1.6 | cancellation, transferable bytes, heartbeat crash detection | shipped in v0.4 (Chrome and Safari measured; Firefox/Edge unverified for this level) |
+| DWI-2 | long-lived workers, pooled scheduling | handles shipped for native and web JS (Chrome, Safari and Firefox verified; Edge unverified); `Dwi.run` pool unchanged from v0.3 |
 | DWI-3 | port-like messaging | proposed |
 | DWI-4 | high `dart:isolate` API similarity | research |
 | DWI-5 | compiler-supported arbitrary functions | research, no design |

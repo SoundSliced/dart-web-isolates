@@ -62,8 +62,29 @@ Interpretation:
   thread) is what makes the worker number meaningful.
 
 Full data: `../audit/evidence/browser-matrix-chrome-2026-11-04.json`.
-Safari, Firefox and Edge were not measured and stay **unverified**
-(`docs/browser-matrix.md` records the exact blocker for each).
+Safari 26.5 was measured with the same harness; its numbers are in
+`docs/browser-matrix.md` §2 and are never copied into this Chrome table.
+Firefox and Edge were not measured for this benchmark and stay **unverified**
+(`docs/browser-matrix.md` records the exact status of each).
+
+### v0.5 handle lifecycle matrix (2026-11-05)
+
+Harness: `../packages/dwi_builder/test/browser_handle_test.dart` (committed).
+It drives the public `DwiWorker` API — state retention, isolation, FIFO, queue
+bounds and deadline, close, timeout, cancellation, transferables, startup and
+runtime failures, heartbeat, malformed message, restart, repeated spawn/close and
+interleaved `Dwi.run` calls. Three page loads per engine, one shared assertion
+list, one retry on a transport failure.
+
+| Engine | Version | Result |
+| --- | --- | --- |
+| Chrome | 156.0.8078.80 (headless) | **pass**, 3/3 |
+| Safari | 26.5 (`safaridriver`) | **pass**, 3/3 |
+| Firefox | 159.0 (WebDriver BiDi) | **pass**, 3/3 |
+| Edge | 156.0.4314.58 | **blocked** — not installable on the measurement machine (disk capacity) |
+
+This matrix measures behaviour, not speed; it produces no timing table. Evidence:
+`../audit/evidence/handle-matrix-<engine>-20261105.json`.
 
 ### Dedicated handles vs the pool — native VM (2026-11-05)
 
