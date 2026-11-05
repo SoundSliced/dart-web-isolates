@@ -27,6 +27,7 @@ void main() {
       })
       ..register('boom', (Object? input) => throw StateError('boom'))
       ..register('die', (Object? input) => Isolate.exit())
+      ..register('unsendable', (Object? input) => ReceivePort())
       ..register('echoTransferable', (Object? input) => input)
       ..register('makeTransferable', (Object? input) {
         final length = input! as int;
@@ -80,6 +81,57 @@ void main() {
     }
   });
 
+  test('a full queue rejects new calls with a typed error', () async {
+    final handle = await spawn(const DwiConfig(maxQueuedTasks: 1));
+    try {
+      final running = handle.run('slow', 300);
+      final queued = handle.run('count', null);
+      await expectLater(
+        handle.run('count', null),
+        throwsA(isA<DwiUnsupportedException>()),
+      );
+      expect(handle.state, DwiWorkerState.ready);
+      expect(await running, 'slow');
+      expect(await queued, 1);
+    } finally {
+      await handle.close();
+    }
+  });
+
+  test('a queued call fails when its queue deadline passes', () async {
+    final handle = await spawn(
+      const DwiConfig(
+        queueTimeout: Duration(milliseconds: 50),
+        taskTimeout: Duration(seconds: 5),
+      ),
+    );
+    try {
+      final running = handle.run('slow', 300);
+      final queued = handle.run('count', null);
+      await expectLater(queued, throwsA(isA<DwiTimeoutException>()));
+      // A queue deadline is caller-local: the context is still healthy.
+      expect(handle.state, DwiWorkerState.ready);
+      expect(await running, 'slow');
+      expect(await handle.run('count', null), 1);
+    } finally {
+      await handle.close();
+    }
+  });
+
+  test('a result that cannot cross the boundary fails only that call', () async {
+    final handle = await spawn();
+    try {
+      await expectLater(
+        handle.run('unsendable', null),
+        throwsA(isA<DwiSerializationException>()),
+      );
+      expect(handle.state, DwiWorkerState.ready);
+      expect(await handle.run('count', null), 1);
+    } finally {
+      await handle.close();
+    }
+  });
+
   test('unknown task fails only that call', () async {
     final handle = await spawn();
     try {
@@ -110,6 +162,21 @@ void main() {
     } finally {
       await handle.close();
     }
+  });
+
+  test('an isolate crash settles the running and queued calls once', () async {
+    final handle = await spawn();
+    final crashed = handle.run('die', null);
+    final queued = handle.run('count', null);
+
+    final runningError = await crashed.then<Object?>(
+      (value) => value,
+      onError: (Object error) => error,
+    );
+    expect(runningError, isA<DwiWorkerFailedException>());
+    await expectLater(queued, throwsA(isA<DwiWorkerFailedException>()));
+    expect(handle.state, DwiWorkerState.failed);
+    await handle.close();
   });
 
   test('close before the first call settles and rejects later work', () async {

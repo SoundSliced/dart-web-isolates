@@ -106,9 +106,13 @@ void _send(SendPort port, List<Object?> message) {
   try {
     port.send(message);
   } catch (error) {
+    // A result reply is [id, ok, payload]; its id is element 0. Reusing
+    // element 1 (the success flag) as the id would make the owner read a
+    // malformed reply and fail the whole handle.
+    final id = message.isNotEmpty && message[0] is int ? message[0] : null;
     try {
       port.send(<Object?>[
-        message.length > 1 ? message[1] : null,
+        id,
         false,
         'serialization',
         'could not send the result: $error',
