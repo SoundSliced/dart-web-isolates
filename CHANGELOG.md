@@ -46,6 +46,17 @@ additive: `Dwi.run` keeps its signature and semantics.
   one project are serialized, so an overlapping CLI and Flutter hook build
   cannot lose the last valid artefact or publish stale outputs.
 
+### Known limitations measured in this release
+
+- A **dart2wasm application cannot host DWI**: `flutter build web --wasm`
+  succeeds and packages the dart2js worker, but the app fails at the first
+  envelope with `message.v must be an int`. The same app built without `--wasm`
+  works. See `docs/limitations.md` §29.
+- **Flutter hot reload does not replace a running worker**: it rebuilds the
+  artefact on disk, but the page keeps its existing `Worker`. Hot restart
+  reloads the page and picks the new worker up. Measured on Flutter 3.47.6
+  stable; see `docs/limitations.md` §16.
+
 ## [0.3.1] - unreleased
 
 Correctness and lifecycle pass over the automatic-worker pipeline. No public

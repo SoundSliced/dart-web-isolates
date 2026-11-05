@@ -206,8 +206,12 @@ apps, CI checks and diagnostics. Generated files remain gitignored.
   iOS/Android will pay a (cached) worker compile during those builds.
 - Dart workspaces where the app has no own `.dart_tool/package_config.json`
   are not resolved yet; use the CLI there.
-- The hook runs before app compilation, so it cannot hot-patch a worker already
-  running in a page. Reload the page (or hot restart) after a task change.
+- The hook runs before app compilation and the page owns its workers, so it
+  cannot hot-patch a worker already running in a page. Measured on 3.47.6 stable
+  (`flutter run -d chrome`, debug): a hot reload does rebuild
+  `web/dwi/worker.dart.js`, but the page keeps the old `Worker` and still runs
+  the old code; a hot restart reloads the page and picks the new worker up.
+  Reload or restart after a task change.
 - **Fresh-project ordering is not guaranteed (re-measured 2026-11-04 on
   Flutter 3.47.6 stable / Dart 3.13.5).** Flutter schedules `build_hooks` and
   `dart2js` as independent web targets: `Dart2WebTarget.dependencies` is only

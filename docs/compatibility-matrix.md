@@ -17,6 +17,7 @@ v0.3 unless marked proposed.** No cell claims parity.
 | `Isolate.kill` | yes | `Worker.terminate()` | abrupt; queued and in-flight work lost | R001 §5, R003 §6 |
 | Cancel a running task | `Isolate.kill` on a retained handle | `Worker.terminate()` | non-cooperative; no partial result | ADR-010 §10.1 |
 | Detect a dead idle worker | port error / explicit state | heartbeat envelope | heartbeat pings idle workers only | ADR-010 §10.3 |
+| dart2wasm host application | n/a | **not supported (v0.4)** | `message.v must be an int` across the JS/wasm boundary; dart2js host works | audit/evidence/flutter-run-hot-restart-and-wasm-2026-11-05.txt |
 | Pause / resume / ping | yes | **no** | no browser equivalent | R003 §1 |
 | `onExit` / `onError` listeners | yes | envelope events | `error` events are coarse; promises rejections vanish | R003 §6 |
 | `RemoteError` + stack | yes | `DwiRemoteException` | stack captured by the worker, not the host | R001 §5 |

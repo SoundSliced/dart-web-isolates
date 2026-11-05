@@ -72,10 +72,13 @@ limitation is not here or in `compatibility-matrix.md`, that is a bug.
 15. **Runtime compilation is not implemented and is not planned for v0.x.** A
     browser-hosted Dart compiler, CSP `eval` restrictions, size and attack
     surface make it non-viable on current evidence (R013 §4.5).
-16. **No hot reload of a running worker.** A rebuild produces a new script;
-    existing workers keep the old one. Reload the page (or hot restart) after
-    the build hook or `dwi watch` rebuilds. Flutter hot reload does not reload
-    the worker script.
+16. **No hot reload of a running worker.** Measured on Flutter 3.47.6 stable
+    (debug, `flutter run -d chrome`, 2026-11-05): a hot reload does rebuild the
+    worker artefact on disk (the build hook recompiled it), but the running page
+    keeps its existing `Worker`, so the app still runs the old code. A hot
+    restart reloads the page and the app then uses the rebuilt worker. Reload
+    the page (or hot restart) after a task change; Flutter hot reload alone is
+    not enough. `dwi watch` + a page reload behaves the same way.
 17. **Queueing and deadlines are bounded.** Waiting callers are capped by
     `maxQueuedTasks` (failing with `DwiUnsupportedException` when full) and by
     `queueTimeout` (failing with `DwiTimeoutException`). `taskTimeout` starts
@@ -126,6 +129,14 @@ limitation is not here or in `compatibility-matrix.md`, that is a bug.
 28. **No long-lived worker handles and no port-like messaging.** A worker is
     owned by the pool; there is no `DwiWorker.spawn` handle and no `SendPort`
     emulation.
+29. **A dart2wasm application cannot host DWI yet.** Measured on Flutter 3.47.6
+    stable with `flutter build web --wasm --release` (2026-11-05): the build
+    succeeds and packages the dart2js worker, but the wasm app fails at the
+    first envelope with `DwiProtocolException: message.v must be an int`
+    because the integer version does not survive the JS/wasm boundary in a form
+    the wasm side accepts. The identical app built without `--wasm` runs the
+    task in the worker. The worker itself is dart2js; there is no wasm worker.
+    A wasm host is unsupported until this is fixed and measured.
 
 ## Research debt (unresolved, tracked)
 

@@ -49,7 +49,7 @@ the exact reason, never filled in from Chrome (AGENTS.md rule 8):
 | Engine | State | Reason on the measurement machine (2026-11-04) |
 | --- | --- | --- |
 | Chrome | measured | `Google Chrome 156.0.8078.80`, headless with `--no-sandbox` |
-| Safari | unverified | `safaridriver` answers `/status`, but session creation is refused: "You must enable 'Allow remote automation' in the Developer section of Safari Settings". Enabling it is an interactive admin step. |
+| Safari | unverified | driver implemented (`dart run run.dart --engine=safari`); `safaridriver` answers `/status`, but session creation is refused: "You must enable 'Allow remote automation' in the Developer section of Safari Settings". Enabling it is an interactive admin step. Re-checked after adding the driver: still refused, so nothing is recorded. |
 | Firefox | unverified | not installed |
 | Edge | unverified | not installed |
 

@@ -215,9 +215,11 @@ plain Dart web apps, CI `check`, and diagnostics.
 ## Development workflow
 
 For a Flutter app, no watcher is required: `flutter run -d chrome` runs the
-hook on start and whenever a declared task dependency changes (hot reload does
-not rebuild a running worker; hot restart or reload the page). For plain Dart
-web apps, use the watcher:
+hook on start and whenever a declared task dependency changes. A hot reload
+rebuilds the worker artefact but the page keeps its existing worker, so the app
+still runs the old code; press `R` (hot restart) or reload the page to pick up a
+task change. This was measured on Flutter 3.47.6 stable (ADR-009, limitations
+§16). For plain Dart web apps, use the watcher:
 
 ```bash
 dart run dwi_builder:dwi watch

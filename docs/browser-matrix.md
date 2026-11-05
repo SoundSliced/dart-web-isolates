@@ -67,7 +67,7 @@ the table reports median (min–max) over three runs. Dart 3.13.5, macOS arm64
 | Engine | Version | Status |
 | --- | --- | --- |
 | Chrome | 156.0.8078.80 (headless) | **measured**, 3/3 runs clean |
-| Safari | 26.5 | **unverified** — `safaridriver` answers `/status` but refuses a session: "You must enable 'Allow remote automation' in the Developer section of Safari Settings" |
+| Safari | 26.5 | **unverified** — `benchmarks/browser_matrix/run.dart --engine=safari` is implemented and reaches `safaridriver`, but session creation is refused: "You must enable 'Allow remote automation' in the Developer section of Safari Settings". Re-checked 2026-11-04 after adding the driver; still refused, so nothing is recorded and the column stays empty |
 | Firefox | — | **unverified** — not installed |
 | Edge | — | **unverified** — not installed |
 
@@ -103,6 +103,18 @@ Full data: `audit/evidence/browser-matrix-chrome-2026-11-04.json`.
 
 **These numbers are Chrome's.** They say nothing about Safari, Firefox or Edge
 (AGENTS.md rule 8), whose cells stay unverified until the harness is run there.
+
+### Compiler matrix (Chrome 156, Flutter 3.47.6 stable)
+
+| App compiler | Worker | Result |
+| --- | --- | --- |
+| dart2js (`flutter build web --release`) | dart2js | **pass** — `DWI_RUN value=v1 backend=worker` |
+| dart2wasm (`flutter build web --wasm --release`) | dart2js | **fail** — `DwiProtocolException: message.v must be an int`; the worker is fetched and packaged, the wasm host cannot decode the envelope |
+
+The wasm row is a DWI limitation, not a Flutter or packaging failure: the build
+succeeds and the identical app on dart2js runs the task. Evidence:
+`audit/evidence/flutter-run-hot-restart-and-wasm-2026-11-05.txt`. Firefox,
+Safari and Edge were not measured for either compiler.
 
 ## Open items
 

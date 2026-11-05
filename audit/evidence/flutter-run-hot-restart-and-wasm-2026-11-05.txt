@@ -1,0 +1,79 @@
+DWI — Flutter integration probes: flutter run hot reload/restart and --wasm (2026-11-05)
+
+Environment
+  macOS arm64 26.5.1, Apple M2, 8 GiB RAM
+  Flutter 3.47.6 stable, framework revision 5fc346839b5d0eef006ed8404392afb4dfae428d
+  Engine 692136cb6582dbfc5af3fb33c2515a069f2f66d0, Dart 3.13.5
+  Google Chrome 156.0.8078.80
+  The installed Flutter cache is read-only here, so the same writable shadow SDK
+  root as the earlier probes was used (symlinked SDK, copied launcher and stamp
+  files, writable bin/cache). No SDK file was modified.
+  PUB_CACHE was a writable directory with a symlink to the read-only hosted
+  cache. `flutter run -d chrome` also needed CHROME_EXECUTABLE pointing at a
+  one-line wrapper that appends --no-sandbox; Flutter's direct launch fails
+  "sandbox initialization failed: Operation not permitted" in this environment.
+  That wrapper is an environment workaround, not a Flutter or DWI change.
+
+Fixture
+  flutter create --no-pub --platforms=web --project-name dwi_probe
+  pubspec: dwi, dwi_annotations and dwi_builder as path dependencies
+  lib/tasks.dart: @DwiTask() String marker(int unused) => 'v1';
+  lib/main.dart: calls Dwi.run<String>('marker', 0), writes document.title and
+  beacons the result to a local HTTP collector (navigator.sendBeacon), so the
+  measurement does not depend on attaching a debugger to Flutter's Chrome.
+
+Probe 1 — flutter run -d chrome, hot reload and hot restart
+  Command: flutter run -d chrome --web-port 8912   (debug mode, DDC)
+  Pressing keys was done over the tool's stdin; results are the collector's
+  reports, in order.
+
+  1. Initial load, 02:11:34.775:
+       run value=v1 backend=worker base=/
+     The annotated task ran in the DWI worker under the Flutter dev server.
+  2. tasks.dart changed from 'v1' to 'v2', then 'r' (hot reload):
+       Flutter log: "Performing hot reload...  3.2s"
+       worker artifact sha256 (web/dwi/worker.dart.js):
+         4217ff186739 -> e1ae4a434594
+       => the dwi_builder hook DID regenerate and recompile the worker.
+       No new app report: hot reload does not re-run main, and the page keeps
+       its existing Worker instance, so the running app still holds worker v1.
+  3. 'R' (hot restart):
+       Flutter log: "Performing hot restart..."
+       New report, 02:11:47.056:
+         run value=v2 backend=worker base=/
+       worker artifact sha unchanged (e1ae4a434594).
+       => the restarted page fetched the rebuilt worker and ran v2.
+
+  Conclusion: hot restart replaces the worker (page reload); hot reload alone
+  does not, even though the artefact on disk is current. This matches the
+  documented limitation and is now measured on 3.47.6 stable in debug mode.
+  NOT probed: `flutter run -d web-server`, Flutter release-mode run, and worker
+  replacement without a page reload.
+
+Probe 2 — flutter build web --wasm
+  Command: flutter build web --wasm --release
+  Result: exit 0 in 9.9 s. Artefacts: main.dart.wasm (262,576 B),
+  main.dart.mjs (22,751 B), and the DWI worker dwi/worker.dart.js (274,051 B)
+  packaged by the build hook.
+
+  Loaded build/web in Chrome 156 (static server, root path):
+    resources fetched: .../main.dart.mjs, .../main.dart.wasm, dwi/worker.dart.js
+    document.title:  DWI_ERR minified:Class391: message.v must be an int
+
+  Control, identical app built without --wasm (flutter build web --release):
+    resources fetched: .../main.dart.js, dwi/worker.dart.js
+    document.title:  DWI_RUN value=v1 backend=worker
+
+  The failing message is DwiProtocolException("message.v must be an int") from
+  DwiEnvelope.fromMap: with a dart2wasm host and a dart2js worker, the envelope
+  version crosses the boundary in a form the wasm side does not see as an `int`,
+  so decoding fails before the worker can answer.
+
+  Conclusion: DWI v0.4 is NOT dart2wasm-host compatible. The worker is fetched
+  and packaged correctly, and the identical app on the JS compiler works, so the
+  gap is the protocol's strict integer check across the wasm/JS boundary, not
+  discovery, packaging or base-path resolution. No fix was attempted here; the
+  limitation is recorded in docs/limitations.md and docs/compatibility-matrix.md.
+
+  NOT probed: a dart2wasm worker (DWI has none), and Firefox/Safari/Edge with a
+  wasm app.
