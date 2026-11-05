@@ -12,6 +12,7 @@ the recommended way to use DWI and must not reach into implementation details.
 | `flutter_counter/` | Flutter integration with UI remaining responsive. |
 | `flutter_jank_demo/` | Measured frame-drop comparison, main thread vs worker. |
 | `automatic_worker/` | Zero-boilerplate `@DwiTask` discovery, worker generation and compilation. |
+| `stateful_worker/` | Dedicated `DwiWorker` handle and worker-local state that persists between calls. |
 
 Each example has its own `README.md` with run instructions and states which
 backend (native isolate / JS worker / Wasm worker) it exercises.

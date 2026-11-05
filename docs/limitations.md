@@ -128,9 +128,39 @@ limitation is not here or in `compatibility-matrix.md`, that is a bug.
     behaviour in Safari, Firefox and Edge is **unverified**; Safari automation
     needs "Allow remote automation", and Firefox/Edge were not installed on the
     measurement machine (`docs/browser-matrix.md`).
-28. **No long-lived worker handles and no port-like messaging.** A worker is
-    owned by the pool; there is no `DwiWorker.spawn` handle and no `SendPort`
-    emulation.
+## v0.5 limitations (dedicated handles)
+
+28. **One handle runs one task at a time.** Extra calls queue in FIFO order up to
+    `DwiConfig.maxQueuedTasks`; a full queue fails with
+    `DwiUnsupportedException`, and `DwiConfig.queueTimeout` bounds the wait.
+    There is no parallel dispatch inside one handle. Create more handles when
+    you need concurrency.
+29. **Worker-local state is not durable.** Closing a handle, a task timeout, a
+    crash, a heartbeat failure, or cancelling a running call loses everything the
+    task kept inside the context. No state survives a restart, and DWI never
+    restores or migrates it.
+30. **Replacement is explicit.** A failed handle stays failed; recovery is
+    `restart()` or a new `DwiWorker.spawn()`. Queued and in-flight calls settle
+    with `DwiWorkerFailedException`/the specific error and are never replayed.
+31. **`close()` is immediate.** It cancels queued and running calls with
+    `DwiWorkerClosedException` and terminates the context; there is no graceful
+    drain variant. Await the work you want to finish before closing.
+32. **Cancelling a running call destroys the handle.** A running task cannot
+    observe a cancel message, so running cancellation is termination, after
+    which the handle is `failed`.
+33. **Handles capture their tasks and config at spawn.** The native isolate gets
+    a snapshot of the `DwiTaskRegistry`; tasks registered or config changed after
+    `spawn()` are not visible to that handle. Create a new handle to pick them
+    up.
+34. **Dedicated handles are Chrome-verified only on web.** Native tests run on
+    the Dart VM; Firefox, Safari and Edge handle behaviour is **unverified**
+    (`docs/browser-matrix.md`).
+35. **Handle memory is reported coarsely.** Only process RSS is observable in
+    the benchmark, with ~16 KiB granularity; no per-handle memory figure is
+    claimed (`docs/benchmarks.md`).
+36. **No port-like messaging or streams.** The handle exposes `run`,
+    `runCancellable`, `restart` and `close` only. `SendPort`/`ReceivePort`
+    emulation remains a separate, later ADR.
 29. **dart2wasm host support is new and Chrome-only.** A dart2wasm application
     (`flutter build web --wasm`) can host DWI since the 2026-11-05 fix that
     lets the envelope accept integral doubles for `v`, `id` and

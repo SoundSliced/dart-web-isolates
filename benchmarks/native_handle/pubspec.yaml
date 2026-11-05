@@ -1,0 +1,12 @@
+name: dwi_native_handle_benchmark
+description: Repeated measurements for dedicated worker handles and the Dwi.run pool.
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  dwi:
+    path: ../../packages/dwi
+  dwi_core:
+    path: ../../packages/dwi_core

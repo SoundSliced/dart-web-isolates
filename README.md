@@ -9,9 +9,10 @@ Dart web applications have no `dart:isolate`. `Isolate.run`, `Isolate.spawn`,
 DWI investigates closing that gap with browser Web Workers, a versioned message
 protocol, and — where it is honest to do so — an isolate-shaped API.
 
-> **Status: research proven, packages at 0.3.0, not published.** v0.3 adds
-> annotation-driven worker generation, automatic compilation, typed proxies,
-> content-hash caching and build-time diagnostics. DWI is not an isolate
+> **Status: research proven, packages at 0.3.0 with v0.4/v0.5 unreleased.** v0.5
+> adds long-lived worker handles (`DwiWorker`): one dedicated worker or isolate
+> per handle, with worker-local state retained between calls. v0.4 adds
+> cancellation, transferable bytes and crash detection. DWI is not an isolate
 > implementation and does not claim semantic parity with `dart:isolate`.
 > Read [`docs/limitations.md`](docs/limitations.md) and
 > [`docs/compatibility-matrix.md`](docs/compatibility-matrix.md) before relying
@@ -36,13 +37,13 @@ not verified (see [`docs/browser-matrix.md`](docs/browser-matrix.md)).
 
 | Package | What it does | Status |
 | --- | --- | --- |
-| `dwi` | Public API: `Dwi.configure`, `Dwi.run`, `Dwi.capabilities`, re-exported `@DwiTask` | implemented, 7 tests |
+| `dwi` | Public API: `Dwi.configure`, `Dwi.run`, `DwiWorker`, `Dwi.capabilities`, re-exported `@DwiTask` | implemented, 17 tests |
 | `dwi_annotations` | `@DwiTask` marker | implemented, 2 tests |
-| `dwi_builder` | Analyzer discovery, worker/proxy/manifest generation, compile CLI, cache | implemented, 20 tests |
-| `dwi_core` | Config, capabilities, task registry, exceptions, backend interface | implemented, 10 tests |
+| `dwi_builder` | Analyzer discovery, worker/proxy/manifest generation, compile CLI, cache | implemented, 21 tests |
+| `dwi_core` | Config, capabilities, task registry, exceptions, backend and handle interfaces | implemented, 10 tests |
 | `dwi_protocol` | Protocol v1 envelopes, error payloads, validation | implemented, 8 tests |
-| `dwi_native` | Isolate backend | implemented, 6 tests |
-| `dwi_web` | Pooled Web Worker backend plus generated-worker runtime | implemented, 8 tests, browser-tested |
+| `dwi_native` | Isolate backend plus dedicated persistent-isolate handles | implemented, 34 tests |
+| `dwi_web` | Pooled Web Worker backend, dedicated-handle backend, generated-worker runtime | implemented, 8 tests, browser-tested |
 
 ## Zero-boilerplate workers (v0.3)
 
@@ -91,7 +92,40 @@ generated proxy selects a precompiled task (see
 [`docs/compiler-strategy.md`](docs/compiler-strategy.md) and
 [`research/R013_RUNTIME_WORKER_COMPILATION.md`](research/R013_RUNTIME_WORKER_COMPILATION.md)).
 
-## Repository layout
+## Long-lived worker handles (v0.5)
+
+`Dwi.run` is a pool: each call may land on a different worker, and a native call
+starts a fresh isolate. When several calls must share warm worker-local state or
+identity, own one dedicated context explicitly:
+
+```dart
+final worker = await DwiWorker.spawn();
+
+try {
+  final first = await worker.run<int>('counter', null);   // 1
+  final second = await worker.run<int>('counter', null);  // 2
+} finally {
+  await worker.close();
+}
+```
+
+- One handle owns one persistent isolate (native) or one dedicated Web Worker
+  (web). It does not borrow a `Dwi.run` pool slot.
+- Calls run one at a time in FIFO order; `DwiConfig.maxQueuedTasks` and
+  `DwiConfig.queueTimeout` bound the queue.
+- `runCancellable` reuses `DwiCancellableTask` unchanged.
+- A timeout, crash, malformed message, heartbeat failure, or cancelling a
+  running call moves the handle to `failed`. Queued calls settle with
+  `DwiWorkerFailedException`. Recovery is an explicit `restart()` (fresh state)
+  or a new `spawn()`; DWI never retries a call.
+- `close()` is immediate and idempotent; `Dwi.close()` closes live handles too.
+
+Losing a handle loses its state. Use a handle for repeated work that benefits
+from a warm cache or retained identity; use `Dwi.run` for one-off tasks. See
+[`examples/stateful_worker/`](examples/stateful_worker/) and ADR-013 in
+[`docs/architecture.md`](docs/architecture.md).
+
+
 
 ```text
 docs/                architecture, protocol, limitations, browser matrix
@@ -123,6 +157,14 @@ Native example:
 cd examples/fibonacci
 dart pub get
 dart run bin/main.dart 30
+```
+
+Dedicated handle example (worker-local state persists between calls):
+
+```bash
+cd examples/stateful_worker
+dart pub get
+dart run bin/main.dart
 ```
 
 M001 demo (Flutter Web):

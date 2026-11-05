@@ -4,7 +4,7 @@ Decision record for DWI. Each ADR states the decision, the evidence behind it,
 and what it forbids. Evidence references point at `research/R00x` reports, which
 in turn cite source files and measurements.
 
-Status: accepted for v0.1 and v0.3; M001 gate applied (PASS WITH LIMITATIONS).
+Status: accepted for v0.1–v0.5; M001 gate applied (PASS WITH LIMITATIONS).
 
 ## ADR-001 — Package-first, worker-backed, no isolate parity claim
 

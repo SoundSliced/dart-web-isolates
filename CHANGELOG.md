@@ -5,6 +5,41 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - unreleased
+
+Long-lived worker handles under ADR-013. All additive: `Dwi.run` keeps its
+signature, pool behaviour and semantics.
+
+### Added
+
+- `DwiWorker.spawn()` with `run<R>`, `runCancellable<R>`, `state`, `isUsable`,
+  `restart()` and `close()`. One handle owns one persistent isolate (native) or
+  one dedicated Web Worker (web), independent of the `Dwi.run` pool.
+- Worker-local state is retained between calls on one handle; separate handles
+  have separate state. Losing the handle (close, timeout, crash, heartbeat
+  failure, running cancellation) loses that state; `restart()` starts fresh and
+  never replays work.
+- `DwiWorkerState` (`created`, `starting`, `ready`, `closing`, `closed`,
+  `failed`) and typed errors `DwiWorkerClosedException`,
+  `DwiWorkerFailedException`, `DwiWorkerStateException`.
+- `DwiBackend.spawnHandle()` for backends; backends track live handles so
+  `Dwi.close()` releases them.
+- Contract tests across native, the `dwi` facade and Chrome, including timeout,
+  crash, malformed message, heartbeat, cancellation and restart settlement.
+- `examples/stateful_worker/` and a committed native benchmark comparing handles
+  with `Dwi.run` for retained-state work (`benchmarks/native_handle/`).
+
+### Changed
+
+- Web dedicated handles fail on a non-object inbound message instead of leaving
+  the call to time out.
+
+### Documentation
+
+- ADR-013 in `docs/architecture.md`; `docs/api-proposal.md`,
+  `docs/compatibility-matrix.md`, `docs/limitations.md` and
+  `docs/benchmarks.md` updated for the handle contract and measurements.
+
 ## [0.4.0] - unreleased
 
 Cancellation, transferable bytes and crash detection, under ADR-010. All

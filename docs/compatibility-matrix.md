@@ -7,7 +7,9 @@ v0.3 unless marked proposed.** No cell claims parity.
 | --- | --- | --- | --- | --- |
 | `Isolate.run(fn)` | via registered task | **not supported** | closures are not cloneable; compiler cannot ship them | R001 §1, R004 §2 |
 | `Isolate.run(task, input)` (named) | yes | yes | requires precompiled worker registry | ADR-002 |
-| `Isolate.spawn` | proposed | proposed | one worker per handle; no heap sharing | R001 §2, ADR-003 |
+| `Isolate.spawn` | yes — one persistent isolate per handle | yes — one dedicated worker per handle | one task at a time per handle; no heap sharing | ADR-013 |
+| Long-lived handle with retained worker-local state | yes (`DwiWorker`) | yes (`DwiWorker`) | state is lost on close, restart, crash or timeout | ADR-013 |
+| Restart a failed handle | yes, explicit `restart()` | yes, explicit `restart()` | fresh context and fresh state; no replay | ADR-013 |
 | `Isolate.spawnUri` | proposed | not planned | a second program means a second compilation | R002 §4 |
 | `SendPort` | proposed | emulated (proposed) | `MessagePort` is transferable once, not cloneable | R001 §3, R003 §5 |
 | `ReceivePort` | proposed | emulated (proposed) | routed over one transport with logical IDs | R003 §5 |
@@ -33,7 +35,7 @@ v0.3 unless marked proposed.** No cell claims parity.
 | DWI-1 | typed named tasks, correlated, typed errors, timeouts | shipped in v0.2 |
 | DWI-1.5 | annotation-driven worker generation, typed proxies, automatic compilation, typed payload codecs | shipped in v0.3.1 |
 | DWI-1.6 | cancellation, transferable bytes, heartbeat crash detection | shipped in v0.4 (Chrome-verified; other engines unverified) |
-| DWI-2 | long-lived workers, pooled scheduling | proposed |
+| DWI-2 | long-lived workers, pooled scheduling | handles shipped for native and web JS (Chrome-verified); `Dwi.run` pool unchanged from v0.3 |
 | DWI-3 | port-like messaging | proposed |
 | DWI-4 | high `dart:isolate` API similarity | research |
 | DWI-5 | compiler-supported arbitrary functions | research, no design |
@@ -47,3 +49,6 @@ v0.3 unless marked proposed.** No cell claims parity.
   3.47+ with `dwi_builder` as a dependency it does (ADR-009), and the CLI is the
   fallback elsewhere.
 - Any browser support cell that was not measured.
+- That a handle preserves state across a restart, a close, a crash or a timeout.
+- That one handle runs calls in parallel. It runs one task at a time, in FIFO
+  order.

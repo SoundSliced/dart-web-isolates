@@ -1,8 +1,9 @@
-# API Proposal (v0.3 target)
+# API Proposal (v0.5 target)
 
-Status: v0.2 surface shipped; v0.3 surface shipped with ADR-008. Public API
-changes require this document plus an ADR (AGENTS.md rule 2). Implemented
-surface must not exceed what is written here.
+Status: v0.2 surface shipped; v0.3 surface shipped with ADR-008; v0.4 additions
+shipped with ADR-010; the v0.5 handle surface is implemented under ADR-013.
+Public API changes require this document plus an ADR (AGENTS.md rule 2).
+Implemented surface must not exceed what is written here.
 
 ## Level 1 — named task
 

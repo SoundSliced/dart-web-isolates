@@ -1,0 +1,11 @@
+name: dwi_stateful_worker_example
+description: A dedicated DwiWorker handle that retains worker-local state.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  dwi:
+    path: ../../packages/dwi

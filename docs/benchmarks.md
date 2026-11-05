@@ -65,6 +65,42 @@ Full data: `../audit/evidence/browser-matrix-chrome-2026-11-04.json`.
 Safari, Firefox and Edge were not measured and stay **unverified**
 (`docs/browser-matrix.md` records the exact blocker for each).
 
+### Dedicated handles vs the pool — native VM (2026-11-05)
+
+Harness: `../benchmarks/native_handle` (committed). Environment: macOS arm64
+26.5.1, Apple M2, 8 cores, Dart 3.13.5. Three runs; each row is the median of
+the three per-run medians (per-run range in parentheses).
+
+| Measurement | Median (range) |
+| --- | --- |
+| `DwiWorker.spawn()` → ready | 145 µs (123–185) |
+| Handle dispatch, 100 calls | 32 µs/call (27–50) |
+| Pool `Dwi.run`, 100 calls | 103 µs/call (95–109) |
+| Cached primes 100k, one handle | 46 µs/call (44–49) |
+| Cached primes 100k, `Dwi.run` | 616 µs/call (607–631) |
+| `close()` | 12 µs (12–13) |
+| `restart()` after a failure | 107 µs (104–110) |
+| RSS with four live handles | +16 KiB measured (16–131 KiB) |
+
+Interpretation:
+
+- Spawn is sub-millisecond at the median; the first spawn in each run reached
+  10–12 ms, which is lazy Dart runtime/library initialisation, not the steady
+  state.
+- The same trivial task costs about 3× less through a handle because the pool
+  starts an isolate per call. Both are microsecond-scale dispatches.
+- The retained-state workload is the measured case for handles: a sieve cached
+  inside the context turns ~616 µs into ~46 µs per call. That is why `Dwi.run`
+  remains the default for one-off work and a handle is for repeated work.
+- Close and restart are sub-millisecond.
+- Memory is reported as process RSS, whose granularity is ~16 KiB. The deltas
+  (16–131 KiB for four handles, 16–32 KiB retained after close) are too coarse
+  for a per-handle claim; no such claim is made.
+- These are VM numbers only. The Chrome suite proves handle behaviour, not these
+  timings; web startup cost remains the numbers in the v0.4 section.
+
+Full harness: `../benchmarks/native_handle/`.
+
 ## Planned suites
 
 | Suite | Workloads | Status |
