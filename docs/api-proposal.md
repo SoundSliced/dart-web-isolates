@@ -229,7 +229,7 @@ Public surface:
 abstract final class DwiWorker {
   static Future<DwiWorker> spawn();
 
-  DwiWorkerState get state;      // new | starting | ready | closing | closed | failed
+  DwiWorkerState get state;      // created | starting | ready | closing | closed | failed
   bool get isUsable;             // state == ready
 
   Future<R> run<R>(String task, [Object? input]);
@@ -266,7 +266,7 @@ Rules (normative, ADR-013):
 New public types (AGENTS.md rule 2, recorded here before implementation):
 
 ```dart
-enum DwiWorkerState { new, starting, ready, closing, closed, failed }
+enum DwiWorkerState { created, starting, ready, closing, closed, failed }
 
 abstract interface class DwiWorkerHandle { /* backend-facing contract */ }
 

@@ -1,6 +1,7 @@
 import 'cancellable_task.dart';
 import 'capabilities.dart';
 import 'config.dart';
+import 'worker_handle.dart';
 
 /// The platform-specific half of DWI.
 ///
@@ -20,6 +21,12 @@ abstract interface class DwiBackend {
   /// an invalid payload, settles the returned task's result with a
   /// [DwiException]. See ADR-010 §10.1.
   DwiCancellableTask<Object?> start(String task, Object? input);
+
+  /// Creates a dedicated handle that owns its own execution context (ADR-013).
+  ///
+  /// The handle does not borrow a slot from the [run] pool. The backend keeps
+  /// ownership of the returned handle so [close] can release it.
+  Future<DwiWorkerHandle> spawnHandle();
 
   /// Reports what the backend can actually do in this environment.
   Future<DwiCapabilities> capabilities();

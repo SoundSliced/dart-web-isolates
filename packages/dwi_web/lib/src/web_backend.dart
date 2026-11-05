@@ -232,6 +232,13 @@ class WebBackend implements DwiBackend {
   }
 
   @override
+  Future<DwiWorkerHandle> spawnHandle() async {
+    throw const DwiUnsupportedException(
+      'dedicated handles are not implemented yet',
+    );
+  }
+
+  @override
   Future<DwiCapabilities> capabilities() async {
     return DwiCapabilities(
       backend: _closed ? DwiBackendKind.unsupported : DwiBackendKind.worker,

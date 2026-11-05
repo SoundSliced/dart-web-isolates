@@ -34,7 +34,12 @@ export 'package:dwi_core/dwi_core.dart'
         DwiTimeoutException,
         DwiTransferableBytes,
         DwiUnknownTaskException,
-        DwiUnsupportedException;
+        DwiUnsupportedException,
+        DwiWorkerClosedException,
+        DwiWorkerFailedException,
+        DwiWorkerHandle,
+        DwiWorkerState,
+        DwiWorkerStateException;
 
 /// Entry point for worker-backed, isolate-like concurrency.
 ///
@@ -121,8 +126,109 @@ abstract final class Dwi {
   static Future<DwiCapabilities> capabilities() => _active.capabilities();
 
   /// Terminates workers/isolates and forgets configuration.
+  ///
+  /// Live [DwiWorker] handles are closed first (ADR-013), so page or
+  /// application teardown cannot leak a dedicated context.
   static Future<void> close() async {
     await _backend?.close();
     _backend = null;
   }
+}
+
+/// A handle to one dedicated worker or isolate (ADR-013).
+///
+/// The handle owns its execution context for its whole lifetime and does not
+/// borrow a slot from the [Dwi.run] pool. Calls run one at a time in FIFO
+/// order, and task implementations may keep worker-local state between calls.
+///
+/// ```dart
+/// final worker = await DwiWorker.spawn();
+/// try {
+///   final first = await worker.run<int>('counter', null);   // 1
+///   final second = await worker.run<int>('counter', null);  // 2
+/// } finally {
+///   await worker.close();
+/// }
+/// ```
+///
+/// On web the artefact is [DwiConfig.workerScript]; on native no URL is used.
+/// Losing the context — close, timeout, crash, or cancelling a running call —
+/// loses its local state. A replacement created with [restart] or [DwiWorker.spawn]
+/// starts fresh and never replays a task.
+final class DwiWorker {
+  DwiWorker._(this._handle);
+
+  final DwiWorkerHandle _handle;
+
+  /// Starts a dedicated execution context and waits until it is ready.
+  ///
+  /// Throws [DwiUnsupportedException] when no backend or worker script is
+  /// available and [DwiStartupException] when the context never becomes ready.
+  static Future<DwiWorker> spawn() async {
+    final handle = await Dwi._active.spawnHandle();
+    return DwiWorker._(handle);
+  }
+
+  /// Current lifecycle state of the handle.
+  DwiWorkerState get state => _handle.state;
+
+  /// Whether the handle can accept work right now.
+  bool get isUsable => _handle.isUsable;
+
+  /// Runs [task] with [input] and returns its result as [R].
+  ///
+  /// Queues behind the current call. Throws [DwiUnknownTaskException],
+  /// [DwiTimeoutException], [DwiSerializationException], [DwiRemoteException],
+  /// or a handle-state exception on failure. A mismatched [R] throws
+  /// [DwiResultTypeException].
+  Future<R> run<R>(String task, [Object? input]) async {
+    final result = await _handle.run(task, input);
+    if (result is R) return result;
+    throw DwiResultTypeException(
+      'task "$task" returned ${result.runtimeType}, expected $R',
+    );
+  }
+
+  /// Runs [task] with [input] and returns a cancellable call.
+  ///
+  /// Reuses [DwiCancellableTask] unchanged: [DwiCancellableTask.result] settles
+  /// exactly once and [DwiCancellableTask.cancel] never throws. Cancelling a
+  /// queued call keeps the context; cancelling a running call terminates it and
+  /// moves the handle to [DwiWorkerState.failed].
+  DwiCancellableTask<R> runCancellable<R>(String task, [Object? input]) {
+    final inner = _handle.start(task, input);
+    final outer = DwiCancellableTask<R>(cancel: inner.cancel);
+    outer.result.ignore();
+    unawaited(
+      inner.result.then<void>(
+        (value) {
+          if (value is R) {
+            outer.complete(value);
+          } else {
+            outer.completeError(
+              DwiResultTypeException(
+                'task "$task" returned ${value.runtimeType}, expected $R',
+              ),
+            );
+          }
+        },
+        onError: (Object error, StackTrace stack) {
+          outer.completeError(error, stack);
+        },
+      ),
+    );
+    return outer;
+  }
+
+  /// Replaces a failed context with a fresh one.
+  ///
+  /// Only allowed while [state] is [DwiWorkerState.failed]. The new context has
+  /// fresh local state and never receives work that failed with the old one.
+  /// Throws [DwiWorkerStateException] in any other state.
+  Future<void> restart() => _handle.restart();
+
+  /// Cancels queued and running work, then terminates the context.
+  ///
+  /// Every affected caller settles with [DwiWorkerClosedException]. Idempotent.
+  Future<void> close() => _handle.close();
 }

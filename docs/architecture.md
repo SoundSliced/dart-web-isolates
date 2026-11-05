@@ -656,7 +656,7 @@ not implemented.
 **State machine.**
 
 ```
-new ──spawn──▶ starting ──ready──▶ ready ──close──▶ closing ──▶ closed
+created ──spawn──▶ starting ──ready──▶ ready ──close──▶ closing ──▶ closed
                    │                 │
                    └──▶ failed ◀─────┘
                           │
@@ -667,7 +667,7 @@ new ──spawn──▶ starting ──ready──▶ ready ──close──�
 
 | Transition | Trigger | Queued calls | In-flight call |
 | --- | --- | --- | --- |
-| `new → starting` | `spawn()` / `restart()` | n/a (calls rejected) | n/a |
+| `created → starting` | `spawn()` / `restart()` | n/a (calls rejected) | n/a |
 | `starting → ready` | isolate started / `ready` envelope | run after ready only | n/a |
 | `starting → failed` | startup timeout or spawn error | none exist | none exist |
 | `ready → ready` | remote exception, unknown task, serialization rejection | unaffected | that call fails only |

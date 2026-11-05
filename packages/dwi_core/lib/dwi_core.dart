@@ -9,3 +9,4 @@ export 'src/config.dart';
 export 'src/exceptions.dart';
 export 'src/registry.dart';
 export 'src/transferable_bytes.dart';
+export 'src/worker_handle.dart';

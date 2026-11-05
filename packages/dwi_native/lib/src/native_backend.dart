@@ -212,6 +212,13 @@ class NativeBackend implements DwiBackend {
       );
 
   @override
+  Future<DwiWorkerHandle> spawnHandle() async {
+    throw const DwiUnsupportedException(
+      'dedicated handles are not implemented yet',
+    );
+  }
+
+  @override
   Future<void> close() async {
     _closed = true;
   }

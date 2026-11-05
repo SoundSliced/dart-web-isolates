@@ -46,6 +46,27 @@ class DwiCancelledException extends DwiException {
   const DwiCancelledException(super.message);
 }
 
+/// A dedicated worker handle was used after [DwiWorkerHandle.close] (ADR-013).
+class DwiWorkerClosedException extends DwiException {
+  const DwiWorkerClosedException(super.message);
+}
+
+/// A dedicated worker handle is in the [DwiWorkerState.failed] state.
+///
+/// Delivered to queued calls when the context died, and to calls made on a
+/// failed handle. Recovery requires an explicit restart or a new handle.
+class DwiWorkerFailedException extends DwiException {
+  const DwiWorkerFailedException(super.message);
+}
+
+/// A dedicated worker handle was used in a state that does not accept it.
+///
+/// For example a call while [DwiWorkerState.starting] or
+/// [DwiWorkerState.closing], or `restart()` on a handle that has not failed.
+class DwiWorkerStateException extends DwiException {
+  const DwiWorkerStateException(super.message);
+}
+
 /// A failure that happened inside another realm.
 ///
 /// [remoteStackTrace] is captured by the worker runtime. It is data, never a
