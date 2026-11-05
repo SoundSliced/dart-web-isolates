@@ -43,13 +43,14 @@ Generated outputs (`lib/dwi_tasks.g.dart`, `web/dwi/`, `web/main.dart.js`,
 
 ## Engine support
 
-Only Chrome is automated. Each other engine must be recorded as unverified with
-the exact reason, never filled in from Chrome (AGENTS.md rule 8):
+Chrome and Safari are automated. Firefox and Edge must stay recorded as
+unverified with the exact reason, never filled in from another engine
+(AGENTS.md rule 8):
 
-| Engine | State | Reason on the measurement machine (2026-11-04) |
+| Engine | State | Notes (measurement machine) |
 | --- | --- | --- |
-| Chrome | measured | `Google Chrome 156.0.8078.80`, headless with `--no-sandbox` |
-| Safari | unverified | driver implemented (`dart run run.dart --engine=safari`); `safaridriver` answers `/status`, but session creation is refused: "You must enable 'Allow remote automation' in the Developer section of Safari Settings". Enabling it is an interactive admin step. Re-checked after adding the driver: still refused, so nothing is recorded. |
+| Chrome | measured | `dart run run.dart --engine=chrome --runs=3`; `Google Chrome 156.0.8078.80`, headless with `--no-sandbox` |
+| Safari | measured | `dart run run.dart --engine=safari --runs=3`; Safari 26.5 through `safaridriver`, which needs **Safari → Develop → Allow Remote Automation** enabled (and Safari restarted) or session creation is refused |
 | Firefox | unverified | not installed |
 | Edge | unverified | not installed |
 

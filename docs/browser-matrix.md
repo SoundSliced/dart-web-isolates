@@ -59,50 +59,57 @@ Safari or Edge remains unverified (AGENTS.md rule 8).
 
 ## v0.4 runtime matrix (DWI API level)
 
-Measured 2026-11-04 with `benchmarks/browser_matrix` (committed harness, see its
-README for methodology). One page load = one run; medians are inside a run and
-the table reports median (min–max) over three runs. Dart 3.13.5, macOS arm64
-26.5.1, Apple M2, 8 GiB RAM.
+Measured with `benchmarks/browser_matrix` (committed harness, see its README for
+methodology). One page load = one run; medians are inside a run and each cell is
+the median (min–max) over three runs. Dart 3.13.5, macOS arm64 26.5.1, Apple M2,
+8 GiB RAM. Chrome 156.0.8078.80 measured 2026-11-04; Safari 26.5 measured
+2026-11-05.
 
 | Engine | Version | Status |
 | --- | --- | --- |
 | Chrome | 156.0.8078.80 (headless) | **measured**, 3/3 runs clean |
-| Safari | 26.5 | **unverified** — `benchmarks/browser_matrix/run.dart --engine=safari` is implemented and reaches `safaridriver`, but session creation is refused: "You must enable 'Allow remote automation' in the Developer section of Safari Settings". Re-checked 2026-11-04 after adding the driver; still refused, so nothing is recorded and the column stays empty |
+| Safari | 26.5 (safaridriver) | **measured**, 3/3 runs clean |
 | Firefox | — | **unverified** — not installed |
 | Edge | — | **unverified** — not installed |
 
-Feature and performance cells for Chrome 156 only:
-
-| Measurement | Chrome 156 median (min–max) | Cell for Safari / Firefox / Edge |
+| Measurement | Chrome 156 median (min–max) | Safari 26.5 median (min–max) |
 | --- | --- | --- |
-| Cold start (first call, worker spawn + ready) | 33 ms (26–35) | unverified |
-| Warm dispatch (round trip) | 0.2 ms (0.101–0.2) | unverified |
-| 64 KiB copy / transfer | 0.3 ms / 0.3 ms | unverified |
-| 1 MiB copy / transfer | 1.5 ms (1.199–1.599) / 1.0 ms (0.9–1.099) | unverified |
-| 8 MiB copy / transfer | 10.0 ms (9.3–10.1) / 6.399 ms (6.0–6.599) | unverified |
-| Queued cancellation | 0.1 ms (0.1–0.101) | unverified |
-| Running cancellation | 0.199 ms (0.101–0.2) | unverified |
-| 100 tasks through 4 workers | 66 ms (43–97), 100/100 settled, results correct | unverified |
-| Dead idle worker → next call | 11 ms (10–13) after heartbeat detection | unverified |
-| UI timer ticks during 300 ms worker CPU | 29 | unverified |
-| UI timer ticks during 300 ms main-thread CPU | 0 | unverified |
+| Cold start (first call, worker spawn + ready) | 33 ms (26–35) | 30 ms (14–33) |
+| Warm dispatch (round trip) | 0.2 ms (0.101–0.2) | 0.0 ms (below the 1 ms resolution) |
+| 64 KiB copy / transfer | 0.3 ms / 0.3 ms | 0.0 ms / 0.0 ms |
+| 1 MiB copy / transfer | 1.5 ms (1.199–1.599) / 1.0 ms (0.9–1.099) | 1.0 ms / 1.0 ms |
+| 8 MiB copy / transfer | 10.0 ms (9.3–10.1) / 6.399 ms (6.0–6.599) | 6.0 ms (5–6) / 4.0 ms (3–5) |
+| Queued cancellation | 0.1 ms (0.1–0.101) | 0.0 ms |
+| Running cancellation | 0.199 ms (0.101–0.2) | 0.0 ms |
+| 100 tasks through 4 workers | 66 ms (43–97), 100/100 settled | 35 ms (28–62), 100/100 settled |
+| Dead idle worker → next call | 11 ms (10–13) | 47 ms (33–58) |
+| UI timer ticks during 300 ms worker CPU | 29 | 25 |
+| UI timer ticks during 300 ms main-thread CPU | 0 | 0 |
 
-What this establishes, for Chrome only:
+Values under one millisecond are reported as `0.0` because the harness records
+milliseconds; that is a resolution floor, not a zero cost. Every cell above is
+that engine's own run — no engine's numbers are copied into another's.
 
-1. Worker round trips cost sub-millisecond time once warm; cold start is tens of
-   milliseconds, so pooling matters for bursty workloads.
-2. Transferring is never slower than copying and sells its cost at size: at
-   8 MiB it is ~36% faster on this machine, at 64 KiB the difference is noise.
-3. Cancellation is cheap on both paths because running cancellation terminates
+What this establishes, per engine:
+
+1. Worker round trips are sub-millisecond once warm on both engines; cold start
+   is tens of milliseconds, so pooling matters for bursty workloads.
+2. Transfer is never slower than copy on either engine and wins at size: at
+   8 MiB it is ~36% faster in Chrome and ~33% faster in Safari on this machine.
+   At 64 KiB the difference is below the measurement floor.
+3. Cancellation is cheap on both engines because running cancellation terminates
    the worker instead of waiting for it.
-4. A silently dead idle worker is replaced in ~11 ms, well below `taskTimeout`.
-5. Running CPU work in a worker keeps the page's event loop alive (29 ticks vs
-   0 for the same work on the main thread).
+4. A silently dead idle worker is replaced in ~11 ms (Chrome) and ~47 ms
+   (Safari), both well below `taskTimeout`.
+5. Running CPU work in a worker keeps the page's event loop alive on both
+   engines (25–29 ticks vs 0 for the same work on the main thread).
 
-Full data: `audit/evidence/browser-matrix-chrome-2026-11-04.json`.
+Full data: `audit/evidence/browser-matrix-chrome-2026-11-04.json` and
+`audit/evidence/browser-matrix-safari-2026-11-05.json`.
 
-**These numbers are Chrome's.** They say nothing about Safari, Firefox or Edge
-(AGENTS.md rule 8), whose cells stay unverified until the harness is run there.
+**Firefox and Edge remain unverified** (AGENTS.md rule 8): neither is installed
+on the measurement machine, so their cells stay empty until the harness runs
+there.
 
 ### Compiler matrix (Chrome 156, Flutter 3.47.6 stable)
 
