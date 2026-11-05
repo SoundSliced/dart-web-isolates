@@ -7,6 +7,7 @@ import 'package:dwi_protocol/dwi_protocol.dart';
 import 'package:web/web.dart' as web;
 
 import 'payload.dart';
+import 'web_worker_handle.dart';
 
 /// One live worker and its in-flight requests.
 class _WorkerSlot {
@@ -65,6 +66,7 @@ class WebBackend implements DwiBackend {
   DwiConfig _config = const DwiConfig();
   final List<_WorkerSlot> _slots = <_WorkerSlot>[];
   final List<_Waiter> _waiters = <_Waiter>[];
+  final Set<WebWorkerHandle> _handles = <WebWorkerHandle>{};
   int _nextWorkerId = 1;
   int _nextTaskId = 1;
   int _consecutiveSpawnFailures = 0;
@@ -233,9 +235,20 @@ class WebBackend implements DwiBackend {
 
   @override
   Future<DwiWorkerHandle> spawnHandle() async {
-    throw const DwiUnsupportedException(
-      'dedicated handles are not implemented yet',
+    if (_closed) {
+      throw const DwiUnsupportedException('backend is closed');
+    }
+    late final WebWorkerHandle handle;
+    handle = await WebWorkerHandle.spawn(
+      _config,
+      onClosed: () => _handles.remove(handle),
     );
+    if (_closed) {
+      await handle.close();
+      throw const DwiUnsupportedException('backend is closed');
+    }
+    _handles.add(handle);
+    return handle;
   }
 
   @override
@@ -257,6 +270,12 @@ class WebBackend implements DwiBackend {
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
+    // Dedicated handles are owned by this backend (ADR-013 decision 9).
+    final handles = List<WebWorkerHandle>.of(_handles);
+    _handles.clear();
+    for (final handle in handles) {
+      await handle.close();
+    }
     const error = DwiUnsupportedException('backend is closed');
     // Settle queued callers first: they must not wait for their queue deadline.
     for (final waiter in _waiters) {
