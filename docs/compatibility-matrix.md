@@ -36,7 +36,7 @@ v0.3 unless marked proposed.** No cell claims parity.
 | DWI-1.5 | annotation-driven worker generation, typed proxies, automatic compilation, typed payload codecs | shipped in v0.3.1 |
 | DWI-1.6 | cancellation, transferable bytes, heartbeat crash detection | shipped in v0.4 (Chrome and Safari measured; Firefox/Edge unverified for this level) |
 | DWI-2 | long-lived workers, pooled scheduling | handles shipped for native and web JS (Chrome, Safari and Firefox verified; Edge unverified); `Dwi.run` pool unchanged from v0.3 |
-| DWI-3 | port-like messaging | proposed |
+| DWI-3 | port-like messaging | implemented under ADR-014: single-subscriber, named, bounded channels per handle; Chrome, Safari and Firefox verified, Edge unverified |
 | DWI-4 | high `dart:isolate` API similarity | research |
 | DWI-5 | compiler-supported arbitrary functions | research, no design |
 | DWI-6 | SDK-integrated web isolate | upstream proposal only |
@@ -50,5 +50,7 @@ v0.3 unless marked proposed.** No cell claims parity.
   fallback elsewhere.
 - Any browser support cell that was not measured.
 - That a handle preserves state across a restart, a close, a crash or a timeout.
+- That channels are `SendPort`/`ReceivePort` parity, broadcast, shared memory,
+  or that they survive a restart.
 - That one handle runs calls in parallel. It runs one task at a time, in FIFO
   order.

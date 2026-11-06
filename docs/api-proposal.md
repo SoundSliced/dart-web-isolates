@@ -1,9 +1,9 @@
 # API Proposal (v0.5 target)
 
 Status: v0.2 surface shipped; v0.3 surface shipped with ADR-008; v0.4 additions
-shipped with ADR-010; the v0.5 handle surface is implemented under ADR-013.
-Public API changes require this document plus an ADR (AGENTS.md rule 2).
-Implemented surface must not exceed what is written here.
+shipped with ADR-010; the v0.5 handle surface is implemented under ADR-013. The
+DWI-3 channel surface is implemented under ADR-014. Public API changes require this document plus an ADR (AGENTS.md
+rule 2). Implemented surface must not exceed what is written here.
 
 ## Level 1 — named task
 
@@ -100,6 +100,66 @@ The generated worker imports `DwiWorkerRuntime` from
 `package:dwi_web/dwi_worker.dart`. That runtime is generated-code API, not
 application API.
 
+## Level 2 — channels (DWI-3, ADR-014)
+
+Channels carry progress updates, multiple results and long-lived request/reply
+conversations over one existing handle. They are **not** `SendPort`/
+`ReceivePort` parity and the API must not be described as such.
+
+```dart
+final worker = await DwiWorker.spawn();
+
+final progress = await worker.openChannel('progress');
+progress.messages.listen((Object? message) {
+  // progress updates, partial results, replies
+});
+await progress.send(<String, Object?>{'step': 1});
+await progress.sendBytes(DwiTransferableBytes(bytes)); // one-way transfer
+await progress.close();
+```
+
+Task code inside the worker uses the same channel by name:
+
+```dart
+import 'package:dwi_core/dwi_worker.dart';
+
+final channel = DwiWorkerChannels.find('progress');
+if (channel != null) {
+  await channel.send('half-way');
+  channel.messages.listen((Object? message) { ... });
+}
+```
+
+Rules:
+
+- `openChannel(name)` resolves after the worker acknowledges the channel. Names
+  are non-empty, at most 64 UTF-16 units, without control characters. One live
+  channel per name per handle; a duplicate live name throws
+  `DwiChannelStateException`. Opening on a non-`ready` handle throws the
+  ADR-013 state error. A name may be reopened after its channel closes.
+- `messages` is a single-subscription stream; a second `listen` throws
+  `StateError`. There is no broadcast mode.
+- Delivery is FIFO per channel and per direction. No ordering is promised across
+  channels, or between channel messages and task calls.
+- `send`/`sendBytes` complete when the peer has enqueued the message. At most
+  `DwiConfig.channelBufferSize` (default 64) sends may be outstanding per
+  channel; a further send throws `DwiChannelBufferException` before sending.
+  Messages are never dropped, coalesced or reordered.
+- `send` copies its message; `sendBytes` transfers `DwiTransferableBytes`
+  exactly once (ADR-010 §10.2). A failed context loses the transferred bytes.
+- A peer `close()` ends the stream normally. A worker crash, task timeout,
+  running cancellation, malformed message, or handle `close()` errors the
+  stream, settles every pending send with the same typed error, and rejects
+  later sends.
+- Channels never survive `restart()`; a restarted handle has no channels and a
+  reopened name starts empty.
+- Protocol v2 is required. A v1 worker artefact is rejected with
+  `DwiUnsupportedException`; rebuild it with `dwi build`.
+
+Not supported: port objects, transferring a port, broadcast, shared memory,
+synchronous send, cross-channel ordering, selective receive, pause/resume, and
+channels across handles or restarts.
+
 ## Configuration
 
 ```dart
@@ -108,8 +168,12 @@ Dwi.configure(const DwiConfig(
   maxWorkers: 4,
   taskTimeout: Duration(seconds: 30),
   startupTimeout: Duration(seconds: 10),
+  channelBufferSize: 64,
 ));
 ```
+
+- `channelBufferSize` bounds outstanding sends per channel per direction
+  (ADR-014). Its receiver-side buffer is the same size; no message is dropped.
 
 - `workerScript` defaults to `dwi/worker.dart.js` on web, matching the builder
   output, and is ignored on native. Set it explicitly when the artefact is

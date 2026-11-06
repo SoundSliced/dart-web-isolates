@@ -182,6 +182,28 @@ limitation is not here or in `compatibility-matrix.md`, that is a bug.
     Flutter 3.47.6 stable. Firefox, Safari and Edge are unverified for wasm as
     for every other cell.
 
+## DWI-3 limitations (channels, ADR-014)
+
+37. **Single subscriber.** A channel has one `messages` listener; a second
+    `listen` throws. There is no broadcast mode and no replay for a late
+    subscriber.
+38. **Bounded per channel, not global.** `channelBufferSize` bounds outstanding
+    sends per channel and per direction; many channels multiply memory. A
+    consumer that stops reading causes further sends to be rejected with
+    `DwiChannelBufferException` rather than dropping messages.
+39. **No port parity.** Channels are not `SendPort`/`ReceivePort`: no port
+    objects, no port transfer, no shared memory, no synchronous send, no
+    cross-channel ordering, no selective receive, no pause/resume.
+40. **Handles only.** A channel belongs to one `DwiWorker`. It cannot cross to
+    another handle or isolate, and it does not survive `close()` or `restart()`.
+41. **No implicit channel deadline.** Pending sends settle only on peer close,
+    handle failure or handle close. A caller that needs a deadline applies its
+    own; DWI never silently drops a message.
+42. **Protocol v2 required.** A v1 worker artefact cannot open channels and is
+    rejected with `DwiUnsupportedException`. Rebuild it with `dwi build`.
+43. **Channel errors are lifecycle errors.** A remote task error remains a task
+    result/error; a channel error always ends the channel.
+
 ## Research debt (unresolved, tracked)
 
 - Generated-registry tree shaking for every library shape (the tested shapes

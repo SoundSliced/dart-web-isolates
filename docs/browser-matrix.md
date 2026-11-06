@@ -12,7 +12,7 @@ another engine's cell.
 | --- | --- | --- | --- |
 | Browser capability probe (static page, `.research/browser_matrix/`, gitignored) | raw browser features: worker startup, structured clone, transfer, module workers, dart2wasm-in-worker, SAB | Chrome 156 | 2026-11-03 |
 | v0.4 runtime benchmark (`benchmarks/browser_matrix`, committed) | `Dwi.run` pool timings: cold start, dispatch, copy vs transfer, cancellation, sustained load, dead-worker recovery, UI responsiveness | Chrome 156, Safari 26.5 | 2026-11-04 / 2026-11-05 |
-| v0.5 handle lifecycle matrix (`packages/dwi_builder/test/browser_handle_test.dart`, committed) | the public `DwiWorker` handle contract at the DWI API level | Chrome 156, Safari 26.5, Firefox 159.0, Edge 156.0.4314.58 | 2026-11-05 |
+| v0.5 handle lifecycle matrix (`packages/dwi_builder/test/browser_handle_test.dart`, committed) | the public `DwiWorker` handle contract at the DWI API level | Chrome 156, Safari 26.5, Firefox 159.0, Edge 156.0.4314.58 | 2026-11-05/06 |
 | Compiler matrix (Flutter application host) | a Flutter web app calling `Dwi.run` with a dart2js worker, built with dart2js and with dart2wasm | Chrome 156 | 2026-11-05 |
 
 ## 1. Browser capability probe — Chrome 156 only (2026-11-03)
@@ -141,9 +141,9 @@ one page load and covers:
 
 | Engine | Version | Automation | Status |
 | --- | --- | --- | --- |
-| Chrome | 156.0.8078.80 (headless) | CDP, private profile | **pass**, 3/3 runs, 2026-11-05 |
-| Safari | 26.5 | `safaridriver` (WebDriver) | **pass**, 3/3 runs, 2026-11-05 |
-| Firefox | 159.0 (headless) | WebDriver BiDi (`--remote-debugging-port`, `/session`) | **pass**, 3/3 runs, 2026-11-05 |
+| Chrome | 156.0.8078.80 (headless) | CDP, private profile | **pass**, 3/3 runs, 2026-11-05/06 |
+| Safari | 26.5 | `safaridriver` (WebDriver) | **pass**, 3/3 runs, 2026-11-05/06 |
+| Firefox | 159.0 (headless) | WebDriver BiDi (`--remote-debugging-port`, `/session`) | **pass**, 3/3 runs, 2026-11-05/06 |
 | Edge | 156.0.4314.58 | CDP, private profile | **blocked** — not installed; unpacking the 415 MiB `.pkg` needs the package plus the ~1.1 GiB app on disk and the data volume had ~1.6 GiB free (first extraction hit `ENOSPC`: `curl: (23)` and the host reported `no space left on device`) |
 
 No result is copied between engines. A blocked engine keeps its exact reason
@@ -152,10 +152,10 @@ instead of being omitted or guessed.
 Evidence (one JSON file per engine, written by the harness with
 `DWI_EVIDENCE_DIR`):
 
-- `audit/evidence/handle-matrix-chrome-20261105.json`
-- `audit/evidence/handle-matrix-safari-20261105.json`
-- `audit/evidence/handle-matrix-firefox-20261105.json`
-- `audit/evidence/handle-matrix-edge-20261105.json` (`status: blocked`)
+- `audit/evidence/handle-matrix-chrome-20261106.json`
+- `audit/evidence/handle-matrix-safari-20261106.json`
+- `audit/evidence/handle-matrix-firefox-20261106.json`
+- `audit/evidence/handle-matrix-edge-20261106.json` (`status: blocked`)
 
 Environment for all three measured engines: macOS 26.5.1 (25F80), arm64 (Apple
 M2, 8 logical cores), Dart 3.13.5. Flutter was not used for this harness; it

@@ -707,8 +707,145 @@ retrying; implying state survived a restart; adding port-like messaging to the
 handle API; exposing `Worker`, `MessagePort`, `Isolate` or `SendPort`.
 
 **Implementation status.** Implemented in v0.5 for native and web JS. Covered by
-`dwi_native` VM tests, `dwi` facade tests, and the browser integration harness
-(Chrome; other engines unverified).
+`dwi_native` VM tests, `dwi` facade tests, and the handle matrix in Chrome,
+Safari and Firefox (three page loads per engine; Edge blocked on the measurement
+machine).
+
+## ADR-014 — DWI-3: port-like channels over one handle (ACCEPTED)
+
+**Status.** Accepted for implementation after v0.5 (2026-11-05). This ADR is
+additive: `DwiWorker.run`, `runCancellable`, `restart`, `close` and `Dwi.run`
+keep their contracts. DWI-3 is **not** `SendPort`/`ReceivePort` parity, and this
+ADR does not claim any.
+
+**Public surface (host side).**
+
+```dart
+final worker = await DwiWorker.spawn();
+final channel = await worker.openChannel('progress');
+channel.messages.listen((Object? message) { ... });
+await channel.send(<String, Object?>{'step': 1});
+await channel.sendBytes(DwiTransferableBytes(bytes)); // one-way transfer
+await channel.close();
+```
+
+**Public surface (worker side, importable by task libraries).**
+
+```dart
+final channel = DwiWorkerChannels.find('progress');
+if (channel != null) {
+  await channel.send('half-way');
+  channel.messages.listen((Object? message) { ... });
+}
+```
+
+**Decision 1 — Attachment.** Channels attach to the existing `DwiWorker`; they
+are not a separate handle and never create a context. One handle still owns
+exactly one isolate or worker (ADR-013 decision 1). Opening a channel costs one
+handshake, not a worker, and does not count against `maxWorkers`.
+
+**Decision 2 — Creation and naming.** `openChannel(name)` is asynchronous and
+resolves after the worker confirms the channel. A name is non-empty, at most 64
+UTF-16 units, and contains no control characters. One live channel per name per
+handle; a duplicate name throws `DwiChannelStateException`. Opening on a handle
+that is not `ready` throws the ADR-013 state error. A name may be reopened after
+its channel closes; the new channel has no buffered history.
+
+**Decision 3 — Ordering.** Delivery is FIFO per channel and per direction:
+messages sent on one channel arrive in send order. There is **no** ordering
+guarantee across channels, or between channel messages and task calls; the
+transport is ordered, but the API promises per-channel order only.
+
+**Decision 4 — Subscription.** `messages` is a single-subscription stream. A
+second `listen` throws `StateError`. Broadcast is not supported: it would
+require per-listener buffers and make backpressure ambiguous.
+
+**Decision 5 — Backpressure and bounds.** `DwiConfig.channelBufferSize`
+(default 64) is the bound per channel and per direction. The receiver buffers up
+to the bound and delays acknowledgements when full. `send` completes only when
+the peer has enqueued the message. At most `channelBufferSize` sends may be
+unacknowledged on one channel; a further send throws
+`DwiChannelBufferException` *before* sending. Messages are never dropped,
+coalesced or reordered. A consumer that stops reading therefore causes further
+sends to be rejected instead of growing memory without bound.
+
+**Decision 6 — Serialization and ownership.** Every message is validated like a
+task payload on web and must be structured-cloneable on native. `send` copies;
+`sendBytes` transfers `DwiTransferableBytes` under ADR-010 §10.2: the sender is
+marked detached only after the transport accepted the message, and a failure
+after acceptance means the bytes belong to the failed context and are gone.
+Each message is independently owned; no message shares mutable state.
+
+**Decision 7 — Failure and close.** A peer `close()` closes the stream normally
+(`onDone`) and settles pending sends. A worker crash, task timeout, heartbeat
+failure, malformed message, running cancellation, or `DwiWorker.close()` errors
+every channel's stream with the same typed error
+(`DwiWorkerFailedException`, `DwiTimeoutException`, `DwiCancelledException` or
+`DwiWorkerClosedException`), completes every pending send with that error, and
+rejects later sends. A malformed channel message fails the handle (ADR-013
+decision 5) because the transport is no longer trustworthy. Channels have no
+timeout of their own: pending sends settle on failure or close and are never
+silently dropped; a caller that needs a deadline applies its own.
+
+**Decision 8 — Restart and lifetime.** Channels do not survive `restart()`. A
+restarted handle has no channels; reopening a name starts empty. `close()` on
+the handle settles channels before terminating the context. No channel outlives
+its handle.
+
+**Decision 9 — Native and web mapping.** Native: messages travel over the
+handle's persistent isolate `ReceivePort` as
+`['channelOpen', name]`, `['channelOpened', name, ok, error]`,
+`['channelMessage', name, seq, payload]`, `['channelAck', name, seq]`,
+`['channelClose', name]`, `['channelClosed', name]`. Web: protocol envelopes with
+the same names and `meta.channel` / `meta.seq`. No `Worker`, `MessagePort`,
+`Isolate` or `SendPort` type appears in the public API (AGENTS.md rule 9).
+
+**Decision 10 — Protocol version.** Protocol v2 adds the six channel types and
+advertises `ready.meta.capabilities = {protocolVersion: 2, channels: true}`. A
+v1 worker is rejected with `DwiUnsupportedException` when a channel is opened,
+and `Dwi.run` requires v2 as well. Migration is to rebuild the worker artefact
+(`dwi build`); a stale artefact fails loudly instead of silently lacking
+channels.
+
+**Decision 11 — Unsupported `dart:isolate` semantics.** Not provided: port
+objects (`SendPort`/`ReceivePort`), transferring a port to another isolate or
+worker, broadcast subscriptions, shared memory, reusing transferred bytes,
+synchronous send, ordering across channels, selective receive, pause/resume,
+and channels that cross handles or survive a restart. Channels are logical,
+single-handle, single-subscriber message queues.
+
+**State machine.**
+
+```text
+opening ──ack──▶ open ──close──▶ closing ──▶ closed
+   │               │
+   └──error──▶ handler error: stream errors, pending sends settle, channel closed
+```
+
+| Transition | Trigger | Pending sends | Stream |
+| --- | --- | --- | --- |
+| `opening → open` | worker acknowledges | queued on the channel | accepts one listener |
+| `open → closing` | `close()` either side | settle as acknowledged or with the close reason | `onDone` after close |
+| any → closed | handle failure / handle close | complete with the typed error | error, then closed |
+
+**Implementation plan (separate commits).** Protocol v2; core channel types,
+worker-side registry and `DwiConfig.channelBufferSize`; native handle and isolate
+runtime; web handle, dispatcher and runtime; the `DwiWorker.openChannel` facade;
+tests; documentation. Every stream and pending send must settle or close on
+worker failure and explicit shutdown, with no unbounded buffering and no leaked
+listeners.
+
+**Testing.** Native: normal flow, per-channel FIFO, a slow consumer hitting the
+buffer bound, crash, running cancellation, close, restart, transfer and worker
+close. Dispatcher VM tests for channel envelopes and malformed input. Browser:
+the same scenarios through the four-engine handle harness (Chrome, Safari and
+Firefox measured; Edge blocked on the measurement machine).
+
+**Implementation status.** Implemented for native and web JS under protocol v2.
+Covered by `dwi_core` endpoint tests, `dwi_native` VM tests, `dwi_web` dispatcher
+tests, and the browser handle matrix (Chrome, Safari and Firefox pass three page
+loads each; Edge blocked). A v1 worker artefact is rejected, so existing
+projects must rebuild their worker (`dwi build`).
 
 ## Consequences
 

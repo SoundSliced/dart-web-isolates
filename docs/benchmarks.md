@@ -84,7 +84,7 @@ list, one retry on a transport failure.
 | Edge | 156.0.4314.58 | **blocked** — not installable on the measurement machine (disk capacity) |
 
 This matrix measures behaviour, not speed; it produces no timing table. Evidence:
-`../audit/evidence/handle-matrix-<engine>-20261105.json`.
+`../audit/evidence/handle-matrix-<engine>-20261106.json`.
 
 ### Dedicated handles vs the pool — native VM (2026-11-05)
 

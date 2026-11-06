@@ -39,13 +39,13 @@ probe remains Chrome-only: see [`docs/browser-matrix.md`](docs/browser-matrix.md
 
 | Package | What it does | Status |
 | --- | --- | --- |
-| `dwi` | Public API: `Dwi.configure`, `Dwi.run`, `DwiWorker`, `Dwi.capabilities`, re-exported `@DwiTask` | implemented, 17 tests |
+| `dwi` | Public API: `Dwi.configure`, `Dwi.run`, `DwiWorker` (tasks and channels), `Dwi.capabilities`, re-exported `@DwiTask` | implemented, 17 tests |
 | `dwi_annotations` | `@DwiTask` marker | implemented, 2 tests |
 | `dwi_builder` | Analyzer discovery, worker/proxy/manifest generation, compile CLI, cache | implemented, 21 tests |
-| `dwi_core` | Config, capabilities, task registry, exceptions, backend and handle interfaces | implemented, 10 tests |
-| `dwi_protocol` | Protocol v1 envelopes, error payloads, validation | implemented, 8 tests |
-| `dwi_native` | Isolate backend plus dedicated persistent-isolate handles | implemented, 38 tests |
-| `dwi_web` | Pooled Web Worker backend, dedicated-handle backend, generated-worker runtime | implemented, 8 tests, browser-tested |
+| `dwi_core` | Config, capabilities, task registry, exceptions, channel endpoint, backend and handle interfaces | implemented, 32 tests |
+| `dwi_protocol` | Protocol v2 envelopes (tasks and channels), error payloads, validation | implemented, 14 tests |
+| `dwi_native` | Isolate backend plus dedicated persistent-isolate handles and channels | implemented, 46 tests |
+| `dwi_web` | Pooled Web Worker backend, dedicated-handle and channel backend, generated-worker runtime | implemented, 23 tests, browser-tested |
 
 ## Zero-boilerplate workers (v0.3)
 

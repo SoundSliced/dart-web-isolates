@@ -31,11 +31,30 @@ signature, pool behaviour and semantics.
   installed on the measurement machine (`docs/browser-matrix.md`).
 - `examples/stateful_worker/` and a committed native benchmark comparing handles
   with `Dwi.run` for retained-state work (`benchmarks/native_handle/`).
+- DWI-3 channels (ADR-014): `DwiWorker.openChannel(name)` returns a named duplex
+  `DwiChannel` with a single-subscription `messages` stream, `send`, `sendBytes`
+  and `close`. Task code inside the worker finds the same channel with
+  `DwiWorkerChannels.find(name)`. Delivery is FIFO per channel, sends complete
+  when the peer enqueues them, and the acknowledgement window is bounded by
+  `DwiConfig.channelBufferSize` (default 64): a full receiver rejects a send with
+  `DwiChannelBufferException` instead of dropping or buffering without bound.
+  Typed `DwiChannelStateException` and `DwiChannelClosedException` cover misuse;
+  channels never survive `close()` or `restart()`.
+- Channel coverage: `dwi_core` endpoint semantics, `dwi_web` dispatcher, real
+  `dwi_native` isolate round trips incl. transfers, crash, restart and close, and
+  the browser handle matrix in Chrome, Safari and Firefox (Edge blocked on the
+  measurement machine).
 
 ### Changed
 
 - Web dedicated handles fail on a non-object inbound message instead of leaving
   the call to time out.
+- Protocol v2 adds the channel message types and advertises
+  `ready.meta.capabilities = {protocolVersion: 2, channels: true}`. Existing
+  worker artefacts must be rebuilt (`dwi build`); a v1 artefact is rejected with
+  `DwiUnsupportedException` rather than silently lacking channels.
+- Channel messages carry a per-channel generation, so closing and reopening a
+  name cannot route a late reply into the new channel.
 
 ### Documentation
 
@@ -51,6 +70,10 @@ signature, pool behaviour and semantics.
   or page reload is required. v0.5 does not replace a running worker
   automatically (ADR-009 amendment,
   `audit/evidence/flutter-worker-replacement-2026-11-05.txt`).
+- ADR-014 defines DWI-3 channels; `docs/protocol.md` is protocol v2,
+  `docs/api-proposal.md` carries the channel surface, and `docs/limitations.md`
+  and `docs/compatibility-matrix.md` record what channels are not
+  (`SendPort`/`ReceivePort` parity, broadcast, cross-channel ordering).
 
 ## [0.4.0] - unreleased
 
