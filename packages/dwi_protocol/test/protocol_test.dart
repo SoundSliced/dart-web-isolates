@@ -18,6 +18,32 @@ void main() {
       expect(decoded.version, dwiProtocolVersion);
     });
 
+    test('is protocol v2', () {
+      expect(dwiProtocolVersion, 2);
+    });
+
+    test('round-trips a channel message with name, generation and sequence', () {
+      const envelope = DwiEnvelope(
+        type: DwiMessageType.channelMessage,
+        payload: 'hello',
+        meta: <String, Object?>{'channel': 'chat', 'gen': 3, 'seq': 7},
+      );
+      final decoded = DwiEnvelope.fromMap(envelope.toMap());
+      expect(decoded.type, DwiMessageType.channelMessage);
+      expect(decoded.channel, 'chat');
+      expect(decoded.seq, 7);
+      expect(decoded.meta['gen'], 3);
+      expect(decoded.payload, 'hello');
+    });
+
+    test('parses the channel error code', () {
+      final payload = DwiErrorPayload.fromMap(<Object?, Object?>{
+        'code': 'channel',
+        'message': 'channel is full',
+      });
+      expect(payload.code, DwiErrorCode.channel);
+    });
+
     test('rejects a missing or foreign version', () {
       expect(
         () => DwiEnvelope.fromMap(<Object?, Object?>{'type': 'ready'}),

@@ -1,5 +1,8 @@
 /// The version of the DWI wire protocol implemented by this package.
-const int dwiProtocolVersion = 1;
+///
+/// v2 adds the channel message types (ADR-014). A v1 worker does not understand
+/// them and is rejected rather than silently missing the capability.
+const int dwiProtocolVersion = 2;
 
 /// Message kinds understood by a DWI runtime.
 enum DwiMessageType {
@@ -11,7 +14,13 @@ enum DwiMessageType {
   cancelled,
   heartbeat,
   shutdown,
-  closed;
+  closed,
+  channelOpen,
+  channelOpened,
+  channelMessage,
+  channelAck,
+  channelClose,
+  channelClosed;
 
   static DwiMessageType? tryParse(Object? name) {
     for (final value in values) {
@@ -28,7 +37,8 @@ enum DwiErrorCode {
   protocol,
   unknownTask,
   serialization,
-  internal;
+  internal,
+  channel;
 
   static DwiErrorCode parse(Object? value) {
     for (final code in values) {
@@ -108,6 +118,15 @@ class DwiEnvelope {
   final Object? payload;
   final DwiErrorPayload? error;
   final Map<String, Object?> meta;
+
+  /// Channel name carried by a channel message (ADR-014), when present.
+  String? get channel {
+    final value = meta['channel'];
+    return value is String && value.isNotEmpty ? value : null;
+  }
+
+  /// Per-channel sequence number carried by a channel message, when present.
+  int? get seq => _asInt(meta['seq']);
 
   /// Encodes the envelope into a structured-cloneable map.
   Map<String, Object?> toMap() => <String, Object?>{
