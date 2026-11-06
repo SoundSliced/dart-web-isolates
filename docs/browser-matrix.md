@@ -175,12 +175,13 @@ Engine-specific notes (setup facts, not results):
 - Edge is located through `DWI_EDGE_BINARY` when it is not in `/Applications`.
   On this machine it was unpacked from the official 415 MiB `.pkg` with
   `xar -xf` plus `cpio` (only `Microsoft Edge.app`), which needs ~1.2 GiB free.
-  Two environment workarounds live in the harness, not in DWI: Edge gets a
-  private per-run home through `CFFIXED_USER_HOME`/`HOME` (its path service
-  aborts on this session's read-only `~/Library/Application Support`), and the
-  standard automation flags suppress its first-run updater, which otherwise
-  outlived the page-target wait. With those, Edge ran the same contract
-  unmodified.
+  Three environment workarounds live in the harness, not in DWI: Edge gets a
+  private home through `CFFIXED_USER_HOME`/`HOME` (its path service aborts on
+  this session's read-only `~/Library/Application Support`), its Keychain
+  request is replaced by `--use-mock-keychain` (the real Keychain cannot store
+  the safe-storage key here), and the standard automation flags suppress its
+  first-run updater, which otherwise outlived the page-target wait. With those,
+  Edge runs the same contract unmodified.
 
 ## 4. Compiler matrix (Flutter application host)
 

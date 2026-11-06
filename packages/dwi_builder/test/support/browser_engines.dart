@@ -196,6 +196,10 @@ Future<BrowserRunResult> _probeChromium(
       '--disable-dev-shm-usage',
       '--no-first-run',
       '--no-default-browser-check',
+      // Edge asks the macOS Keychain for its safe-storage key; that access
+      // fails (and blocks the browser) in a restricted session. A mock keychain
+      // is Chromium's supported CI workaround.
+      if (engine == BrowserEngine.edge) '--use-mock-keychain',
       '--user-data-dir=${profile.path}',
       '--remote-debugging-address=127.0.0.1',
       '--remote-debugging-port=$port',

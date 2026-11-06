@@ -1,7 +1,7 @@
 {
   "engine": "chrome",
   "status": "pass",
-  "browserVersion": "Google Chrome 156.0.8078.80",
+  "browserVersion": "Google Chrome 157.0.8103.38",
   "harness": "packages/dwi_builder/test/browser_handle_test.dart",
   "command": "dart test test/browser_handle_test.dart --plain-name \"handle lifecycle contract in chrome\"",
   "environment": {
