@@ -67,6 +67,32 @@ class DwiWorkerStateException extends DwiException {
   const DwiWorkerStateException(super.message);
 }
 
+/// Base type for channel failures (ADR-014).
+class DwiChannelException extends DwiException {
+  const DwiChannelException(super.message);
+}
+
+/// A channel was used after it closed.
+class DwiChannelClosedException extends DwiChannelException {
+  const DwiChannelClosedException(super.message);
+}
+
+/// A channel operation is not valid in the channel's current state.
+///
+/// For example opening a name that is already open on the handle, or opening a
+/// channel on a handle that is not ready.
+class DwiChannelStateException extends DwiChannelException {
+  const DwiChannelStateException(super.message);
+}
+
+/// A send was refused because the channel's unacknowledged window is full.
+///
+/// Nothing was sent. The caller can await outstanding sends and retry, or
+/// consume `messages` so the peer can acknowledge.
+class DwiChannelBufferException extends DwiChannelException {
+  const DwiChannelBufferException(super.message);
+}
+
 /// A failure that happened inside another realm.
 ///
 /// [remoteStackTrace] is captured by the worker runtime. It is data, never a

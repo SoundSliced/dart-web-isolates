@@ -15,6 +15,7 @@ class DwiConfig {
     this.maxPayloadBytes = 64 * 1024 * 1024,
     this.heartbeatInterval = const Duration(seconds: 5),
     this.heartbeatMisses = 2,
+    this.channelBufferSize = 64,
   });
 
   /// Conventional served path for the generated worker.
@@ -59,6 +60,14 @@ class DwiConfig {
 
   /// Consecutive unanswered pings after which an idle worker is considered dead.
   final int heartbeatMisses;
+
+  /// Bound on outstanding (unacknowledged) channel sends, per channel and per
+  /// direction, and on the receiver-side channel buffer (ADR-014).
+  ///
+  /// A further send throws [DwiChannelBufferException] instead of growing
+  /// memory; a receiver that stops reading delays acknowledgements, so the
+  /// sender stalls rather than losing messages.
+  final int channelBufferSize;
 
   /// Returns a copy with validated values or throws [ArgumentError].
   DwiConfig validated() {
@@ -107,6 +116,13 @@ class DwiConfig {
       throw ArgumentError.value(
         heartbeatMisses,
         'heartbeatMisses',
+        'must be >= 1',
+      );
+    }
+    if (channelBufferSize < 1) {
+      throw ArgumentError.value(
+        channelBufferSize,
+        'channelBufferSize',
         'must be >= 1',
       );
     }
