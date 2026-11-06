@@ -42,6 +42,15 @@ signature, pool behaviour and semantics.
 - ADR-013 in `docs/architecture.md`; `docs/api-proposal.md`,
   `docs/compatibility-matrix.md`, `docs/limitations.md` and
   `docs/benchmarks.md` updated for the handle contract and measurements.
+- Fresh typed-proxy build ordering re-measured on Flutter 3.47.6 with a writable
+  SDK; `tooling/proxy_gate` reproduces the first-build failure and the
+  succeeding second build, so the limitation cannot silently go stale
+  (`audit/evidence/flutter-fresh-build-gate-2026-11-05.txt`).
+- Worker replacement during development re-measured: a hot reload rebuilds the
+  worker artefact but the live page keeps running the old worker; a hot restart
+  or page reload is required. v0.5 does not replace a running worker
+  automatically (ADR-009 amendment,
+  `audit/evidence/flutter-worker-replacement-2026-11-05.txt`).
 
 ## [0.4.0] - unreleased
 

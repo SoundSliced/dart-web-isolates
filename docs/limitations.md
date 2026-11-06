@@ -33,7 +33,10 @@ limitation is not here or in `compatibility-matrix.md`, that is a bug.
    `dwi build --flutter-build`) before the first Flutter build. A fresh project
    that calls `Dwi.run` and imports no generated proxy compiles on the first
    ordinary Flutter command (measured 2026-11-04, root and `/sub/app/`), but
-   typed `DwiTasks` proxies need that one pre-build step. Older Flutter
+   typed `DwiTasks` proxies need that one pre-build step. The ordering gap was
+   re-measured on 2026-11-05 with a writable SDK; `tooling/proxy_gate`
+   reproduces it and exits non-zero if the first build ever starts succeeding.
+   Older Flutter
    versions, plain Dart web apps and CI checks use
    `dart run dwi_builder:dwi build`; `--flutter-build` wraps the Flutter build
    after the worker step for that path. Web build hooks do not expose the target
@@ -72,15 +75,20 @@ limitation is not here or in `compatibility-matrix.md`, that is a bug.
 15. **Runtime compilation is not implemented and is not planned for v0.x.** A
     browser-hosted Dart compiler, CSP `eval` restrictions, size and attack
     surface make it non-viable on current evidence (R013 §4.5).
-16. **No hot reload of a running worker.** Measured on Flutter 3.47.6 stable
-    (2026-11-05) in both `flutter run -d chrome` (debug) and
-    `flutter run -d web-server`: a hot reload does rebuild the worker artefact on
-    disk (the build hook recompiled it), but the running page keeps its existing
-    `Worker`, so the app still runs the old code. A hot restart reloads the page
-    and the app then uses the rebuilt worker. In release mode
-    (`flutter run -d chrome --release`) Flutter still prints the `r`/`R` key
-    commands, but pressing them produced no reload — a worker change needs a
-    manual page reload. `dwi watch` plus a page reload behaves the same way.
+16. **No hot reload of a running worker.** Re-measured on Flutter 3.47.6 stable
+    (2026-11-05) with `flutter run -d chrome` (debug): a hot reload rebuilds
+    `web/dwi/worker.dart.js` (the build hook recompiled it, sha256 changed), but
+    the live page keeps its existing `Worker` and every task result for the next
+    8 s still came from the old code. A hot restart reloads the page and the app
+    then uses the rebuilt worker. `flutter run -d web-server` serves and runs the
+    app, but this environment has no Dart Debug Chrome extension, so the reload
+    command never completed and web-server hot reload is **unverified** here (no
+    result is claimed for it). In release mode (`flutter run -d chrome
+    --release`) Flutter still prints the `r`/`R` key commands, but pressing them
+    produced no reload — a worker change needs a manual page reload. `dwi watch`
+    plus a page reload behaves the same way. v0.5 does not replace a running
+    worker automatically (ADR-009 amendment); a hot restart or reload is
+    required, and no state survives it.
 17. **Queueing and deadlines are bounded.** Waiting callers are capped by
     `maxQueuedTasks` (failing with `DwiUnsupportedException` when full) and by
     `queueTimeout` (failing with `DwiTimeoutException`). `taskTimeout` starts

@@ -212,9 +212,9 @@ apps, CI checks and diagnostics. Generated files remain gitignored.
   `web/dwi/worker.dart.js`, but the page keeps the old `Worker` and still runs
   the old code; a hot restart reloads the page and picks the new worker up.
   Reload or restart after a task change.
-- **Fresh-project ordering is not guaranteed (re-measured 2026-11-04 on
-  Flutter 3.47.6 stable / Dart 3.13.5).** Flutter schedules `build_hooks` and
-  `dart2js` as independent web targets: `Dart2WebTarget.dependencies` is only
+- **Fresh-project ordering is not guaranteed (re-measured 2026-11-05 on
+  Flutter 3.47.6 stable / Dart 3.13.5; first measured 2026-11-04).** Flutter
+  schedules `build_hooks` and `dart2js` as independent web targets: `Dart2WebTarget.dependencies` is only
   `[WebEntrypointTarget, GenerateLocalizationsTarget]`, and the web
   `BuildHooks` target is a dependency of `LinkHooks`, which itself runs after
   the compile targets. On a project that has never generated
@@ -231,7 +231,9 @@ apps, CI checks and diagnostics. Generated files remain gitignored.
   the one pre-build step. The hook prints an explicit diagnostic when it
   creates proxies during a build. This is a Flutter build graph ordering gap,
   not a discovery or compilation failure; the CLI wrapper remains the supported
-  fallback. See `audit/evidence/flutter-fresh-build-gate-2026-11-04.txt`.
+  fallback. See `audit/evidence/flutter-fresh-build-gate-2026-11-04.txt` and
+  `audit/evidence/flutter-fresh-build-gate-2026-11-05.txt`; the committed
+  reproduction is `tooling/proxy_gate`.
 - A hook failure fails the Flutter build; this is intentional and preserves the
   "no main-thread fallback" rule.
 - The resolver is conservative: zero or multiple matching app packages means
@@ -242,6 +244,28 @@ apps, CI checks and diagnostics. Generated files remain gitignored.
 `hook-build-cli.log`, `hook-build-inc1.log`, `hook-build-lib.log`,
 `hook-build-real.log` (scratch, reproduced by the commands in the audit report).
 Unit tests for the resolver: `packages/dwi_builder/test/hook_support_test.dart`.
+
+**Amendment — worker replacement during development (2026-11-05, v0.5).**
+Re-measured on Flutter 3.47.6 / Dart 3.13.5 with `flutter run -d chrome`
+(debug), driving the real keys through a pty, with a task returning `v1` then
+`v2` and every result reported to a local collector. A hot reload (`r`) rebuilt
+`web/dwi/worker.dart.js` (sha256 `c5e7f5f5…` → `1b01033e…`) while the live page
+kept reporting `v1` for all 12 samples over the next 8 seconds; a hot restart
+(`R`) then reported `v2` from the same rebuilt artefact. `flutter run -d
+web-server` serves and runs the app, but without the Dart Debug Chrome extension
+the reload command never completed, so that mode's reload behaviour is
+unverified here.
+
+**Decision.** v0.5 does **not** replace a running worker automatically. After a
+task edit the developer must hot restart (`R`) or reload the page; a hot reload
+is not sufficient. The page owns its workers, so replacement is a page-level
+operation; and silently swapping the context would have to settle live handles
+and pending calls and start with fresh state (ADR-013), which would look like a
+successful reload while losing work. Automatic replacement is deferred
+post-0.5; any future design must state which handles are replaced, what pending
+and queued calls receive, that work is never replayed, and that no state
+survives replacement. Evidence:
+`audit/evidence/flutter-worker-replacement-2026-11-05.txt`.
 
 ## ADR-010 — v0.4: cancellation, transferable bytes, crash detection (ACCEPTED)
 

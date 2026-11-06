@@ -1,0 +1,78 @@
+DWI — live worker replacement during development (2026-11-05)
+
+Environment
+  macOS arm64 26.5.1 (25F80), Apple M2, 8 cores
+  Flutter 3.47.6 stable, framework revision 5fc346839b, Dart 3.13.5
+  Repo-local SDK: .research/flutter-sdk/bin/flutter (writable cache; the
+  machine-wide launcher's cache is read-only in this session)
+  Google Chrome 156.0.8078.80, launched by Flutter through a wrapper that adds
+  --no-sandbox (the plain launch fails "sandbox initialization failed")
+  PUB_CACHE: writable directory with `hosted` symlinked to the real cache
+
+Fixture
+  flutter create --no-pub --platforms=web --project-name reload_probe .
+  pubspec: path dependencies on dwi, dwi_annotations and dwi_builder
+  lib/tasks.dart: @DwiTask() String marker(String input) => 'v1';
+  lib/main.dart: every second calls DwiTasks.marker('x'), writes the result into
+  document.title and beacons it to a local HTTP collector on 127.0.0.1:8899, so
+  observations do not depend on attaching a debugger to Flutter's Chrome.
+  A local collector appends every beacon with a UTC timestamp.
+
+Probe — flutter run -d chrome (debug, DDC), developer key path
+  Driver: a pty (Python `pty`) runs `flutter run -d chrome --web-port=8804` and
+  writes `r` / `R` to the pty, the same keys a developer presses. The machine
+  protocol (`app.restart`) was tried first and timed out at 3 minutes in both
+  `-d chrome` and `-d web-server`; the pty path is the one reported here.
+
+  1. Initial load:
+       first beacon: {"value":"v1"}
+       worker sha256 (web/dwi/worker.dart.js):
+         c5e7f5f54a5287c7dd631225b3c48e13e23366602756fc226fa30a0685bd14f6
+  2. lib/tasks.dart changed 'v1' -> 'v2', then `r` (hot reload):
+       worker sha256:
+         1b01033e39653a8e6377e6ef147f52363e0d4f001f42aa1d590205b22d8deb52
+       => the dwi_builder hook DID rebuild and recompile the worker artefact.
+       Task results reported by the live page over the following 8 seconds:
+         v1, v1, v1, v1, v1, v1, v1, v1, v1, v1, v1, v1   (12 samples)
+       => every call still ran the OLD worker. Hot reload does not replace the
+          page's existing Worker or its pool.
+  3. `R` (hot restart):
+       first result after restart: {"value":"v2"}
+       worker sha256 unchanged (1b01033e...)
+       => the restarted page fetched the rebuilt worker and ran the new code.
+          The artefact was already current; only the page was stale.
+
+  Conclusions:
+    - A task edit makes the artefact stale, not automatically live.
+    - Hot reload alone is insufficient: it updates the UI isolate, not the
+      worker. A hot restart or page reload is required.
+    - No state is preserved by this path: the page reloads and creates a fresh
+      pool/handles.
+
+Probe — flutter run -d web-server (debug)
+  The app was served at http://127.0.0.1:8802, started, and reported v1 from the
+  worker. Flutter printed: "The web-server device requires the Dart Debug Chrome
+  extension for debugging." A headless Chrome loaded the page without that
+  extension; `app.restart` (hot reload and hot restart) never completed (3-minute
+  timeout each). That mode's reload behaviour is therefore UNVERIFIED here and no
+  result is claimed for it. The machine protocol command format was checked
+  against flutter_tools (`daemon.dart` `restart`), so the timeout is not a
+  message-shape error.
+
+Decision (recorded as an amendment to ADR-009)
+  v0.5 does NOT replace a running worker automatically. After editing a task a
+  developer must hot restart (R) or reload the page; a hot reload is not enough.
+  Rationale: the page owns its workers, so replacement is a page-level
+  operation; and swapping the context silently would have to settle live
+  handles and pending calls with fresh state (ADR-013 forbids replay and
+  preserves no state), which would look like a successful reload while losing
+  work. Automatic replacement is deferred post-0.5.
+  If a future design implements it, it must specify: which handles are replaced
+  (only idle ones, or all), what pending/queued calls receive, that no call is
+  replayed, that state is never preserved, and that failures surface as typed
+  errors.
+
+NOT PROBED
+  `flutter run -d chrome --release` in this session (prior evidence: r/R are
+  printed but produced no reload), `flutter run -d edge`, and hot reload in
+  web-server mode with the Dart Debug Chrome extension installed.
