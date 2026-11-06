@@ -708,8 +708,7 @@ handle API; exposing `Worker`, `MessagePort`, `Isolate` or `SendPort`.
 
 **Implementation status.** Implemented in v0.5 for native and web JS. Covered by
 `dwi_native` VM tests, `dwi` facade tests, and the handle matrix in Chrome,
-Safari and Firefox (three page loads per engine; Edge blocked on the measurement
-machine).
+Safari, Firefox and Edge (three page loads per engine).
 
 ## ADR-014 — DWI-3: port-like channels over one handle (ACCEPTED)
 
@@ -838,13 +837,13 @@ listeners.
 **Testing.** Native: normal flow, per-channel FIFO, a slow consumer hitting the
 buffer bound, crash, running cancellation, close, restart, transfer and worker
 close. Dispatcher VM tests for channel envelopes and malformed input. Browser:
-the same scenarios through the four-engine handle harness (Chrome, Safari and
-Firefox measured; Edge blocked on the measurement machine).
+the same scenarios through the four-engine handle harness (Chrome, Safari,
+Firefox and Edge measured).
 
 **Implementation status.** Implemented for native and web JS under protocol v2.
 Covered by `dwi_core` endpoint tests, `dwi_native` VM tests, `dwi_web` dispatcher
-tests, and the browser handle matrix (Chrome, Safari and Firefox pass three page
-loads each; Edge blocked). A v1 worker artefact is rejected, so existing
+tests, and the browser handle matrix (Chrome, Safari, Firefox and Edge pass three
+page loads each). A v1 worker artefact is rejected, so existing
 projects must rebuild their worker (`dwi build`).
 
 ## Consequences

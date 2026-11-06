@@ -81,7 +81,7 @@ list, one retry on a transport failure.
 | Chrome | 156.0.8078.80 (headless) | **pass**, 3/3 |
 | Safari | 26.5 (`safaridriver`) | **pass**, 3/3 |
 | Firefox | 159.0 (WebDriver BiDi) | **pass**, 3/3 |
-| Edge | 156.0.4314.58 | **blocked** — not installable on the measurement machine (disk capacity) |
+| Edge | 156.0.4314.58 | **pass**, 3/3 |
 
 This matrix measures behaviour, not speed; it produces no timing table. Evidence:
 `../audit/evidence/handle-matrix-<engine>-20261106.json`.

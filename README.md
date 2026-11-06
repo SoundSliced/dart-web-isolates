@@ -32,8 +32,8 @@ runs identical CPU work on the main thread and in a worker, measured in Chrome
 Same result (348,513 primes) both ways; worker errors return a typed envelope.
 **Verdict: PASS WITH LIMITATIONS** — M001 is Chrome-only; Firefox, Safari and
 Edge were not measured for that experiment. The v0.5 handle matrix is measured
-separately in Chrome, Safari and Firefox (Edge blocked), and the capability
-probe remains Chrome-only: see [`docs/browser-matrix.md`](docs/browser-matrix.md).
+separately in Chrome, Safari, Firefox and Edge, and the capability probe remains
+Chrome-only: see [`docs/browser-matrix.md`](docs/browser-matrix.md).
 
 ## Packages
 

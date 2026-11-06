@@ -173,25 +173,73 @@ Future<BrowserRunResult> _probeChromium(
   final version = await _executableVersion(executable, name);
   final profile = Directory.systemTemp.createTempSync('dwi_${engine.name}_');
   final port = await _freePort();
-  final process = await Process.start(executable, <String>[
-    if (engine == BrowserEngine.chrome) '--headless' else '--headless=new',
-    '--no-sandbox',
-    '--disable-gpu',
-    '--disable-dev-shm-usage',
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--user-data-dir=${profile.path}',
-    '--remote-debugging-address=127.0.0.1',
-    '--remote-debugging-port=$port',
-    url,
-  ]);
+  // Edge resolves the macOS application-data directory through CoreFoundation,
+  // which cannot create `~/Library/Application Support` inside a restricted
+  // host session (it aborts with `path_service.cc: Failed to get the path`).
+  // The home must be *stable across runs*: a fresh home makes Edge re-run its
+  // updater install, which can outlive the page-target budget. Only Edge needs
+  // this; outside a sandbox it merely makes the run hermetic.
+  final privateHome = engine == BrowserEngine.edge
+      ? (Directory('${Directory.systemTemp.path}/dwi_edge_home')
+          ..createSync(recursive: true))
+      : null;
+  if (privateHome != null) {
+    Directory('${privateHome.path}/Library/Application Support')
+        .createSync(recursive: true);
+  }
+  final process = await Process.start(
+    executable,
+    <String>[
+      if (engine == BrowserEngine.chrome) '--headless' else '--headless=new',
+      '--no-sandbox',
+      '--disable-gpu',
+      '--disable-dev-shm-usage',
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--user-data-dir=${profile.path}',
+      '--remote-debugging-address=127.0.0.1',
+      '--remote-debugging-port=$port',
+      // Edge installs an updater on first run, which can outlive the page
+      // target wait; these are the standard automation flags that keep it out
+      // of the measurement.
+      if (engine == BrowserEngine.edge) ...<String>[
+        '--disable-component-update',
+        '--disable-background-networking',
+        '--disable-features=msEdgeUpdater,EdgeUpdater',
+        '--no-service-autorun',
+        '--disable-sync',
+        '--disable-default-apps',
+      ],
+      url,
+    ],
+    environment: <String, String>{
+      if (privateHome != null) 'CFFIXED_USER_HOME': privateHome.path,
+      if (privateHome != null) 'HOME': privateHome.path,
+    },
+  );
   final errors = StringBuffer();
   process.stderr.transform(utf8.decoder).listen(errors.write);
+  // The stdout pipe must be drained: Edge writes verbose startup logs, and an
+  // unread pipe fills, blocks the browser before it opens CDP, and looks like a
+  // browser that never starts.
+  process.stdout.drain<void>();
 
   WebSocket? socket;
   try {
-    final target = await _waitForCdpPageTarget(port, name, errors);
-    socket = await WebSocket.connect(target);
+    final target = await _waitForCdpPageTarget(
+      port,
+      name,
+      errors,
+      // Edge's first run in a new home pays an updater install.
+      timeout: engine == BrowserEngine.edge
+          ? const Duration(minutes: 3)
+          : const Duration(seconds: 60),
+    );
+    // A browser that accepts the CDP socket but never completes the handshake
+    // must fail the run, not hang the test.
+    socket = await WebSocket.connect(
+      target,
+    ).timeout(const Duration(seconds: 30));
     final pending = <int, Completer<Map<String, dynamic>>>{};
     var nextId = 0;
     socket.listen((message) {
@@ -240,9 +288,19 @@ Future<BrowserRunResult> _probeChromium(
       data: data,
     );
   } finally {
-    await socket?.close();
+    // Closing a CDP socket whose browser already died can wait forever; the
+    // run is over either way.
+    try {
+      await socket?.close().timeout(const Duration(seconds: 5));
+    } catch (_) {
+      // Ignore a teardown timeout.
+    }
     process.kill(ProcessSignal.sigkill);
-    await process.exitCode;
+    // Reaping can stall if the browser left a helper holding the pipe.
+    await process.exitCode.timeout(
+      const Duration(seconds: 10),
+      onTimeout: () => -1,
+    );
     _deleteProfile(profile);
   }
 }
@@ -250,9 +308,10 @@ Future<BrowserRunResult> _probeChromium(
 Future<String> _waitForCdpPageTarget(
   int port,
   String name,
-  StringBuffer errors,
-) async {
-  final deadline = DateTime.now().add(const Duration(seconds: 30));
+  StringBuffer errors, {
+  Duration timeout = const Duration(seconds: 60),
+}) async {
+  final deadline = DateTime.now().add(timeout);
   final client = HttpClient();
   try {
     while (DateTime.now().isBefore(deadline)) {
@@ -276,7 +335,10 @@ Future<String> _waitForCdpPageTarget(
   } finally {
     client.close(force: true);
   }
-  throw StateError('$name did not expose a page target within 30 seconds.\n$errors');
+  throw StateError(
+    '$name did not expose a page target within ${timeout.inSeconds} seconds.\n'
+    '$errors',
+  );
 }
 
 // ---------------------------------------------------------------------------

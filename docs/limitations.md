@@ -98,9 +98,8 @@ limitation is not here or in `compatibility-matrix.md`, that is a bug.
     respawned after three consecutive failures.
 18. **Browser coverage differs by harness.** The capability probe and the
     compiler matrix are Chrome-only; the v0.4 runtime benchmark covers Chrome and
-    Safari; the v0.5 handle matrix covers Chrome, Safari and Firefox. Edge has no
-    measured result (it could not be installed here). `docs/browser-matrix.md`
-    records which engine each cell came from.
+    Safari; the v0.5 handle matrix covers Chrome, Safari, Firefox and Edge.
+    `docs/browser-matrix.md` records which engine each cell came from.
 19. **No Flutter `compute()` integration.** Changing Flutter's web `compute()`
     is an upstream proposal, not a package feature.
 
@@ -163,10 +162,9 @@ limitation is not here or in `compatibility-matrix.md`, that is a bug.
     a snapshot of the `DwiTaskRegistry`; tasks registered or config changed after
     `spawn()` are not visible to that handle. Create a new handle to pick them
     up.
-34. **Dedicated handles are verified on web in Chrome, Safari and Firefox.**
-    Each engine passes the same handle contract on three page loads; Edge
-    remains unverified because it could not be installed on the measurement
-    machine (`docs/browser-matrix.md`).
+34. **Dedicated handles are verified on web in Chrome, Safari, Firefox and
+    Edge.** Each engine passes the same handle contract on three page loads
+    (`docs/browser-matrix.md`).
 35. **Handle memory is reported coarsely.** Only process RSS is observable in
     the benchmark, with ~16 KiB granularity; no per-handle memory figure is
     claimed (`docs/benchmarks.md`).

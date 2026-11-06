@@ -144,7 +144,7 @@ one page load and covers:
 | Chrome | 156.0.8078.80 (headless) | CDP, private profile | **pass**, 3/3 runs, 2026-11-05/06 |
 | Safari | 26.5 | `safaridriver` (WebDriver) | **pass**, 3/3 runs, 2026-11-05/06 |
 | Firefox | 159.0 (headless) | WebDriver BiDi (`--remote-debugging-port`, `/session`) | **pass**, 3/3 runs, 2026-11-05/06 |
-| Edge | 156.0.4314.58 | CDP, private profile | **blocked** — not installed; unpacking the 415 MiB `.pkg` needs the package plus the ~1.1 GiB app on disk and the data volume had ~1.6 GiB free (first extraction hit `ENOSPC`: `curl: (23)` and the host reported `no space left on device`) |
+| Edge | 156.0.4314.58 | CDP, private profile | **pass**, 3/3 runs, 2026-11-06 |
 
 No result is copied between engines. A blocked engine keeps its exact reason
 instead of being omitted or guessed.
@@ -173,10 +173,14 @@ Engine-specific notes (setup facts, not results):
   also needs a Firefox profile root it can write; the harness passes a private
   `--profile` directory.
 - Edge is located through `DWI_EDGE_BINARY` when it is not in `/Applications`.
-  No run was possible on this machine: Edge is only distributed as a 415 MiB
-  `.pkg`, and extracting it needs more free disk than the data volume had
-  (~1.6 GiB) after the first attempt filled it. The harness records `blocked`
-  with the exact reason rather than a result.
+  On this machine it was unpacked from the official 415 MiB `.pkg` with
+  `xar -xf` plus `cpio` (only `Microsoft Edge.app`), which needs ~1.2 GiB free.
+  Two environment workarounds live in the harness, not in DWI: Edge gets a
+  private per-run home through `CFFIXED_USER_HOME`/`HOME` (its path service
+  aborts on this session's read-only `~/Library/Application Support`), and the
+  standard automation flags suppress its first-run updater, which otherwise
+  outlived the page-target wait. With those, Edge ran the same contract
+  unmodified.
 
 ## 4. Compiler matrix (Flutter application host)
 
@@ -198,8 +202,6 @@ failure). Firefox, Safari and Edge were not measured for either compiler.
 
 - The capability probe (§1) has only ever run in Chrome.
 - The v0.4 runtime benchmark (§2) has no Firefox or Edge cell.
-- The v0.5 handle matrix (§3) has no Edge result: Edge could not be installed
-  on the measurement machine (disk capacity; exact reason in §3).
 - The compiler matrix (§4) is Chrome-only, and there is no dart2wasm **worker**
   backend to measure.
 - CSP `worker-src` behaviour per engine.
@@ -237,3 +239,10 @@ An engine without a binary is skipped with an exact reason, never silently
 passed. `DWI_FIREFOX_BINARY` and `DWI_EDGE_BINARY` exist because the measurement
 machine runs those browsers from a temporary unpacked location; a normal install
 in `/Applications` is discovered automatically.
+
+Run the commands one engine at a time for evidence. A single `dart test`
+invocation that drives all four is far heavier: on a memory-constrained host the
+last engine can starve (this machine reached ~7.1 GiB of 7.7 GiB swap and a
+compiler/browser run stalled while a Safari instance held sixteen processes).
+That is a host limit, not an engine result, and it is why each engine's cell
+comes from its own invocation.

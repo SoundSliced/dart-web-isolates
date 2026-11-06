@@ -566,7 +566,9 @@ void main() {
               '$runs',
         );
       },
-      timeout: const Timeout(Duration(minutes: 6)),
+      // Four engines × three page loads is heavy; under a parallel `dart test`
+      // run a slow engine can otherwise exhaust the budget.
+      timeout: const Timeout(Duration(minutes: 12)),
     );
   }
 }

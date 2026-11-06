@@ -22,24 +22,35 @@ Future<HttpServer> serveDirectory(String root) async {
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
   unawaited(
     server.forEach((request) async {
-      final relative = request.uri.path.replaceFirst(RegExp('^/'), '');
-      final path = p.normalize(
-        p.join(root, relative.isEmpty ? 'index.html' : relative),
-      );
-      if (!p.isWithin(root, path)) {
-        request.response.statusCode = HttpStatus.forbidden;
+      // One browser disappearing mid-request must not end the loop: the handle
+      // matrix reuses a single server across several engines, and an
+      // unhandled write error would otherwise stop serving every later page.
+      try {
+        final relative = request.uri.path.replaceFirst(RegExp('^/'), '');
+        final path = p.normalize(
+          p.join(root, relative.isEmpty ? 'index.html' : relative),
+        );
+        if (!p.isWithin(root, path)) {
+          request.response.statusCode = HttpStatus.forbidden;
+          await request.response.close();
+          return;
+        }
+        final file = File(path);
+        if (!await file.exists()) {
+          request.response.statusCode = HttpStatus.notFound;
+          await request.response.close();
+          return;
+        }
+        request.response.headers.contentType = _contentType(file.path);
+        request.response.add(await file.readAsBytes());
         await request.response.close();
-        return;
+      } catch (_) {
+        try {
+          await request.response.close();
+        } catch (_) {
+          // The client is gone; nothing left to close.
+        }
       }
-      final file = File(path);
-      if (!await file.exists()) {
-        request.response.statusCode = HttpStatus.notFound;
-        await request.response.close();
-        return;
-      }
-      request.response.headers.contentType = _contentType(file.path);
-      request.response.add(await file.readAsBytes());
-      await request.response.close();
     }),
   );
   return server;

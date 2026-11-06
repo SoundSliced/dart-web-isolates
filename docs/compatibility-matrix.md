@@ -35,8 +35,8 @@ v0.3 unless marked proposed.** No cell claims parity.
 | DWI-1 | typed named tasks, correlated, typed errors, timeouts | shipped in v0.2 |
 | DWI-1.5 | annotation-driven worker generation, typed proxies, automatic compilation, typed payload codecs | shipped in v0.3.1 |
 | DWI-1.6 | cancellation, transferable bytes, heartbeat crash detection | shipped in v0.4 (Chrome and Safari measured; Firefox/Edge unverified for this level) |
-| DWI-2 | long-lived workers, pooled scheduling | handles shipped for native and web JS (Chrome, Safari and Firefox verified; Edge unverified); `Dwi.run` pool unchanged from v0.3 |
-| DWI-3 | port-like messaging | implemented under ADR-014: single-subscriber, named, bounded channels per handle; Chrome, Safari and Firefox verified, Edge unverified |
+| DWI-2 | long-lived workers, pooled scheduling | handles shipped for native and web JS (Chrome, Safari, Firefox and Edge verified); `Dwi.run` pool unchanged from v0.3 |
+| DWI-3 | port-like messaging | implemented under ADR-014: single-subscriber, named, bounded channels per handle; Chrome, Safari, Firefox and Edge verified |
 | DWI-4 | high `dart:isolate` API similarity | research |
 | DWI-5 | compiler-supported arbitrary functions | research, no design |
 | DWI-6 | SDK-integrated web isolate | upstream proposal only |

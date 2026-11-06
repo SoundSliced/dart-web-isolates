@@ -27,8 +27,9 @@ signature, pool behaviour and semantics.
 - Contract tests across native, the `dwi` facade, and Chrome, Safari and Firefox
   (three page loads per engine from one shared assertion list), including
   timeout, crash, malformed message, heartbeat, cancellation, queue bounds and
-  queue deadline, and restart settlement. Edge has no result: it could not be
-  installed on the measurement machine (`docs/browser-matrix.md`).
+  queue deadline, and restart settlement. All four engines now have a measured
+  result: Chrome, Safari, Firefox and Edge pass three page loads each
+  (`docs/browser-matrix.md`).
 - `examples/stateful_worker/` and a committed native benchmark comparing handles
   with `Dwi.run` for retained-state work (`benchmarks/native_handle/`).
 - DWI-3 channels (ADR-014): `DwiWorker.openChannel(name)` returns a named duplex
@@ -42,8 +43,7 @@ signature, pool behaviour and semantics.
   channels never survive `close()` or `restart()`.
 - Channel coverage: `dwi_core` endpoint semantics, `dwi_web` dispatcher, real
   `dwi_native` isolate round trips incl. transfers, crash, restart and close, and
-  the browser handle matrix in Chrome, Safari and Firefox (Edge blocked on the
-  measurement machine).
+  the browser handle matrix in Chrome, Safari, Firefox and Edge.
 
 ### Changed
 
