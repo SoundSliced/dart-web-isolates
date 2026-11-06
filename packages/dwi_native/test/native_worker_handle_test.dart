@@ -28,6 +28,37 @@ void main() {
       ..register('boom', (Object? input) => throw StateError('boom'))
       ..register('die', (Object? input) => Isolate.exit())
       ..register('unsendable', (Object? input) => ReceivePort())
+      ..register('startEcho', (Object? input) {
+        final channel = DwiWorkerChannels.find(input! as String);
+        if (channel == null) return 'missing';
+        channel.messages.listen(
+          (message) => channel.send('echo:$message'),
+          onError: (Object error, StackTrace stack) {},
+        );
+        return 'listening';
+      })
+      ..register('announce', (Object? input) {
+        final channel = DwiWorkerChannels.find(input! as String);
+        if (channel == null) return 'missing';
+        channel.send('hello');
+        return 'sent';
+      })
+      ..register('closeChannel', (Object? input) {
+        final channel = DwiWorkerChannels.find(input! as String);
+        channel?.close();
+        return 'closed';
+      })
+      ..register('startBytesEcho', (Object? input) {
+        final channel = DwiWorkerChannels.find(input! as String);
+        if (channel == null) return 'missing';
+        channel.messages.listen(
+          (message) {
+            if (message is DwiTransferableBytes) channel.sendBytes(message);
+          },
+          onError: (Object error, StackTrace stack) {},
+        );
+        return 'listening';
+      })
       ..register('echoTransferable', (Object? input) => input)
       ..register('makeTransferable', (Object? input) {
         final length = input! as int;
@@ -363,4 +394,191 @@ void main() {
       throwsA(isA<DwiUnsupportedException>()),
     );
   });
+
+  test('opens a channel and exchanges messages in both directions', () async {
+    final handle = await spawn();
+    try {
+      final channel = await handle.openChannel('chat');
+      expect(channel.name, 'chat');
+      expect(await handle.run('startEcho', 'chat'), 'listening');
+
+      final received = <Object?>[];
+      final subscription = channel.messages.listen(
+        received.add,
+        onError: (Object error, StackTrace stack) {},
+      );
+      await channel.send('ping');
+      await _waitFor(() => received.contains('echo:ping'));
+      expect(received, <Object?>['echo:ping']);
+
+      expect(await handle.run('announce', 'chat'), 'sent');
+      await _waitFor(() => received.contains('hello'));
+      expect(received, <Object?>['echo:ping', 'hello']);
+
+      await subscription.cancel();
+    } finally {
+      await handle.close();
+    }
+  });
+
+  test('rejects a duplicate name and allows reopening after close', () async {
+    final handle = await spawn();
+    try {
+      final channel = await handle.openChannel('chat');
+      channel.messages.listen(
+        (_) {},
+        onError: (Object error, StackTrace stack) {},
+      );
+      await expectLater(
+        handle.openChannel('chat'),
+        throwsA(isA<DwiChannelStateException>()),
+      );
+      await channel.close();
+      final again = await handle.openChannel('chat');
+      expect(again.name, 'chat');
+      expect(await handle.run('startEcho', 'chat'), 'listening');
+      await again.close();
+    } finally {
+      await handle.close();
+    }
+  });
+
+  test('bounds the unacknowledged window and recovers after an ack', () async {
+    final handle = await spawn(const DwiConfig(channelBufferSize: 1));
+    try {
+      final channel = await handle.openChannel('chat');
+      final received = <Object?>[];
+      channel.messages.listen(
+        received.add,
+        onError: (Object error, StackTrace stack) {},
+      );
+
+      await channel.send('a');
+      await expectLater(
+        channel.send('b'),
+        throwsA(isA<DwiChannelBufferException>()),
+      );
+
+      expect(await handle.run('startEcho', 'chat'), 'listening');
+      await _waitFor(() => received.contains('echo:a'));
+      await channel.send('c');
+    } finally {
+      await handle.close();
+    }
+  });
+
+  test('a worker-initiated channel close ends the stream normally', () async {
+    final handle = await spawn();
+    try {
+      final channel = await handle.openChannel('chat');
+      final done = Completer<void>();
+      channel.messages.listen(
+        (_) {},
+        onError: (Object error, StackTrace stack) {},
+        onDone: done.complete,
+      );
+      expect(await handle.run('closeChannel', 'chat'), 'closed');
+      await done.future.timeout(const Duration(seconds: 5));
+      await expectLater(
+        channel.send('after'),
+        throwsA(isA<DwiChannelClosedException>()),
+      );
+    } finally {
+      await handle.close();
+    }
+  });
+
+  test('a handle failure errors every open channel', () async {
+    final handle = await spawn();
+    final channel = await handle.openChannel('chat');
+    Object? caught;
+    final done = Completer<void>();
+    channel.messages.listen(
+      (_) {},
+      onError: (Object error, StackTrace stack) {
+        caught = error;
+      },
+      onDone: done.complete,
+    );
+
+    await expectLater(handle.run('die', null), throwsA(isA<DwiException>()));
+    await done.future.timeout(const Duration(seconds: 5));
+    expect(caught, isA<DwiWorkerFailedException>());
+    expect(handle.state, DwiWorkerState.failed);
+    await expectLater(
+      channel.send('after'),
+      throwsA(isA<DwiChannelClosedException>()),
+    );
+    await handle.close();
+  });
+
+  test('channels do not survive restart', () async {
+    final handle = await spawn();
+    final channel = await handle.openChannel('chat');
+    channel.messages.listen(
+      (_) {},
+      onError: (Object error, StackTrace stack) {},
+    );
+    await expectLater(handle.run('die', null), throwsA(isA<DwiException>()));
+    await handle.restart();
+    await expectLater(
+      channel.send('stale'),
+      throwsA(isA<DwiChannelClosedException>()),
+    );
+    final fresh = await handle.openChannel('chat');
+    expect(fresh.name, 'chat');
+    await fresh.close();
+    await handle.close();
+  });
+
+  test('handle close errors open channels with DwiWorkerClosedException',
+      () async {
+    final handle = await spawn();
+    final channel = await handle.openChannel('chat');
+    Object? caught;
+    final done = Completer<void>();
+    channel.messages.listen(
+      (_) {},
+      onError: (Object error, StackTrace stack) {
+        caught = error;
+      },
+      onDone: done.complete,
+    );
+    await handle.close();
+    await done.future.timeout(const Duration(seconds: 5));
+    expect(caught, isA<DwiWorkerClosedException>());
+  });
+
+  test('transfers bytes over a channel', () async {
+    final handle = await spawn();
+    try {
+      final channel = await handle.openChannel('bytes');
+      expect(await handle.run('startBytesEcho', 'bytes'), 'listening');
+      final received = <Object?>[];
+      channel.messages.listen(
+        received.add,
+        onError: (Object error, StackTrace stack) {},
+      );
+      final bytes = DwiTransferableBytes(Uint8List.fromList(<int>[1, 2, 3]));
+      await channel.sendBytes(bytes);
+      expect(bytes.isDetached, isTrue);
+      await _waitFor(() => received.isNotEmpty);
+      final echoed = received.single! as DwiTransferableBytes;
+      expect(echoed.bytes, <int>[1, 2, 3]);
+    } finally {
+      await handle.close();
+    }
+  });
+}
+
+Future<void> _waitFor(
+  bool Function() condition, {
+  Duration timeout = const Duration(seconds: 5),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    if (condition()) return;
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+  }
+  fail('condition was not met within $timeout');
 }

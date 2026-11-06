@@ -1,0 +1,5 @@
+{
+  "engine": "edge",
+  "status": "blocked",
+  "reason": "Microsoft Edge is not installed (set DWI_EDGE_BINARY to a usable Microsoft Edge binary)."
+}

@@ -83,6 +83,25 @@ DwiTransferableBytes makeBytes(int length) {
   final data = Uint8List(length)..fillRange(0, length, 7);
   return DwiTransferableBytes(data);
 }
+
+@DwiTask()
+String startChannelEcho(String name) {
+  final channel = DwiWorkerChannels.find(name);
+  if (channel == null) return 'missing';
+  channel.messages.listen(
+    (message) => channel.send('echo:$message'),
+    onError: (Object error, StackTrace stack) {},
+  );
+  return 'listening';
+}
+
+@DwiTask()
+String announceChannel(String name) {
+  final channel = DwiWorkerChannels.find(name);
+  if (channel == null) return 'missing';
+  channel.send('hello');
+  return 'sent';
+}
 ''';
 
 const String handleMain = r'''
@@ -110,6 +129,9 @@ String _classify(Object error) {
   if (error is DwiWorkerClosedException) return 'DwiWorkerClosedException';
   if (error is DwiWorkerFailedException) return 'DwiWorkerFailedException';
   if (error is DwiWorkerStateException) return 'DwiWorkerStateException';
+  if (error is DwiChannelStateException) return 'DwiChannelStateException';
+  if (error is DwiChannelClosedException) return 'DwiChannelClosedException';
+  if (error is DwiChannelBufferException) return 'DwiChannelBufferException';
   if (error is DwiTimeoutException) return 'DwiTimeoutException';
   if (error is DwiStartupException) return 'DwiStartupException';
   if (error is DwiUnknownTaskException) return 'DwiUnknownTaskException';
@@ -123,6 +145,15 @@ String _classify(Object error) {
 Future<String> _outcome(Future<Object?> future) async {
   try {
     return 'OK:${await future}';
+  } catch (error) {
+    return _classify(error);
+  }
+}
+
+Future<String> _openOutcome(DwiWorker worker, String name) async {
+  try {
+    await worker.openChannel(name);
+    return 'NO_ERROR';
   } catch (error) {
     return _classify(error);
   }
@@ -357,6 +388,50 @@ Future<void> main() async {
     result['lState'] = l.state.name;
     result['lAfter'] = await _outcome(l.run<int>('count', 0));
 
+    // M: channels carry worker-initiated messages, host messages, a bounded
+    // window and a clean close (ADR-014).
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        taskTimeout: Duration(seconds: 5),
+        channelBufferSize: 1,
+      ),
+    );
+    final m = await DwiWorker.spawn();
+    final chat = await m.openChannel('chat');
+    result['mName'] = chat.name;
+    final mReceived = <Object?>[];
+    chat.messages.listen(
+      mReceived.add,
+      onError: (Object error, StackTrace stack) {
+        mReceived.add('ERR:$error');
+      },
+    );
+    result['mEchoStart'] =
+        await _outcome(m.run<Object?>('startChannelEcho', 'chat'));
+    result['mSend'] = await _outcome(chat.send('ping'));
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    result['mEcho'] = mReceived.whereType<String>().toList();
+    result['mAnnounce'] =
+        await _outcome(m.run<Object?>('announceChannel', 'chat'));
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    result['mHello'] = mReceived.contains('hello');
+    result['mDuplicate'] = await _openOutcome(m, 'chat');
+    await chat.close();
+    result['mAfterClose'] = await _outcome(chat.send('x'));
+
+    final again = await m.openChannel('chat');
+    result['mReopen'] = again.name;
+    await again.close();
+
+    final raw = await m.openChannel('raw');
+    result['mRawFirst'] = await _outcome(raw.send('a'));
+    result['mRawSecond'] = await _outcome(raw.send('b'));
+    await raw.close();
+    result['mState'] = m.state.name;
+    await m.close();
+
     result['ok'] = true;
   } catch (error, stack) {
     result['ok'] = false;
@@ -580,6 +655,20 @@ void _expectContract(Map<String, dynamic> decoded) {
   expect(decoded['lBefore'], 'OK:1');
   expect(decoded['lState'], 'closed');
   expect(decoded['lAfter'], 'DwiWorkerClosedException');
+
+  // M: channels (ADR-014).
+  expect(decoded['mName'], 'chat');
+  expect(decoded['mEchoStart'], 'OK:listening');
+  expect(decoded['mSend'], 'OK:null');
+  expect(decoded['mEcho'], contains('echo:ping'));
+  expect(decoded['mAnnounce'], 'OK:sent');
+  expect(decoded['mHello'], isTrue);
+  expect(decoded['mDuplicate'], 'DwiChannelStateException');
+  expect(decoded['mAfterClose'], 'DwiChannelClosedException');
+  expect(decoded['mReopen'], 'chat');
+  expect(decoded['mRawFirst'], 'OK:null');
+  expect(decoded['mRawSecond'], 'DwiChannelBufferException');
+  expect(decoded['mState'], 'ready');
 }
 
 /// Records one blocked engine with its exact reason (AGENTS.md rule 8).
