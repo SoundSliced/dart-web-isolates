@@ -1,8 +1,9 @@
 # DWI 0.5.0 — release notes (prepared, not published)
 
-Status: **prepared, not released.** The packages are still marked `publish_to:
-none` and `version: 0.3.0`; publishing requires the decisions listed at the end.
-Everything below is implemented, tested and pushed on `main`.
+Status: **prepared, not released.** Every package is now `version: 0.5.0`,
+`publish_to: none` is gone, and `dart pub publish --dry-run` passes for all
+seven with **0 warnings**. Uploading still needs pub.dev credentials and the
+final go-ahead. Everything below is implemented, tested and pushed on `main`.
 
 ## Highlights
 
@@ -117,12 +118,36 @@ See `docs/limitations.md`. Release-relevant ones:
 - The browser matrix is run one engine at a time; a single all-engine `dart test`
   invocation is memory-heavy.
 
-## Publishing checklist (blocking)
+## Dry-run status (2026-11-06)
 
-1. Decide the published version (all pubspecs currently say `0.3.0`).
-2. Replace `publish_to: none` with the intended target in each package.
-3. Confirm pub.dev credentials and run `dart pub publish --dry-run` per package.
-4. Date the `CHANGELOG.md` 0.5.0 section and link these notes.
-5. Publish in dependency order: `dwi_annotations` → `dwi_core` →
-   `dwi_protocol` → `dwi_native` / `dwi_web` → `dwi_builder` → `dwi`.
-   Publishing is irreversible on pub.dev (only retraction is possible).
+`dart pub publish --dry-run` from a clean tree, Dart 3.13.5:
+
+| Package | Archive | Warnings | Hints |
+| --- | --- | --- | --- |
+| `dwi_annotations` | 2 KB | 0 | 0 |
+| `dwi_protocol` | 4 KB | 0 | 0 |
+| `dwi_core` | 13 KB | 0 | 0 |
+| `dwi_native` | 13 KB | 0 | 1 |
+| `dwi_web` | 17 KB | 0 | 2 |
+| `dwi_builder` | 53 KB | 0 | 1 |
+| `dwi` | 5 KB | 0 | 5 |
+
+The only hints are "non-dev dependencies are overridden in
+pubspec_overrides.yaml", one per overridden package. That file exists so this
+monorepo resolves its siblings locally; pub.dev ignores it, and the published
+pubspecs carry `^0.5.0` hosted constraints.
+
+## Publishing checklist
+
+- [x] Decide the published version — **0.5.0** in all seven pubspecs.
+- [x] Remove `publish_to: none`.
+- [x] Replace path dependencies with hosted `^0.5.0` constraints plus
+      `pubspec_overrides.yaml` for local development.
+- [x] Add the per-package `LICENSE`, `README.md` and `CHANGELOG.md` pub requires.
+- [x] Dry-run every package from a clean tree — 0 warnings, hints explained above.
+- [ ] Confirm pub.dev credentials and date the root `CHANGELOG.md` 0.5.0 section
+      if the release date is to be recorded.
+- [ ] Publish in dependency order: `dwi_annotations` → `dwi_core` →
+      `dwi_protocol` → `dwi_native` / `dwi_web` → `dwi_builder` → `dwi`
+      (`dwi` last, because it depends on the rest).
+      Publishing is irreversible on pub.dev (only retraction is possible).
