@@ -7,6 +7,7 @@ Development-time tools. None of these ship in a user's dependency graph.
 | `worker_compiler/` | Compile Dart worker entrypoints (`dart compile js`, later `dart compile wasm`) and place artefacts where the app serves them. | Planned |
 | `code_generator/` | Generate deterministic worker registries, dispatch tables and serialization bindings from `@DwiTask` declarations. | Planned |
 | `benchmark_runner/` | Run the benchmark matrix (main thread / worker / Wasm worker / native isolate) and emit comparable results. | Planned |
+| `proxy_gate/` | Reproduce the fresh typed-proxy Flutter ordering gap (first build fails, second succeeds) and fail if Flutter ever orders it correctly. | Implemented |
 
 Rules:
 

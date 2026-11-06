@@ -12,6 +12,7 @@ analyzer:
     todo: ignore
   exclude:
     - .research/**
+    - tooling/proxy_gate/fixture/**
     - "**/*.g.dart"
     - "**/*.freezed.dart"
     - build/**

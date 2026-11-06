@@ -1,0 +1,97 @@
+DWI — fresh typed-proxy Flutter build gate, re-measured (2026-11-05)
+
+Environment
+  macOS arm64 26.5.1 (25F80), Apple M2, 8 logical cores
+  Flutter 3.47.6 stable, framework revision 5fc346839b, Dart 3.13.5
+  Repo-local SDK: .research/flutter-sdk/bin/flutter (writable cache)
+  The machine-wide Flutter launcher could not run in this session because its
+  SDK cache is read-only here (`Operation not permitted` writing
+  bin/cache/lockfile and engine stamps). The repo-local SDK of the same version
+  was used instead; no SDK file was modified.
+  PUB_CACHE: a writable directory whose `hosted` entry symlinks the read-only
+  hosted cache (2.9 GB); dependency resolution used `--offline`.
+  Google Chrome 156.0.8078.80 (headless) for the runtime check.
+
+Fixture (clean room)
+  flutter create --no-pub --platforms=web --project-name proxy_gate .
+  pubspec: path dependencies on dwi, dwi_annotations and dwi_builder
+  lib/tasks.dart: @DwiTask() int countPrimes(int limit) { ... }
+  lib/main.dart: imports dwi_tasks.g.dart and calls DwiTasks.countPrimes(1000)
+  Before the first build: no lib/dwi_tasks.g.dart, no .dwi/, no web/dwi/,
+  no build/.
+  Same fixture is committed as tooling/proxy_gate (README + run.sh + files).
+
+Probe 1 — first ordinary build, typed proxy, genuinely clean project
+  Command: flutter build web --release
+  Exit: 1
+  Output (key lines):
+    dwi_builder: generated lib/dwi_tasks.g.dart during this build. Flutter may
+      have started the Dart compiler before this hook ran; ...
+    Error: Error when reading 'lib/dwi_tasks.g.dart': Error reading
+      'lib/dwi_tasks.g.dart'  (No such file or directory)
+    Error: Undefined name 'DwiTasks'.
+    Error: Failed to compile application for the Web.
+  Artifacts produced by the same build after dart2js failed:
+    lib/dwi_tasks.g.dart                     1,530 B
+    .dwi/generated_worker.dart                 797 B
+    .dwi/worker_manifest.json                  489 B
+    web/dwi/worker.dart.js                 275,560 B
+  => The hook generated the proxy and worker, but not before the compiler read
+     the proxy. The ordering gap reproduces on 3.47.6 with a writable SDK and a
+     clean project.
+
+Probe 2 — second build, same command
+  Command: flutter build web --release
+  Exit: 0 ("✓ Built build/web")
+  Artifacts:
+    build/web/main.dart.js                 1,756,472 B
+    build/web/dwi/worker.dart.js             275,560 B (packaged by this build)
+
+Runtime check (build/web served by a static server, headless Chrome 156)
+  Requests observed by the server:
+    GET /                    200
+    GET /main.dart.js        200
+    GET /dwi/worker.dart.js  200
+  => The packaged worker is fetched and used; the app is not falling back to the
+     main thread. (Flutter renders to canvas, so the DOM text is not asserted.)
+
+Committed reproduction case
+  tooling/proxy_gate/run.sh, executed with the env above:
+    == resolve dependencies ==        (offline, lockfile only)
+    == first build ==                 exit 1
+    == second build ==                exit 0, ✓ Built build/web
+    REPRODUCED: first build failed (exit 1), second build packaged the worker.
+  The script exits 2 if a future Flutter makes the first build succeed, so the
+  limitation cannot silently go stale.
+
+Source findings (repo-local SDK, read-only inspection)
+  1. `Dart2WebTarget.dependencies` ==
+     [WebEntrypointTarget(), GenerateLocalizationsTarget()]
+     (flutter_tools/lib/src/build_system/targets/web.dart:143-146).
+     `Dart2JSTarget` extends `Dart2WebTarget`; `BuildHooks` is not a dependency.
+  2. `LinkHooks.dependencies` includes `BuildHooks(platform: web)` and the
+     compile targets as `extraDependencies`
+     (targets/native_assets.dart:140-147); the web graph instantiates
+     `LinkHooks(platform: HookPlatform.web, extraDependencies: compileTargets)`
+     (web.dart:601-605). Hooks therefore feed linking, after compilation.
+  3. `BuildHooks` declares a result file as its output (native_assets.dart);
+     there is no supported way for a hook to declare a Dart source file that
+     the compiler must wait for.
+
+Verdict
+  The typed-proxy zero-manual-build gate stays OPEN. No supported Flutter
+  mechanism orders a dependency build hook before application compilation
+  (candidates re-checked: hook output declared as a compiler input — unsupported;
+  app-root hook — not run; dev_dependency hook — not run; committing generated
+  proxies — stale by design and rejected by ADR-008 determinism).
+  The supported workflow is unchanged: run `dart run dwi_builder:dwi build` (or
+  `dwi build --flutter-build`) once before the first Flutter build; afterwards
+  ordinary Flutter commands keep the worker fresh. An app that calls `Dwi.run`
+  directly and imports no generated proxy builds on the first ordinary command
+  (measured 2026-11-04, retained).
+  Evidence for this re-measurement: tooling/proxy_gate and this file.
+
+NOT PROBED here
+  Flutter release-mode `flutter run`, worker replacement while a page is live
+  (separate probe), `flutter build web --wasm` for the proxy fixture, and any
+  non-Chrome engine for the runtime check.
