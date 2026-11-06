@@ -603,6 +603,7 @@ class WebBackend implements DwiBackend {
         );
       case DwiErrorCode.remote:
       case DwiErrorCode.internal:
+      case DwiErrorCode.channel:
         return DwiRemoteException(
           message: error.message,
           remoteType: error.remoteType,

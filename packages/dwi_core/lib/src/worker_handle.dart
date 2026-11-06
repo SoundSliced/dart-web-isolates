@@ -1,4 +1,5 @@
 import 'cancellable_task.dart';
+import 'channel.dart';
 
 /// Lifecycle state of a [DwiWorkerHandle] (ADR-013).
 ///
@@ -70,6 +71,14 @@ abstract interface class DwiWorkerHandle {
   /// local state; queued and in-flight calls were already settled with
   /// [DwiWorkerFailedException] and are never replayed.
   Future<void> restart();
+
+  /// Opens a named duplex channel on this handle (ADR-014).
+  ///
+  /// Resolves after the worker acknowledged the channel; throws
+  /// [DwiChannelStateException] when the name is already open or the handle is
+  /// not ready, and [DwiUnsupportedException] when the worker artefact does not
+  /// implement protocol v2. Channels never survive [restart].
+  Future<DwiChannel> openChannel(String name);
 
   /// Terminates the context and settles every caller.
   ///

@@ -31,6 +31,14 @@ class _Call {
 /// The script path is passed to `Worker` unchanged, so a relative path resolves
 /// against the document URL and works for root (`/`) and subdirectory
 /// (`/sub/app/`) deployments.
+/// One live web channel, tagged with its generation.
+class _WebChannel {
+  const _WebChannel(this.gen, this.endpoint);
+
+  final int gen;
+  final DwiChannelEndpoint endpoint;
+}
+
 class WebWorkerHandle implements DwiWorkerHandle {
   WebWorkerHandle._(this._config, this._script, this._onClosed);
 
@@ -65,6 +73,9 @@ class WebWorkerHandle implements DwiWorkerHandle {
   final List<_Call> _queue = <_Call>[];
   _Call? _activeCall;
   Completer<DwiEnvelope>? _activeReply;
+  int _nextChannelGen = 1;
+  final Map<String, _WebChannel> _channels = <String, _WebChannel>{};
+  Map<Object?, Object?>? _capabilities;
 
   @override
   DwiWorkerState get state => _state;
@@ -302,6 +313,138 @@ class WebWorkerHandle implements DwiWorkerHandle {
   }
 
   @override
+  Future<DwiChannel> openChannel(String name) async {
+    validateDwiChannelName(name);
+    if (!isUsable) throw _stateError();
+    final capabilities = _capabilities;
+    if (capabilities == null || capabilities['channels'] != true) {
+      throw const DwiUnsupportedException(
+        'worker artefact does not support channels; rebuild it with '
+        '`dwi build` (protocol v2)',
+      );
+    }
+    if (_channels.containsKey(name)) {
+      throw DwiChannelStateException(
+        'channel "$name" is already open on this handle',
+      );
+    }
+    final worker = _worker;
+    if (worker == null) {
+      throw const DwiWorkerFailedException(
+        'dedicated worker is not available',
+      );
+    }
+    final gen = _nextChannelGen++;
+    final channel = _createChannel(name, gen);
+    _channels[name] = _WebChannel(gen, channel);
+    try {
+      worker.postMessage(
+        DwiEnvelope(
+          type: DwiMessageType.channelOpen,
+          meta: <String, Object?>{
+            'channel': name,
+            'bufferSize': _config.channelBufferSize,
+            'gen': gen,
+          },
+        ).toMap().jsify(),
+      );
+    } catch (error) {
+      _channels.remove(name);
+      final failure = DwiSerializationException(
+        'could not open channel "$name": $error',
+      );
+      channel.failOpen(failure);
+      throw failure;
+    }
+    try {
+      await channel.open();
+    } catch (_) {
+      _channels.remove(name);
+      rethrow;
+    }
+    return channel;
+  }
+
+  DwiChannelEndpoint _createChannel(String name, int gen) {
+    return DwiChannelEndpoint(
+      name: name,
+      bufferSize: _config.channelBufferSize,
+      onSend: (seq, message, transfer) {
+        final worker = _worker;
+        if (worker == null) {
+          throw const DwiWorkerFailedException(
+            'dedicated worker is not available',
+          );
+        }
+        if (transfer) {
+          final bytes = message! as DwiTransferableBytes;
+          validateDwiPayload(
+            bytes,
+            path: 'channel message',
+            maxBytes: _config.maxPayloadBytes,
+          );
+          final envelope = DwiEnvelope(
+            type: DwiMessageType.channelMessage,
+            meta: <String, Object?>{
+              'channel': name,
+              'seq': seq,
+              'gen': gen,
+              'payloadKind': 'transferableBytes',
+              'maxPayloadBytes': _config.maxPayloadBytes,
+            },
+            payload: bytes.buffer,
+          );
+          worker.postMessage(
+            envelope.toMap().jsify(),
+            <JSObject>[bytes.buffer.toJS].toJS,
+          );
+          bytes.markSent();
+        } else {
+          validateDwiPayload(
+            message,
+            path: 'channel message',
+            maxBytes: _config.maxPayloadBytes,
+          );
+          worker.postMessage(
+            DwiEnvelope(
+              type: DwiMessageType.channelMessage,
+              meta: <String, Object?>{
+                'channel': name,
+                'seq': seq,
+                'gen': gen,
+                'maxPayloadBytes': _config.maxPayloadBytes,
+              },
+              payload: message,
+            ).toMap().jsify(),
+          );
+        }
+      },
+      onAck: (seq) => _worker?.postMessage(
+        DwiEnvelope(
+          type: DwiMessageType.channelAck,
+          meta: <String, Object?>{'channel': name, 'seq': seq, 'gen': gen},
+        ).toMap().jsify(),
+      ),
+      onClose: () => _worker?.postMessage(
+        DwiEnvelope(
+          type: DwiMessageType.channelClose,
+          meta: <String, Object?>{'channel': name, 'gen': gen},
+        ).toMap().jsify(),
+      ),
+      onClosed: () => _worker?.postMessage(
+        DwiEnvelope(
+          type: DwiMessageType.channelClosed,
+          meta: <String, Object?>{'channel': name, 'gen': gen},
+        ).toMap().jsify(),
+      ),
+      onTerminated: () {
+        final entry = _channels[name];
+        if (entry != null && entry.gen == gen) _channels.remove(name);
+      },
+    );
+  }
+
+  @override
   Future<void> restart() async {
     if (_state != DwiWorkerState.failed) {
       throw const DwiWorkerStateException(
@@ -315,6 +458,8 @@ class WebWorkerHandle implements DwiWorkerHandle {
   Future<void> _start() async {
     _state = DwiWorkerState.starting;
     _queue.clear();
+    _channels.clear();
+    _capabilities = null;
     _missedHeartbeats = 0;
 
     web.Worker worker;
@@ -404,13 +549,47 @@ class WebWorkerHandle implements DwiWorkerHandle {
 
     switch (envelope.type) {
       case DwiMessageType.ready:
+        final capabilities = envelope.meta['capabilities'];
+        if (capabilities is Map) {
+          _capabilities = Map<Object?, Object?>.from(capabilities);
+        }
         final ready = _ready;
         if (ready != null && !ready.isCompleted) ready.complete();
       case DwiMessageType.heartbeat:
         return;
       case DwiMessageType.result:
-      case DwiMessageType.error:
         _onReply(envelope);
+      case DwiMessageType.error:
+        final channel = envelope.channel;
+        if (channel != null) {
+          final entry = _channels[channel];
+          if (entry != null && entry.gen == envelope.meta['gen']) {
+            final seq = envelope.seq;
+            final message =
+                envelope.error?.message ?? 'worker could not send a message';
+            if (seq != null) {
+              entry.endpoint.reject(
+                seq,
+                DwiChannelBufferException(message),
+              );
+            } else {
+              entry.endpoint.fail(DwiSerializationException(message));
+            }
+          }
+          return;
+        }
+        _onReply(envelope);
+      case DwiMessageType.channelOpened:
+        _onChannelOpened(envelope);
+      case DwiMessageType.channelMessage:
+        _onChannelMessage(envelope);
+      case DwiMessageType.channelAck:
+        final entry = _entryFor(envelope);
+        final seq = envelope.seq;
+        if (entry != null && seq != null) entry.endpoint.ack(seq);
+      case DwiMessageType.channelClose:
+      case DwiMessageType.channelClosed:
+        _entryFor(envelope)?.endpoint.peerClosed();
       default:
         _fail(
           DwiWorkerFailedException(
@@ -418,6 +597,81 @@ class WebWorkerHandle implements DwiWorkerHandle {
             'message',
           ),
         );
+    }
+  }
+
+  _WebChannel? _entryFor(DwiEnvelope envelope) {
+    final name = envelope.channel;
+    final gen = envelope.meta['gen'];
+    final entry = name == null ? null : _channels[name];
+    return entry != null && entry.gen == gen ? entry : null;
+  }
+
+  void _onChannelOpened(DwiEnvelope envelope) {
+    final name = envelope.channel;
+    if (name == null) {
+      _fail(
+        const DwiWorkerFailedException(
+          'worker acknowledged a channel without a name',
+        ),
+      );
+      return;
+    }
+    final entry = _channels[name];
+    if (entry == null || entry.gen != envelope.meta['gen']) return;
+    final channel = entry.endpoint;
+    if (envelope.meta['opened'] == true) {
+      channel.markOpened();
+    } else {
+      _channels.remove(name);
+      channel.failOpen(
+        DwiChannelStateException(
+          envelope.error?.message ?? 'worker refused channel "$name"',
+        ),
+      );
+    }
+  }
+
+  void _onChannelMessage(DwiEnvelope envelope) {
+    final name = envelope.channel;
+    final seq = envelope.seq;
+    if (name == null || seq == null) {
+      _fail(
+        const DwiWorkerFailedException(
+          'worker sent a channel message without a name or sequence',
+        ),
+      );
+      return;
+    }
+    final entry = _channels[name];
+    if (entry == null || entry.gen != envelope.meta['gen']) return;
+    final channel = entry.endpoint;
+    Object? payload = envelope.payload;
+    if (envelope.meta['payloadKind'] == 'transferableBytes' &&
+        payload is ByteBuffer) {
+      payload = DwiTransferableBytes.fromBuffer(payload);
+    }
+    try {
+      validateDwiPayload(payload, path: 'channel message');
+    } on DwiSerializationException catch (error) {
+      channel.fail(error);
+      return;
+    }
+    if (!channel.deliver(seq, payload)) {
+      _worker?.postMessage(
+        DwiEnvelope(
+          type: DwiMessageType.error,
+          error: DwiErrorPayload(
+            code: DwiErrorCode.channel,
+            message: 'channel "$name" is full',
+          ),
+          meta: <String, Object?>{
+            'channel': name,
+            'gen': entry.gen,
+            'seq': seq,
+          },
+        ).toMap().jsify(),
+      );
     }
   }
 
@@ -518,6 +772,12 @@ class WebWorkerHandle implements DwiWorkerHandle {
         ),
       );
     }
+    final channels =
+        _channels.values.map((entry) => entry.endpoint).toList();
+    _channels.clear();
+    for (final channel in channels) {
+      channel.fail(error);
+    }
     _terminateWorker();
   }
 
@@ -545,6 +805,12 @@ class WebWorkerHandle implements DwiWorkerHandle {
     for (final call in waiting) {
       _settle(call, error: error);
     }
+    final channels =
+        _channels.values.map((entry) => entry.endpoint).toList();
+    _channels.clear();
+    for (final channel in channels) {
+      channel.fail(error);
+    }
 
     _terminateWorker();
     _state = DwiWorkerState.closed;
@@ -569,6 +835,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
       case DwiErrorCode.protocol:
       case DwiErrorCode.remote:
       case DwiErrorCode.internal:
+      case DwiErrorCode.channel:
         return DwiRemoteException(
           message: error.message,
           remoteType: error.remoteType,

@@ -39,7 +39,12 @@ export 'package:dwi_core/dwi_core.dart'
         DwiWorkerFailedException,
         DwiWorkerHandle,
         DwiWorkerState,
-        DwiWorkerStateException;
+        DwiWorkerStateException,
+        DwiChannel,
+        DwiChannelException,
+        DwiChannelClosedException,
+        DwiChannelStateException,
+        DwiChannelBufferException;
 
 /// Entry point for worker-backed, isolate-like concurrency.
 ///
@@ -226,6 +231,15 @@ final class DwiWorker {
   /// fresh local state and never receives work that failed with the old one.
   /// Throws [DwiWorkerStateException] in any other state.
   Future<void> restart() => _handle.restart();
+
+  /// Opens a named duplex channel on this handle (ADR-014).
+  ///
+  /// Resolves after the worker acknowledged the channel. Channels carry progress
+  /// updates, multiple results and long-lived conversations over the handle's
+  /// single context. They are not `SendPort`/`ReceivePort` parity: one
+  /// subscriber, FIFO per channel, bounded ack window, and no survival across
+  /// [close] or [restart].
+  Future<DwiChannel> openChannel(String name) => _handle.openChannel(name);
 
   /// Cancels queued and running work, then terminates the context.
   ///

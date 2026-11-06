@@ -28,7 +28,11 @@ abstract final class DwiWorkerRuntime {
   /// task names alone: a string cannot keep a function alive through tree
   /// shaking.
   static void start(Map<String, DwiWorkerTask> tasks, {String workerId = ''}) {
-    final dispatcher = DwiWorkerDispatcher(tasks, workerId: workerId);
+    final dispatcher = DwiWorkerDispatcher(
+      tasks,
+      workerId: workerId,
+      emit: _send,
+    );
     _self.setProperty(
       'onmessage'.toJS,
       ((JSAny? event) {
@@ -38,9 +42,13 @@ abstract final class DwiWorkerRuntime {
     _send(
       DwiEnvelope(
         type: DwiMessageType.ready,
-        meta: workerId.isEmpty
-            ? const <String, Object?>{}
-            : <String, Object?>{'workerId': workerId},
+        meta: <String, Object?>{
+          'capabilities': <String, Object?>{
+            'protocolVersion': dwiProtocolVersion,
+            'channels': true,
+          },
+          if (workerId.isNotEmpty) 'workerId': workerId,
+        },
       ),
     );
   }
@@ -84,6 +92,7 @@ abstract final class DwiWorkerRuntime {
     String message, {
     String remoteType = '',
     String remoteStack = '',
+    String? channel,
   }) {
     _send(
       DwiEnvelope(
@@ -96,6 +105,9 @@ abstract final class DwiWorkerRuntime {
           remoteStack: remoteStack,
           taskId: id,
         ),
+        meta: <String, Object?>{
+          if (channel != null) 'channel': channel,
+        },
       ),
     );
   }
@@ -139,8 +151,9 @@ abstract final class DwiWorkerRuntime {
       _sendError(
         envelope.id,
         DwiErrorCode.serialization,
-        'worker could not serialize the task result: $error',
+        'worker could not serialize the message: $error',
         remoteType: error.runtimeType.toString(),
+        channel: envelope.channel,
       );
     }
   }

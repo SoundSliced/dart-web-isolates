@@ -6,10 +6,11 @@ import 'package:dwi_core/dwi_core.dart';
 
 /// Message that starts the persistent isolate belonging to one handle.
 class _HandleStart {
-  const _HandleStart(this.tasks, this.owner);
+  const _HandleStart(this.tasks, this.owner, this.channelBufferSize);
 
   final Map<String, DwiTaskFunction> tasks;
   final SendPort owner;
+  final int channelBufferSize;
 }
 
 /// Converts transferable bytes into a real native transfer (ADR-010 §10.2).
@@ -39,8 +40,177 @@ void _handleMain(_HandleStart start) {
   start.owner.send(port.sendPort);
   var chain = Future<void>.value();
   port.listen((Object? message) {
-    chain = chain.then<void>((_) => _handleRequest(start, message));
+    if (message is List && message.isNotEmpty && message[0] == 'request') {
+      chain = chain.then<void>((_) => _handleRequest(start, message));
+      return;
+    }
+    // Channel messages are not tasks: handle them immediately so a running
+    // asynchronous task cannot block progress or conversation messages
+    // (ADR-014). A synchronous task still blocks the isolate event loop.
+    _handleChannel(start, message);
   });
+}
+
+/// Generations of the channels live in this isolate (name -> generation).
+final Map<String, int> _channelGens = <String, int>{};
+
+/// Serves channel traffic for one persistent isolate (ADR-014).
+void _handleChannel(_HandleStart start, Object? message) {
+  if (message is! List || message.length < 2 || message[0] is! String) {
+    _send(start.owner, <Object?>[
+      'protocol',
+      'isolate received a malformed channel message',
+    ]);
+    return;
+  }
+  final kind = message[0]! as String;
+  final name = message[1];
+  if (name is! String) {
+    _send(start.owner, <Object?>[
+      'protocol',
+      'channel message without a name',
+    ]);
+    return;
+  }
+  switch (kind) {
+    case 'channelOpen':
+      final bufferSize = message.length > 2 && message[2] is int
+          ? message[2]! as int
+          : start.channelBufferSize;
+      final gen = message.length > 3 && message[3] is int
+          ? message[3]! as int
+          : 0;
+      try {
+        if (_channelGens.containsKey(name)) {
+          throw DwiChannelStateException(
+            'channel "$name" is already open in this worker',
+          );
+        }
+        final endpoint = _isolateChannel(start, name, bufferSize, gen);
+        DwiWorkerChannels.register(name, endpoint);
+        _channelGens[name] = gen;
+        endpoint.markOpened();
+        _send(start.owner, <Object?>['channelOpened', name, gen, true]);
+      } on DwiException catch (error) {
+        _send(start.owner, <Object?>[
+          'channelOpened',
+          name,
+          gen,
+          false,
+          error.message,
+        ]);
+      } catch (error) {
+        _send(start.owner, <Object?>[
+          'channelOpened',
+          name,
+          gen,
+          false,
+          '$error',
+        ]);
+      }
+      return;
+    case 'channelMessage':
+      final gen = message.length > 2 ? message[2] : null;
+      final seq = message.length > 3 ? message[3] : null;
+      if (gen is! int || seq is! int) {
+        _send(start.owner, <Object?>[
+          'protocol',
+          'channel message without a generation or sequence number',
+        ]);
+        return;
+      }
+      if (_channelGens[name] != gen) return;
+      final endpoint = DwiWorkerChannels.find(name);
+      if (endpoint is! DwiChannelEndpoint) {
+        _send(start.owner, <Object?>[
+          'channelError',
+          name,
+          gen,
+          seq,
+          'serialization',
+          'channel "$name" is not open',
+        ]);
+        return;
+      }
+      Object? value;
+      try {
+        value = _decodeFromIsolate(message.length > 4 ? message[4] : null);
+      } catch (error) {
+        _send(start.owner, <Object?>[
+          'protocol',
+          'could not decode a channel message: $error',
+        ]);
+        return;
+      }
+      if (!endpoint.deliver(seq, value)) {
+        _send(start.owner, <Object?>[
+          'channelError',
+          name,
+          gen,
+          seq,
+          'channel',
+          'channel "$name" is full',
+        ]);
+      }
+      return;
+    case 'channelError':
+      final gen = message.length > 2 ? message[2] : null;
+      final seq = message.length > 3 ? message[3] : null;
+      if (gen is! int || _channelGens[name] != gen) return;
+      final endpoint = DwiWorkerChannels.find(name);
+      final text = message.length > 5 && message[5] is String
+          ? message[5]! as String
+          : 'channel "$name" is full';
+      if (seq is int && endpoint is DwiChannelEndpoint) {
+        endpoint.reject(seq, DwiChannelBufferException(text));
+      }
+      return;
+    case 'channelAck':
+      final gen = message.length > 2 ? message[2] : null;
+      final seq = message.length > 3 ? message[3] : null;
+      if (gen is! int || seq is! int || _channelGens[name] != gen) return;
+      final endpoint = DwiWorkerChannels.find(name);
+      if (endpoint is DwiChannelEndpoint) endpoint.ack(seq);
+      return;
+    case 'channelClose':
+    case 'channelClosed':
+      final gen = message.length > 2 ? message[2] : null;
+      if (gen is! int || _channelGens[name] != gen) return;
+      final endpoint = DwiWorkerChannels.find(name);
+      if (endpoint is DwiChannelEndpoint) endpoint.peerClosed();
+      return;
+    default:
+      _send(start.owner, <Object?>[
+        'protocol',
+        'unknown channel message "$kind"',
+      ]);
+  }
+}
+
+DwiChannelEndpoint _isolateChannel(
+  _HandleStart start,
+  String name,
+  int bufferSize,
+  int gen,
+) {
+  return DwiChannelEndpoint(
+    name: name,
+    bufferSize: bufferSize,
+    onSend: (seq, message, transfer) {
+      final payload = transfer ? _encodeForIsolate(message) : message;
+      start.owner.send(<Object?>['channelMessage', name, gen, seq, payload]);
+      if (transfer && message is DwiTransferableBytes) message.markSent();
+    },
+    onAck: (seq) => start.owner.send(<Object?>['channelAck', name, gen, seq]),
+    onClose: () => start.owner.send(<Object?>['channelClose', name, gen]),
+    onClosed: () => start.owner.send(<Object?>['channelClosed', name, gen]),
+    onTerminated: () {
+      if (_channelGens[name] == gen) {
+        _channelGens.remove(name);
+        DwiWorkerChannels.remove(name);
+      }
+    },
+  );
 }
 
 Future<void> _handleRequest(_HandleStart start, Object? message) async {
@@ -125,6 +295,14 @@ void _send(SendPort port, List<Object?> message) {
   }
 }
 
+/// One live channel on the host side, tagged with its generation.
+class _HostChannel {
+  const _HostChannel(this.gen, this.endpoint);
+
+  final int gen;
+  final DwiChannelEndpoint endpoint;
+}
+
 /// One call waiting for, or holding, the dedicated isolate.
 class _Call {
   _Call(this.task, this.input);
@@ -177,6 +355,8 @@ class NativeWorkerHandle implements DwiWorkerHandle {
   _Call? _activeCall;
   Completer<Object?>? _activeReply;
   int _nextId = 1;
+  int _nextChannelGen = 1;
+  final Map<String, _HostChannel> _channels = <String, _HostChannel>{};
 
   @override
   DwiWorkerState get state => _state;
@@ -382,6 +562,175 @@ class NativeWorkerHandle implements DwiWorkerHandle {
     return false;
   }
 
+  /// Routes one channel message from the isolate (ADR-014).
+  ///
+  /// Every channel message carries the generation assigned when the channel was
+  /// opened, so a reply for a closed channel can never be routed to a channel
+  /// that later reused the same name.
+  void _onChannelMessage(List<Object?> message) {
+    if (message.length < 3 || message[1] is! String || message[2] is! int) {
+      _fail(
+        const DwiWorkerFailedException(
+          'worker isolate sent a malformed channel message',
+        ),
+      );
+      return;
+    }
+    final name = message[1]! as String;
+    final gen = message[2]! as int;
+    final entry = _channels[name];
+    if (entry == null || entry.gen != gen) {
+      // A stale message for a channel this handle already closed.
+      return;
+    }
+    final channel = entry.endpoint;
+    switch (message[0]) {
+      case 'channelOpened':
+        final ok = message.length > 3 && message[3] == true;
+        if (ok) {
+          channel.markOpened();
+        } else {
+          final reason = message.length > 4 && message[4] is String
+              ? message[4]! as String
+              : '';
+          _channels.remove(name);
+          channel.failOpen(
+            DwiChannelStateException(
+              reason.isEmpty ? 'worker refused channel "$name"' : reason,
+            ),
+          );
+        }
+      case 'channelMessage':
+        final seq = message.length > 3 ? message[3] : null;
+        if (seq is! int) {
+          _fail(
+            const DwiWorkerFailedException(
+              'worker isolate sent a channel message without a sequence number',
+            ),
+          );
+          return;
+        }
+        Object? value;
+        try {
+          value = _decodeFromIsolate(message.length > 4 ? message[4] : null);
+        } catch (error) {
+          _fail(
+            DwiRemoteException(
+              message: 'could not decode a channel message: $error',
+            ),
+          );
+          return;
+        }
+        if (!channel.deliver(seq, value)) {
+          _workerPort?.send(<Object?>[
+            'channelError',
+            name,
+            gen,
+            seq,
+            'channel',
+            'channel "$name" is full',
+          ]);
+        }
+      case 'channelAck':
+        final seq = message.length > 3 ? message[3] : null;
+        if (seq is int) channel.ack(seq);
+      case 'channelClose':
+      case 'channelClosed':
+        channel.peerClosed();
+      case 'channelError':
+        final seq = message.length > 3 ? message[3] : null;
+        final text = message.length > 5 && message[5] is String
+            ? message[5]! as String
+            : '';
+        if (seq is int) {
+          channel.reject(
+            seq,
+            DwiChannelBufferException(
+              text.isEmpty ? 'channel "$name" is full' : text,
+            ),
+          );
+        } else {
+          channel.fail(
+            DwiSerializationException(
+              text.isEmpty ? 'worker could not send on channel "$name"' : text,
+            ),
+          );
+        }
+      default:
+        _fail(
+          DwiWorkerFailedException(
+            'worker isolate sent an unexpected channel message "${message[0]}"',
+          ),
+        );
+    }
+  }
+
+  @override
+  Future<DwiChannel> openChannel(String name) async {
+    validateDwiChannelName(name);
+    if (!isUsable) throw _stateError();
+    if (_channels.containsKey(name)) {
+      throw DwiChannelStateException(
+        'channel "$name" is already open on this handle',
+      );
+    }
+    final workerPort = _workerPort;
+    if (workerPort == null) {
+      throw const DwiWorkerFailedException('worker isolate is not available');
+    }
+    final gen = _nextChannelGen++;
+    final channel = _createChannel(name, gen);
+    _channels[name] = _HostChannel(gen, channel);
+    try {
+      workerPort.send(<Object?>[
+        'channelOpen',
+        name,
+        _config.channelBufferSize,
+        gen,
+      ]);
+    } catch (error) {
+      _channels.remove(name);
+      final failure = DwiSerializationException(
+        'could not open channel "$name": $error',
+      );
+      channel.failOpen(failure);
+      throw failure;
+    }
+    try {
+      await channel.open();
+    } catch (_) {
+      _channels.remove(name);
+      rethrow;
+    }
+    return channel;
+  }
+
+  DwiChannelEndpoint _createChannel(String name, int gen) {
+    return DwiChannelEndpoint(
+      name: name,
+      bufferSize: _config.channelBufferSize,
+      onSend: (seq, message, transfer) {
+        final workerPort = _workerPort;
+        if (workerPort == null) {
+          throw const DwiWorkerFailedException(
+            'worker isolate is not available',
+          );
+        }
+        final payload = transfer ? _encodeForIsolate(message) : message;
+        workerPort.send(<Object?>['channelMessage', name, gen, seq, payload]);
+        if (transfer && message is DwiTransferableBytes) message.markSent();
+      },
+      onAck: (seq) =>
+          _workerPort?.send(<Object?>['channelAck', name, gen, seq]),
+      onClose: () => _workerPort?.send(<Object?>['channelClose', name, gen]),
+      onClosed: () => _workerPort?.send(<Object?>['channelClosed', name, gen]),
+      onTerminated: () {
+        final entry = _channels[name];
+        if (entry != null && entry.gen == gen) _channels.remove(name);
+      },
+    );
+  }
+
   @override
   Future<void> restart() async {
     if (_state != DwiWorkerState.failed) {
@@ -395,6 +744,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
   Future<void> _start() async {
     _state = DwiWorkerState.starting;
     _queue.clear();
+    _channels.clear();
     final port = ReceivePort();
     _port = port;
     port.listen(
@@ -420,7 +770,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
     try {
       isolate = await Isolate.spawn(
         _handleMain,
-        _HandleStart(tasks, port.sendPort),
+        _HandleStart(tasks, port.sendPort, _config.channelBufferSize),
         debugName: 'dwi-handle',
       );
     } catch (error) {
@@ -482,6 +832,21 @@ class NativeWorkerHandle implements DwiWorkerHandle {
           'worker isolate sent a malformed message',
         ),
       );
+      return;
+    }
+
+    if (message[0] is String) {
+      if (message[0] == 'protocol') {
+        _fail(
+          DwiWorkerFailedException(
+            message.length > 1
+                ? 'worker isolate reported a protocol error: ${message[1]}'
+                : 'worker isolate reported a protocol error',
+          ),
+        );
+        return;
+      }
+      _onChannelMessage(message);
       return;
     }
 
@@ -600,6 +965,12 @@ class NativeWorkerHandle implements DwiWorkerHandle {
     }
 
     _workerPort = null;
+    final channels =
+        _channels.values.map((entry) => entry.endpoint).toList();
+    _channels.clear();
+    for (final channel in channels) {
+      channel.fail(error);
+    }
     final port = _port;
     _port = null;
     final isolate = _isolate;
@@ -634,6 +1005,12 @@ class NativeWorkerHandle implements DwiWorkerHandle {
     }
 
     _workerPort = null;
+    final channels =
+        _channels.values.map((entry) => entry.endpoint).toList();
+    _channels.clear();
+    for (final channel in channels) {
+      channel.fail(error);
+    }
     final port = _port;
     _port = null;
     final isolate = _isolate;
