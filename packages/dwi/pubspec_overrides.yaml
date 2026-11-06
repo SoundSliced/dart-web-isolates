@@ -1,0 +1,13 @@
+# Local development: resolve the sibling packages from this checkout.
+# Ignored by pub.dev; the published pubspec uses hosted constraints.
+dependency_overrides:
+  dwi_annotations:
+    path: ../dwi_annotations
+  dwi_core:
+    path: ../dwi_core
+  dwi_native:
+    path: ../dwi_native
+  dwi_protocol:
+    path: ../dwi_protocol
+  dwi_web:
+    path: ../dwi_web
