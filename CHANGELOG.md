@@ -58,6 +58,8 @@ signature, pool behaviour and semantics.
 
 ### Documentation
 
+- Release notes for 0.5.0: `docs/release-notes-0.5.0.md` (prepared; packages are
+  not published yet).
 - ADR-013 in `docs/architecture.md`; `docs/api-proposal.md`,
   `docs/compatibility-matrix.md`, `docs/limitations.md` and
   `docs/benchmarks.md` updated for the handle contract and measurements.
