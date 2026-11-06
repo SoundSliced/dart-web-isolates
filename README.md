@@ -37,6 +37,8 @@ Chrome-only: see [`docs/browser-matrix.md`](docs/browser-matrix.md).
 
 ## Packages
 
+All seven packages are published on pub.dev at **0.5.0** (2026-11-06).
+
 | Package | What it does | Status |
 | --- | --- | --- |
 | `dwi` | Public API: `Dwi.configure`, `Dwi.run`, `DwiWorker` (tasks and channels), `Dwi.capabilities`, re-exported `@DwiTask` | implemented, 17 tests |

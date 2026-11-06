@@ -1,9 +1,19 @@
 # DWI 0.5.0 — release notes (prepared, not published)
 
-Status: **prepared, not released.** Every package is now `version: 0.5.0`,
-`publish_to: none` is gone, and `dart pub publish --dry-run` passes for all
-seven with **0 warnings**. Uploading still needs pub.dev credentials and the
-final go-ahead. Everything below is implemented, tested and pushed on `main`.
+Status: **released 2026-11-06.** All seven packages are live on pub.dev at
+`0.5.0`. `dwi_web` first hit pub.dev's new-package creation rate limit after
+four uploads; it, `dwi_builder` and `dwi` uploaded on the next attempt once the
+quota window reopened.
+
+| Package | pub.dev |
+| --- | --- |
+| `dwi` | https://pub.dev/packages/dwi |
+| `dwi_annotations` | https://pub.dev/packages/dwi_annotations |
+| `dwi_builder` | https://pub.dev/packages/dwi_builder |
+| `dwi_core` | https://pub.dev/packages/dwi_core |
+| `dwi_native` | https://pub.dev/packages/dwi_native |
+| `dwi_protocol` | https://pub.dev/packages/dwi_protocol |
+| `dwi_web` | https://pub.dev/packages/dwi_web |
 
 ## Highlights
 
@@ -145,9 +155,9 @@ pubspecs carry `^0.5.0` hosted constraints.
       `pubspec_overrides.yaml` for local development.
 - [x] Add the per-package `LICENSE`, `README.md` and `CHANGELOG.md` pub requires.
 - [x] Dry-run every package from a clean tree — 0 warnings, hints explained above.
-- [ ] Confirm pub.dev credentials and date the root `CHANGELOG.md` 0.5.0 section
-      if the release date is to be recorded.
-- [ ] Publish in dependency order: `dwi_annotations` → `dwi_core` →
-      `dwi_protocol` → `dwi_native` / `dwi_web` → `dwi_builder` → `dwi`
-      (`dwi` last, because it depends on the rest).
-      Publishing is irreversible on pub.dev (only retraction is possible).
+- [x] Confirm pub.dev credentials and date the root `CHANGELOG.md` 0.5.0
+      section — released 2026-11-06.
+- [x] Publish in dependency order: `dwi_annotations` → `dwi_core` →
+      `dwi_protocol` → `dwi_native` → `dwi_web` → `dwi_builder` → `dwi`.
+      All seven are live at 0.5.0; versions on pub.dev cannot be changed
+      afterwards (only retraction is possible).
