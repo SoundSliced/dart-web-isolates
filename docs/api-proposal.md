@@ -293,6 +293,7 @@ Public surface:
 ```dart
 abstract final class DwiWorker {
   static Future<DwiWorker> spawn();
+  static Future<R> using<R>(FutureOr<R> Function(DwiWorker worker) body);
 
   DwiWorkerState get state;      // created | starting | ready | closing | closed | failed
   bool get isUsable;             // state == ready
@@ -327,6 +328,43 @@ Rules (normative, ADR-013):
   running cancellation terminates the context and fails the handle.
 - **Transferables.** ADR-010 §10.2 ownership is unchanged. A transfer that
   succeeds followed by a failure loses the bytes.
+
+### Scoped lifetime helper (ADR-015)
+
+`DwiWorker.using` is the supported way to own a handle for one block of work:
+
+```dart
+final values = await DwiWorker.using((worker) async {
+  final first = await worker.run<int>('counter');
+  final second = await worker.run<int>('counter');
+  return (first, second); // (1, 2)
+});
+
+await DwiWorker.using<void>((worker) async {
+  await worker.run('counter', null);
+});
+```
+
+- The helper spawns the handle, awaits the callback's `FutureOr<R>`, and closes
+  the handle on every path. It adds no new error type and no new execution
+  model.
+- If spawning fails, the callback never runs, no `close()` is attempted, and
+  the spawn error propagates unchanged.
+- The helper does **not** track or wait for calls, sends, or channels started
+  inside the callback. Unawaited work may be cancelled by the guaranteed
+  `close()` and settle with `DwiWorkerClosedException`. Callers must await work
+  they need; there is no implicit drain.
+- Error precedence: a callback failure is rethrown with its original stack. If
+  `close()` also fails, the callback error still wins and the close error is
+  reported to the current zone (`Zone.current.handleUncaughtError`), never
+  silently swallowed. If the callback succeeded, a close failure is the scope's
+  error.
+- Closing the handle inside the callback is allowed; the helper's second close
+  is a no-op because `close()` is idempotent. Channels left open are failed at
+  scope exit.
+- `onError`/`onFinally` callbacks are deliberately not part of the surface
+  (ADR-015 Decision 8). `DwiWorker.run`, `Dwi.run`, cancellable calls and
+  channel sends never close a handle implicitly.
 
 New public types (AGENTS.md rule 2, recorded here before implementation):
 

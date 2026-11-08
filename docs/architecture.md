@@ -846,6 +846,127 @@ tests, and the browser handle matrix (Chrome, Safari, Firefox and Edge pass thre
 page loads each). A v1 worker artefact is rejected, so existing
 projects must rebuild their worker (`dwi build`).
 
+## ADR-015 — Scoped worker lifetime helper (ACCEPTED)
+
+**Status.** Accepted for implementation (2026-11-08). This ADR is additive:
+`DwiWorker.spawn`, `run`, `runCancellable`, `restart`, `close`, `openChannel`
+and `Dwi.run` keep their ADR-013/ADR-014 contracts. The helper is implemented in
+the public facade; no backend or protocol change is allowed under this ADR.
+
+**Problem.** Every existing handle example repeats the same ownership
+boilerplate: spawn, `try`, work, close in `finally`. Forgetting the `finally`
+leaks a dedicated isolate or Web Worker until page teardown. A scoped helper
+removes that boilerplate without changing what a handle promises.
+
+**Public surface.**
+
+```dart
+final values = await DwiWorker.using((worker) async {
+  final first = await worker.run<int>('counter');
+  final second = await worker.run<int>('counter');
+  return (first, second); // (1, 2): worker-local state persists in the scope
+});
+```
+
+```dart
+abstract final class DwiWorker {
+  static Future<R> using<R>(FutureOr<R> Function(DwiWorker worker) body);
+}
+```
+
+`using` spawns exactly one handle, passes it to `body`, awaits `body`'s
+`FutureOr<R>` result, and closes the handle it created on every path. The
+helper is sugar over `spawn()` + `try`/`finally`; it adds no new execution
+model and no new error type.
+
+**Decision 1 — Ownership.** The helper owns the handle it creates. Callers that
+need to own a handle themselves keep using `spawn()` and `close()`. Ownership
+does not transfer to the callback: the callback receives a live handle for the
+duration of the scope only. A handle retained past the scope rejects calls with
+`DwiWorkerClosedException`, exactly like any closed handle.
+
+**Decision 2 — Spawn failure.** If spawning fails before a handle exists, the
+callback never runs, no `close()` is attempted, and the spawn error propagates
+unchanged (`DwiUnsupportedException`, `DwiStartupException`, or another
+`DwiException`). There is no main-thread fallback and no synthetic result.
+
+**Decision 3 — Scope end and unawaited work.** The scope ends when the
+callback's future completes; that future is always awaited. The helper does not
+enumerate, track, or wait for individual calls, sends, or channels started
+inside the callback. On scope exit `close()` cancels queued and running calls,
+settles them with `DwiWorkerClosedException`, and fails open channels — so
+unawaited work is *not* safe and may be cancelled. Callers must await every
+operation whose result they need. The helper never implies a graceful drain;
+ADR-013 has no drain variant and none is added here.
+
+**Decision 4 — Error precedence.** Cleanup must not be able to hide the
+callback's failure, and a cleanup failure must not disappear:
+
+| Callback | `close()` | The helper's future |
+| --- | --- | --- |
+| returns `value` | succeeds | completes with `value` |
+| returns `value` | throws | completes with the close error |
+| throws `E` with stack `S` | succeeds | completes with `E`, original stack `S` |
+| throws `E` with stack `S` | throws `C` | completes with `E`, original stack `S`; `C` is reported to `Zone.current.handleUncaughtError(C, stack)` |
+
+The last row is the only place the two errors collide. The original callback
+error and stack are preserved (rethrown with `Error.throwWithStackTrace`), and
+the cleanup error is delivered to the current zone so `runZonedGuarded`, a test
+harness, or `FlutterError` observes it instead of losing it. It is never
+silently swallowed and never replaces the callback error. Shipped backends
+implement `close()` without awaiting anything that can fail, so a throwing
+`close()` is a backend-contract violation; the rule exists so that violation is
+visible rather than mistaken for success.
+
+**Decision 5 — The callback closes the handle itself.** Permitted. `close()` is
+idempotent (ADR-013 Decision 4), so the helper's close is a no-op and the scope
+still ends normally. Calls made after the callback closed the handle throw
+`DwiWorkerClosedException`. The helper does not treat an early close as an
+error.
+
+**Decision 6 — Cancellation, failure, restart, channels.** Cancelling a queued
+call keeps the context; cancelling a running call fails the handle (ADR-013
+Decision 7). A failed handle is still closed by the helper (`failed → closing →
+closed`). `restart()` inside the callback is allowed and replaces the context;
+the helper closes the replacement. Channels opened inside the scope are failed
+with `DwiWorkerClosedException` at scope exit if they are still open; callers
+that need a clean channel termination call `channel.close()` before returning.
+None of these need special handling from the helper beyond the guarantee that
+`close()` runs exactly once.
+
+**Decision 7 — Generic typing.** `body` returns `FutureOr<R>`, so synchronous
+and asynchronous callbacks are both accepted. `R` is inferred from the callback
+and may be `void`; `Future<void> using<void>(...)` is a valid, common call. The
+returned `Future<R>` completes with the callback's value, not a wrapper type.
+There is no `Future<void>` overload and no callback-returned status object.
+
+**Decision 8 — No `onError` or `onFinally` in this release.** An `onError`
+callback could only observe errors the returned future already carries, and an
+`onFinally` could not do work that the callback body, a `finally` inside the
+callback, or the guaranteed `close()` cannot. Cleanup failures have their own
+rule (Decision 4). Adding either requires a concrete consumer case and a new
+ADR; neither is part of this surface.
+
+**Decision 9 — No implicit close anywhere else.** `DwiWorker.run`,
+`runCancellable`, channel `send`/`sendBytes`, and `Dwi.run` do not own a handle
+and do not close anything. `DwiWorker.using` is the only scoped close in the
+API. `Dwi.close()` retains its ADR-013 responsibility for live handles.
+
+**Forbids.** Making a successful callback look like a failed one; converting
+typed exceptions into success-shaped status objects; promising that unawaited
+work completes before scope exit; suppressing the callback error to report a
+cleanup error; retrying a task after a failure; adding a drain variant.
+
+**Implementation status.** Implemented in `packages/dwi` (facade only) for
+native and web JS. Not published: consumers receive it only in a future release.
+Covered by `packages/dwi/test/worker_scope_test.dart`.
+
+**Testing.** Successful callback with several calls and retained state; typed
+and `void` return; synchronous callback; task failure and callback failure;
+spawn failure (callback not entered); callback closing the handle itself;
+timeout during the callback; channels opened within the scope; close exactly
+once and no live handle after exit; callback error plus cleanup error.
+
 ## Consequences
 
 - The first release is deliberately narrow: named tasks, one worker pool, typed
