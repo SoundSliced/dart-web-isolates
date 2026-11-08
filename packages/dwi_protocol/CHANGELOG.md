@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.3
+
+- Synchronised release with the other DWI packages. No code changes.
+
 ## 0.5.2
 
 - Add `example/` so usage is documented on the pub.dev Example tab. No code

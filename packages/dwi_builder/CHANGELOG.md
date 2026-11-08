@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.3
+
+- Upgrade `analyzer` to `^14.0.0` (resolved to 14.7.0) and port discovery to
+  the analyzer 14 API: `NamedExpression` is now `NamedArgument`, and
+  `AnalysisContextCollection` no longer takes `excludedPaths` (discovery already
+  filters excluded files before handing paths to the analyzer).
+- Discovery results, generated output, diagnostics and the public API are
+  unchanged; the suite passes against analyzer 14.7.0.
+
 ## 0.5.2
 
 - Add `example/` so usage is documented on the pub.dev Example tab. No code

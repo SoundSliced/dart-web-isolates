@@ -5,6 +5,29 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2026-11-08
+
+Dependency and metadata patch for `dwi_builder` and `dwi_native`. No public DWI
+API, handle, channel or protocol changes.
+
+### Changed
+
+- `dwi_builder` now depends on `analyzer: ^14.0.0` (resolved to 14.7.0), two
+  majors ahead of the previous `^10.1.0`, which restores the pub.dev
+  dependency-freshness points. Discovery was ported to the analyzer 14 API:
+  AST `NamedExpression` is now `NamedArgument`, and
+  `AnalysisContextCollection` no longer accepts `excludedPaths` (analyzer 14
+  deprecates it in favour of `analysis_options.yaml` excludes; discovery already
+  filters excluded files before handing paths to the analyzer). Discovery
+  results, generated output, diagnostics and the public API are unchanged, and
+  the builder suite passes against 14.7.0.
+- The other six packages are version-bumped only.
+
+### Fixed
+
+- `dwi_native`'s description was 48 characters, below the 50-character minimum
+  pub.dev analysis enforces; it is now 73. Metadata only; no code changes.
+
 ## [0.5.2] - 2026-11-07
 
 Example-only patch. No public API, protocol or behavioural changes.

@@ -1,6 +1,6 @@
 name: dwi_native
-description: Native DWI backend backed by real Dart isolates.
-version: 0.5.2
+description: Native DWI backend backed by long-lived Dart isolates and typed failures.
+version: 0.5.3
 repository: https://github.com/SoundSliced/dart-web-isolates
 topics:
   - isolate

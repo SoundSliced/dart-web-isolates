@@ -96,9 +96,12 @@ Future<DwiDiscoveryResult> discoverTasks(DwiBuildConfig config) async {
       }
     }
 
+    // Analyzer 14 removed `excludedPaths` from the public collection factory
+    // (use `analysis_options.yaml` excludes instead). Discovery already filters
+    // excluded files in [_collectDartFiles], so an excluded path is never
+    // handed to the analyzer; only scanned files reach `contextFor`.
     final collection = AnalysisContextCollection(
       includedPaths: includedRoots.toList(growable: false),
-      excludedPaths: cfg.absoluteExcludePaths,
     );
 
     try {
@@ -526,10 +529,10 @@ String? _readTaskName(
     final arguments = annotation.arguments?.arguments ?? const [];
     String? name;
     for (final argument in arguments) {
-      if (argument is NamedExpression &&
-          argument.name.label.name == 'name' &&
-          argument.expression is SimpleStringLiteral) {
-        name = (argument.expression as SimpleStringLiteral).value;
+      if (argument is NamedArgument &&
+          argument.name.lexeme == 'name' &&
+          argument.argumentExpression is SimpleStringLiteral) {
+        name = (argument.argumentExpression as SimpleStringLiteral).value;
         continue;
       }
       diagnostics.add(
