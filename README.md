@@ -37,7 +37,7 @@ Chrome-only: see [`docs/browser-matrix.md`](docs/browser-matrix.md).
 
 ## Packages
 
-All seven packages are published on pub.dev at **0.5.0** (2026-11-06).
+All seven packages are published on pub.dev at **0.5.1** (2026-11-07).
 
 | Package | What it does | Status |
 | --- | --- | --- |
