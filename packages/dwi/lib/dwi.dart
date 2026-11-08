@@ -13,6 +13,7 @@ import 'package:dwi_core/dwi_core.dart';
 import 'src/backend_native.dart'
     if (dart.library.js_interop) 'src/backend_web.dart'
     as impl;
+import 'src/worker_scope.dart';
 
 export 'package:dwi_annotations/dwi_annotations.dart' show DwiTask;
 
@@ -172,6 +173,47 @@ final class DwiWorker {
   static Future<DwiWorker> spawn() async {
     final handle = await Dwi._active.spawnHandle();
     return DwiWorker._(handle);
+  }
+
+  /// Spawns a handle, runs [body] with it, and closes it when [body] finishes.
+  ///
+  /// The helper owns the handle: it closes it whether [body] returns or throws,
+  /// and it adds no error type of its own. It is sugar over [spawn] and
+  /// `try`/`finally`, so repeated calls inside the callback still reach one
+  /// context and keep worker-local state until the scope ends.
+  ///
+  /// ```dart
+  /// final values = await DwiWorker.using((worker) async {
+  ///   final first = await worker.run<int>('counter');
+  ///   final second = await worker.run<int>('counter');
+  ///   return (first, second); // (1, 2)
+  /// });
+  /// ```
+  ///
+  /// - If spawning fails, [body] never runs, no `close()` is attempted, and the
+  ///   spawn error propagates unchanged.
+  /// - The returned future completes with [body]'s value. A synchronous
+  ///   callback and `R == void` are both supported.
+  /// - Work started in [body] is not tracked. On scope exit `close()` cancels
+  ///   calls, sends and channels that are still active, so callers must await
+  ///   every operation whose result they need.
+  /// - If [body] throws, that error and its stack are rethrown even when
+  ///   `close()` also throws; the cleanup error is then reported to the current
+  ///   zone ([Zone.handleUncaughtError]) instead of being silently lost. If
+  ///   [body] succeeded, a `close()` failure is this call's error.
+  /// - Closing the handle inside [body] is allowed; the helper's close is a
+  ///   no-op because `close()` is idempotent. Calls made after that close throw
+  ///   [DwiWorkerClosedException]. Open channels are failed at scope exit.
+  ///
+  /// There is no `onError`/`onFinally` variant: the callback already has both
+  /// the return value and typed exceptions, and the guaranteed `close()` is the
+  /// cleanup hook.
+  static Future<R> using<R>(FutureOr<R> Function(DwiWorker worker) body) {
+    return runScopedWorker<R>(
+      open: spawn,
+      close: (worker) => worker.close(),
+      body: body,
+    );
   }
 
   /// Current lifecycle state of the handle.

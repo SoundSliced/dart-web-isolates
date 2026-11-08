@@ -124,6 +124,20 @@ try {
   or a new `spawn()`; DWI never retries a call.
 - `close()` is immediate and idempotent; `Dwi.close()` closes live handles too.
 
+For one block of work, `DwiWorker.using` owns the handle instead of you:
+
+```dart
+final values = await DwiWorker.using((worker) async {
+  final first = await worker.run<int>('counter', null);   // 1
+  final second = await worker.run<int>('counter', null);  // 2
+  return (first, second);
+});
+```
+
+The helper closes the handle when the callback returns or throws (ADR-015). It
+does not wait for calls you forgot to await: on exit, `close()` cancels active
+work. See [`examples/scoped_worker/`](examples/scoped_worker/).
+
 Losing a handle loses its state. Use a handle for repeated work that benefits
 from a warm cache or retained identity; use `Dwi.run` for one-off tasks. See
 [`examples/stateful_worker/`](examples/stateful_worker/) and ADR-013 in

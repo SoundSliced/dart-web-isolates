@@ -1,0 +1,11 @@
+name: dwi_scoped_worker_example
+description: A DwiWorker.using scope that owns one handle for one block of work.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  dwi:
+    path: ../../packages/dwi

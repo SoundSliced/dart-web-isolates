@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `DwiWorker.using` (ADR-015): a scoped helper that spawns one dedicated
+  handle, awaits the callback's `FutureOr<R>` value, and closes that handle on
+  every path. Spawn failures propagate unchanged; a callback error is rethrown
+  with its original stack even when cleanup also fails (the cleanup error is
+  reported to the current zone); closing inside the callback is allowed because
+  `close()` is idempotent. The helper does not wait for unawaited work — on exit
+  `close()` cancels it. `examples/scoped_worker/` shows the shape.
+- No backend or protocol change. Not published: consumers receive this only in
+  the next release.
+
 ## [0.5.3] - 2026-11-08
 
 Dependency and metadata patch for `dwi_builder` and `dwi_native`. No public DWI
