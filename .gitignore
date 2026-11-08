@@ -40,3 +40,14 @@ examples/automatic_worker/web/main.dart.js
 benchmarks/browser_matrix/web/main.dart.js
 benchmarks/browser_matrix/web/main.dart.js.deps
 benchmarks/browser_matrix/web/main.dart.js.map
+
+# Local agent/tool configuration (not part of the project)
+.claude/
+.cursor/
+.gemini/
+.grok/
+.kiro/
+.ignore
+.mcp.json
+GEMINI.md
+opencode.json
