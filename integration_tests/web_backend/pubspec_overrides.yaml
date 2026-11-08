@@ -1,0 +1,8 @@
+# Local development: resolve the sibling packages from this checkout.
+dependency_overrides:
+  dwi_core:
+    path: ../../packages/dwi_core
+  dwi_protocol:
+    path: ../../packages/dwi_protocol
+  dwi_web:
+    path: ../../packages/dwi_web
