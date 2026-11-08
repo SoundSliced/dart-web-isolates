@@ -1,6 +1,6 @@
 name: dwi_web
 description: Browser DWI backend backed by dedicated Web Workers.
-version: 0.5.1
+version: 0.5.2
 repository: https://github.com/SoundSliced/dart-web-isolates
 topics:
   - isolate

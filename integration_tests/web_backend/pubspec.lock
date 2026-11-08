@@ -7,21 +7,21 @@ packages:
       path: "../../packages/dwi_core"
       relative: true
     source: path
-    version: "0.5.1"
+    version: "0.5.2"
   dwi_protocol:
     dependency: "direct main"
     description:
       path: "../../packages/dwi_protocol"
       relative: true
     source: path
-    version: "0.5.1"
+    version: "0.5.2"
   dwi_web:
     dependency: "direct main"
     description:
       path: "../../packages/dwi_web"
       relative: true
     source: path
-    version: "0.5.1"
+    version: "0.5.2"
   web:
     dependency: "direct main"
     description:
