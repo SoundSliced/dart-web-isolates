@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1
+
+- Declare pub.dev `topics` (`isolate`, `concurrency`, `web-worker`, `wasm`) for
+  discovery. No code changes.
+
 ## 0.5.0
 
 - Annotations for declaring Dart Web Isolates worker tasks.

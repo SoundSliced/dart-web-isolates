@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1
+
+- Declare pub.dev `topics` (`isolate`, `concurrency`, `web-worker`, `wasm`) for
+  discovery. No code changes.
+
 ## 0.5.0
 
 - Versioned wire protocol shared by DWI hosts, workers and tooling.

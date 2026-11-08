@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-11-07
+
+Discovery-only patch. No public API, protocol or behavioural changes; the
+`0.5.0` artefacts are otherwise identical.
+
+### Changed
+
+- All seven packages declare pub.dev `topics` (`isolate`, `concurrency`,
+  `web-worker`, `wasm`) so they are reachable from topic listings rather than
+  only by exact name.
+
+### Fixed
+
+- The repository URL was unreachable while
+  `https://github.com/SoundSliced/dart-web-isolates` was private, which made
+  pub.dev report `Repository URL doesn't exist` in the pub points analysis and
+  left every package page with a dead source link. The repository is now public
+  and the analysis re-runs against it with this release.
+
 ## [0.5.0] - 2026-11-06
 
 Long-lived worker handles under ADR-013. All additive: `Dwi.run` keeps its
