@@ -1,0 +1,24 @@
+{
+  "engine": "firefox",
+  "status": "pass",
+  "browserVersion": "Mozilla Firefox 159.0.1",
+  "harness": "packages/dwi_builder/test/browser_scoped_test.dart",
+  "command": "dart test test/browser_scoped_test.dart --plain-name \"scoped helper contract in firefox\"",
+  "environment": {
+    "os": "Version 26.5.1 (Build 25F80)",
+    "dartVersion": "3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"macos_arm64\"",
+    "cpuCount": 8
+  },
+  "runs": [
+    {
+      "run": 1,
+      "status": "pass"
+    },
+    {
+      "run": 2,
+      "status": "pass"
+    }
+  ],
+  "passed": 2,
+  "failed": 0
+}

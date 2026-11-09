@@ -234,6 +234,49 @@ on any mismatch. Reproduce with
 `FLUTTER=/path/to/flutter ./tooling/hosted_consumer/run.sh`; results
 (`root.json`, `sub.json`) are written under `WORK_DIR`.
 
+## 6. Checkout-consumer scoped-helper matrix (ADR-015 / ADR-016)
+
+**Scope of this section: the checkout packages, including unpublished APIs.**
+This is separate evidence from §5: it exercises `DwiWorker.using` and
+`Dwi.runFresh`, which do not exist in published 0.5.3.
+
+Harness: `packages/dwi_builder/test/browser_scoped_test.dart` (committed). It
+builds a generated worker from the checkout, compiles the page with
+`dart compile js`, and runs the same assertions in every engine:
+
+1. two `Dwi.runFresh` calls observe fresh worker-local state (`[1, 1]`);
+2. two calls in one `DwiWorker.using` scope retain state (`[1, 2]`);
+3. a callback failure (`StateError`) and a remote task failure
+   (`DwiRemoteException`) each leave the owned handle `closed`;
+4. a spawn failure (`DwiStartupException`) does not invoke the callback;
+5. a timeout (`DwiTimeoutException`) and a running cancellation
+   (`DwiCancelledException`) each leave the owned handle `closed`;
+6. `Dwi.run`, handle state and channel exchange remain green.
+
+Native coverage is the VM suites `packages/dwi/test/worker_scope_test.dart` and
+`packages/dwi/test/run_fresh_test.dart` (20 tests, all passing). This harness is
+the browser-side evidence and does not stand in for the native run.
+
+| Engine | Version | Runs | Status |
+| --- | --- | --- | --- |
+| Chrome | 157.0.8103.38 | 2/2 | **pass** |
+| Safari | 26.5 | 2/2 | **pass** |
+| Firefox | 159.0.1 | 2/2 | **pass** |
+| Edge | 157.0.4341.42 | 2/2 | **pass** |
+
+Measured 2026-11-08 on macOS arm64 with Dart 3.13.5. Evidence:
+`audit/evidence/scoped-matrix-<engine>-20261109.json`. Reproduce one engine at a
+time:
+
+```bash
+cd packages/dwi_builder
+DWI_EVIDENCE_DIR=../../audit/evidence \
+  dart test test/browser_scoped_test.dart \
+  --plain-name "scoped helper contract in chrome"
+```
+
+Repeat the last line for `safari`, `firefox` and `edge`.
+
 ## What remains unverified
 
 - The capability probe (§1) has only ever run in Chrome.
