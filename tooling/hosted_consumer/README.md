@@ -1,17 +1,18 @@
 # Published-consumer regression fixture
 
 A reproducible version of the disposable `dwi: ^0.5.3` probe recorded in
-`docs/browser-matrix.md`. It is **not** a package test and does not run against
-the checkout: every DWI package resolves from pub.dev, with no path overrides
-and an isolated `PUB_CACHE`, so a local path dependency cannot silently satisfy
-the constraint. It is deliberately kept separate from tests of unreleased
-checkout code.
+`docs/browser-matrix.md`, now targeting the published version selected by
+`DWI_HOSTED_VERSION` (default `0.6.0`). It is **not** a package test and does not
+run against the checkout: every DWI package resolves from pub.dev, with no path
+overrides and an isolated `PUB_CACHE`, so a local path dependency cannot silently
+satisfy the constraint. It is deliberately kept separate from tests of checkout
+code.
 
 ## What it does
 
 1. Creates a throwaway Flutter Web app in a scratch directory.
 2. Writes a pubspec with hosted `dwi`, `dwi_core`, `dwi_annotations` and
-   `dwi_builder` at `^0.5.3` (and `flutter` from the SDK). No
+   `dwi_builder` at `^$DWI_HOSTED_VERSION` (and `flutter` from the SDK). No
    `pubspec_overrides.yaml`, no `path` entries.
 3. Prints the resolved package versions and asserts every `dwi*` package in
    `pubspec.lock` is `source: hosted` at `https://pub.dev`.
@@ -26,7 +27,9 @@ The fixture page exercises:
 | Check | Expected |
 | --- | --- |
 | generated typed proxy | `DwiTasks.counter(0) == 1` |
-| persistent handle | `DwiWorker.using` sees `[1, 2]` |
+| fresh-context calls | `Dwi.runFresh` returns `[1, 1]` |
+| scoped handle | `DwiWorker.using` sees `[1, 2]` |
+| persistent handle | explicit `spawn`/`close` sees `[1, 2]` |
 | channel exchange | send `ping`, receive `echo:ping` |
 | typed remote error then success | `DwiRemoteException`, then `echo == ok` |
 | worker asset loading | `dwi/worker.dart.js` fetched at the deployment mount |
@@ -57,8 +60,9 @@ FLUTTER=/path/to/flutter ./run.sh
 
 Inputs: `FLUTTER` (default `flutter`), `DART` (default the sibling `dart` of
 `FLUTTER`), `WORK_DIR` (default a new temp directory), `PUB_CACHE` (default
-`$WORK_DIR/pub-cache`), `ENGINES` (default
-`chrome,safari,firefox,edge`).
+`$WORK_DIR/pub-cache`), `ENGINES` (default `chrome,safari,firefox,edge`),
+`DWI_HOSTED_VERSION` (default `0.6.0`; set to `0.5.3` to re-run the historical
+baseline, whose page has no `runFresh`/`using` cases).
 
 Prerequisites: Flutter with web build hooks (measured on 3.47.6 / Dart 3.13.5),
 network access to pub.dev, and the four engines installed. `safaridriver` ships
@@ -83,6 +87,7 @@ outside `/Applications`.
   `packages/dwi_builder/test/support/browser_probe.dart` through a relative
   import. That keeps CDP/WebDriver handling in one tested place; this tool is
   internal and ships in no package.
-- This fixture verifies the **published 0.5.3** API. It cannot exercise
-  unpublished APIs such as `DwiWorker.using` or `Dwi.runFresh`; use the
-  checkout-consumer fixture for those.
+- This fixture verifies the **published** version selected by
+  `DWI_HOSTED_VERSION`, including `DwiWorker.using` and `Dwi.runFresh` from
+  0.6.0. The checkout-consumer matrix remains separate evidence for checkout
+  builds.

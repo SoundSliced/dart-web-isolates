@@ -64,9 +64,19 @@ Future<void> main() async {
     // 1. Generated typed task through the proxy.
     result['typed'] = await DwiTasks.counter(0);
 
-    // 2. One persistent handle keeps worker-local state across calls. This is
-    // the published 0.5.3 API (`using`/`runFresh` are unreleased); the
-    // checkout-consumer fixture covers those separately.
+    // 2. Fresh-context one-shot calls never share worker-local state (ADR-016).
+    result['fresh'] = <int>[
+      await Dwi.runFresh<int>('counter', 0),
+      await Dwi.runFresh<int>('counter', 0),
+    ];
+
+    // 3. A scoped helper owns one handle and retains state (ADR-015).
+    result['scoped'] = await DwiWorker.using((worker) async => <int>[
+          await worker.run<int>('counter', 0),
+          await worker.run<int>('counter', 0),
+        ]);
+
+    // 4. The explicit spawn/close handle API keeps its state too.
     final worker = await DwiWorker.spawn();
     try {
       result['handle'] = <int>[
@@ -77,7 +87,7 @@ Future<void> main() async {
       await worker.close();
     }
 
-    // 3. Channel exchange on a dedicated handle.
+    // 5. Channel exchange on a dedicated handle.
     final channelWorker = await DwiWorker.spawn();
     final channel = await channelWorker.openChannel('progress');
     final reply = channel.messages.first;
@@ -86,7 +96,7 @@ Future<void> main() async {
     result['channel'] = await reply.timeout(const Duration(seconds: 5));
     await channelWorker.close();
 
-    // 4. Typed remote error, then another successful pooled call.
+    // 6. Typed remote error, then another successful pooled call.
     try {
       await DwiTasks.boom('x');
       result['remote'] = 'NO_ERROR';

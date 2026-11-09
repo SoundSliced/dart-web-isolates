@@ -9,12 +9,12 @@ Dart web applications have no `dart:isolate`. `Isolate.run`, `Isolate.spawn`,
 DWI investigates closing that gap with browser Web Workers, a versioned message
 protocol, and — where it is honest to do so — an isolate-shaped API.
 
-> **Status: all seven packages are published at 0.5.3 (2026-11-08). 0.6.0 is
-> prepared for review in this branch and is not published.** It adds the scoped
-> lifetime helper (`DwiWorker.using`, ADR-015) and the first DWI-4 increment
-> (`Dwi.runFresh`, ADR-016). v0.5 adds long-lived worker handles (`DwiWorker`):
-> one dedicated worker or isolate per handle, with worker-local state retained
-> between calls. v0.4 adds cancellation, transferable bytes and crash detection.
+> **Status: all seven packages are published at 0.6.0 (2026-11-08).** It adds
+> the scoped lifetime helper (`DwiWorker.using`, ADR-015) and the first DWI-4
+> increment (`Dwi.runFresh`, ADR-016). v0.5 adds long-lived worker handles
+> (`DwiWorker`): one dedicated worker or isolate per handle, with worker-local
+> state retained between calls. v0.4 adds cancellation, transferable bytes and
+> crash detection.
 > DWI is not an isolate implementation and does not claim semantic parity with
 > `dart:isolate`. Read [`docs/limitations.md`](docs/limitations.md) and
 > [`docs/compatibility-matrix.md`](docs/compatibility-matrix.md) before relying
@@ -39,14 +39,13 @@ Chrome-only: see [`docs/browser-matrix.md`](docs/browser-matrix.md).
 
 ## Packages
 
-All seven packages are published on pub.dev at **0.5.3** (2026-11-08). The
-`0.6.0` versions in this branch are prepared for review and are not published.
+All seven packages are published on pub.dev at **0.6.0** (2026-11-08).
 
 | Package | What it does | Status |
 | --- | --- | --- |
-| `dwi` | Public API: `Dwi.configure`, `Dwi.run`, `DwiWorker` (tasks and channels), `Dwi.capabilities`, re-exported `@DwiTask` | implemented, 17 tests |
+| `dwi` | Public API: `Dwi.configure`, `Dwi.run`, `Dwi.runFresh`, `DwiWorker` (tasks, scoped lifetime, channels), `Dwi.capabilities`, re-exported `@DwiTask` | implemented, 37 tests |
 | `dwi_annotations` | `@DwiTask` marker | implemented, 2 tests |
-| `dwi_builder` | Analyzer discovery, worker/proxy/manifest generation, compile CLI, cache | implemented, 21 tests |
+| `dwi_builder` | Analyzer discovery, worker/proxy/manifest generation, compile CLI, cache | implemented, 57 tests |
 | `dwi_core` | Config, capabilities, task registry, exceptions, channel endpoint, backend and handle interfaces | implemented, 32 tests |
 | `dwi_protocol` | Protocol v2 envelopes (tasks and channels), error payloads, validation | implemented, 14 tests |
 | `dwi_native` | Isolate backend plus dedicated persistent-isolate handles and channels | implemented, 46 tests |

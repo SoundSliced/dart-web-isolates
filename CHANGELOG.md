@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.0] - 2026-11-08
 
+Published to pub.dev on 2026-11-08 (`dwi_annotations`, `dwi_core`,
+`dwi_protocol`, `dwi_native`, `dwi_web`, `dwi_builder`, `dwi`).
+
 ### Added
 
 - `DwiWorker.using` (ADR-015): a scoped helper that spawns one dedicated

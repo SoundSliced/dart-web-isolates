@@ -1,8 +1,8 @@
 # DWI 0.6.0 — release notes (prepared, not published)
 
-Status: **prepared for review on 2026-11-08; not uploaded.** All seven packages
-move from `0.5.3` to `0.6.0`. The new public APIs do not exist in `0.5.3`, so
-this is a minor release.
+Status: **published to pub.dev on 2026-11-08.** All seven packages uploaded in
+the dependency order below at `0.6.0`. This is a minor release; the new public
+APIs do not exist in `0.5.3`.
 
 | Package | Version | Upload order |
 | --- | --- | --- |
@@ -72,8 +72,10 @@ behaviour correction is the double-failure path described above.
   2/2 runs each.
 - Published-consumer regression fixture
   (`tooling/hosted_consumer/run.sh`): exits 0 on the same four engines at the
-  site root and under `/sub/app/` against published `^0.5.3`. It does not
-  exercise the unpublished APIs.
+  site root and under `/sub/app/` against the published **0.6.0** packages
+  (hosted resolution, no path overrides). The page observes `runFresh [1,1]`,
+  one `using` scope `[1,2]`, an explicit handle `[1,2]`, channel `echo:ping`,
+  a typed `DwiRemoteException` followed by success, and the worker asset fetch.
 - `dart pub publish --dry-run` for all seven packages: see the release review.
 
 ## Known limits

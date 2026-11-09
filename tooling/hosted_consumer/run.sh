@@ -37,6 +37,7 @@ work="${WORK_DIR:-$(mktemp -d)}"
 export PUB_CACHE="${PUB_CACHE:-$work/pub-cache}"
 export PUB_HOSTED_URL="${PUB_HOSTED_URL:-https://pub.dev}"
 engines="${ENGINES:-chrome,safari,firefox,edge}"
+version="${DWI_HOSTED_VERSION:-0.6.0}"
 
 app="$work/app"
 proxyfree="$work/app_proxyfree"
@@ -59,9 +60,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  dwi: ^0.5.3
-  dwi_core: ^0.5.3
-  dwi_annotations: ^0.5.3
+  dwi: ^$version
+  dwi_core: ^$version
+  dwi_annotations: ^$version
 $extra
 
 flutter:
@@ -90,6 +91,7 @@ PY
 }
 
 say "scratch: $work"
+say "target:  ^$version (hosted)"
 say "flutter: $flutter"
 say "dart:    $dart"
 say "pub cache: $PUB_CACHE"
@@ -99,7 +101,7 @@ say "pub cache: $PUB_CACHE"
 # ---------------------------------------------------------------------------
 say "flutter create (generated-proxy app)"
 (cd "$work" && "$flutter" create --no-pub --platforms=web --project-name hosted_consumer app)
-write_pubspec "$app" "  dwi_builder: ^0.5.3"
+write_pubspec "$app" "  dwi_builder: ^$version"
 cp "$here/fixture/lib/tasks.dart" "$app/lib/tasks.dart"
 cp "$here/fixture/lib/main.dart" "$app/lib/main.dart"
 cat > "$app/web/index.html" <<'EOF'
@@ -179,7 +181,7 @@ cp -R "$app/build/web/." "$serve/sub/app/"
 # ---------------------------------------------------------------------------
 say "proxy-free app: first ordinary build"
 (cd "$work" && "$flutter" create --no-pub --platforms=web --project-name hosted_consumer_proxyfree app_proxyfree)
-cat > "$proxyfree/pubspec.yaml" <<'EOF'
+cat > "$proxyfree/pubspec.yaml" <<EOF
 name: hosted_consumer_proxyfree
 description: "DWI hosted fixture with no generated proxy"
 publish_to: 'none'
@@ -191,7 +193,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  dwi: ^0.5.3
+  dwi: ^$version
 
 flutter:
   uses-material-design: true
@@ -243,6 +245,8 @@ import json, sys
 expected = {
     'capabilityBackend': 'worker',
     'typed': 1,
+    'fresh': [1, 1],
+    'scoped': [1, 2],
     'handle': [1, 2],
     'channel': 'echo:ping',
     'remote': 'DwiRemoteException',
