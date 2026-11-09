@@ -13,7 +13,7 @@ another engine's cell.
 | Browser capability probe (static page, `.research/browser_matrix/`, gitignored) | raw browser features: worker startup, structured clone, transfer, module workers, dart2wasm-in-worker, SAB | Chrome 156 | 2026-11-03 |
 | v0.4 runtime benchmark (`benchmarks/browser_matrix`, committed) | `Dwi.run` pool timings: cold start, dispatch, copy vs transfer, cancellation, sustained load, dead-worker recovery, UI responsiveness | Chrome 156, Safari 26.5 | 2026-11-04 / 2026-11-05 |
 | v0.5 handle lifecycle matrix (`packages/dwi_builder/test/browser_handle_test.dart`, committed) | the public `DwiWorker` handle contract at the DWI API level, including ADR-016's `runFresh` vs pooled-state case | Chrome 156/157.0.8103.38, Safari 26.5, Firefox 159.0/159.0.1, Edge 156.0.4314.58/157.0.4341.42 | 2026-11-05/06 and 2026-11-08 |
-| Published-consumer gate (throwaway hosted `dwi: ^0.5.3` Flutter app, `$TMPDIR`, not committed) | generated task and typed proxy, `Dwi.run` pool, handle state retention, channel exchange, typed remote error then success, at the site root and under `--base-href /sub/app/` | Chrome 157.0.8103.38, Safari 26.5, Firefox 159.0.1, Edge 157.0.4341.42 | 2026-11-08 |
+| Published-consumer regression fixture (`tooling/hosted_consumer/run.sh`, committed) | published `^0.5.3` resolution from pub.dev (no path overrides), generated typed proxy, persistent handle, channel exchange, typed remote error then success, worker asset fetch, first-build gate, at the site root and under `/sub/app/` | Chrome 157.0.8103.38, Safari 26.5, Firefox 159.0.1, Edge 157.0.4341.42 | 2026-11-08 |
 | Compiler matrix (Flutter application host) | a Flutter web app calling `Dwi.run` with a dart2js worker, built with dart2js and with dart2wasm | Chrome 156 | 2026-11-05 |
 
 ## 1. Browser capability probe — Chrome 156 only (2026-11-03)
@@ -199,6 +199,40 @@ The wasm row is measured on Flutter 3.47.6 stable / Chrome 156 only. Evidence:
 `audit/evidence/flutter-run-modes-and-wasm-fix-2026-11-05.txt` (fix and re-run)
 and `audit/evidence/flutter-run-hot-restart-and-wasm-2026-11-05.txt` (original
 failure). Firefox, Safari and Edge were not measured for either compiler.
+
+## 5. Published-consumer regression fixture
+
+**Scope of this section: the published 0.5.3 packages resolved from pub.dev, not
+the checkout.** It cannot exercise unpublished APIs; `DwiWorker.using` and
+`Dwi.runFresh` are covered only by the checkout harness in §6.
+
+Harness: `tooling/hosted_consumer/run.sh` (committed). It creates a throwaway
+Flutter Web app, sets an isolated `PUB_CACHE`, writes only hosted `^0.5.3`
+constraints (no `pubspec_overrides.yaml`, no `path` entries), and asserts every
+`dwi*` package in `pubspec.lock` is `source: hosted` at `https://pub.dev`.
+It then builds the app for the site root and with `--base-href /sub/app/` and
+drives the four engines through the same page.
+
+The page checks: generated typed proxy, persistent handle state retention,
+channel exchange (`ping` → `echo:ping`), typed `DwiRemoteException` followed by
+another successful call, and a fetch of `dwi/worker.dart.js` at the deployment
+mount. The first-build gate is asserted, not assumed: the generated-proxy app
+fails its first ordinary build (exit 1 on the missing `dwi_tasks.g.dart`), the
+fixture runs `dart run dwi_builder:dwi build`, the next build succeeds; a
+separate proxy-free app builds on its first ordinary command.
+
+| Engine | Version | Site root | `/sub/app/` |
+| --- | --- | --- | --- |
+| Chrome | 157.0.8103.38 | **pass** | **pass** |
+| Safari | 26.5 | **pass** | **pass** |
+| Firefox | 159.0.1 | **pass** | **pass** |
+| Edge | 157.0.4341.42 | **pass** | **pass** |
+
+Measured 2026-11-08 on macOS arm64 with Flutter 3.47.6 / Dart 3.13.5. One page
+load per engine per mount; the fixture validates the payload and exits non-zero
+on any mismatch. Reproduce with
+`FLUTTER=/path/to/flutter ./tooling/hosted_consumer/run.sh`; results
+(`root.json`, `sub.json`) are written under `WORK_DIR`.
 
 ## What remains unverified
 

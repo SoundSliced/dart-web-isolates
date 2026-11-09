@@ -1,0 +1,10 @@
+name: hosted_consumer_probe
+description: Browser driver for the hosted-consumer fixture. Internal tooling.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  path: ^1.9.1
