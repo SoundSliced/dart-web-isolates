@@ -95,14 +95,14 @@ packages:
       path: "../dwi_core"
       relative: true
     source: path
-    version: "0.5.3"
+    version: "0.6.0"
   dwi_protocol:
     dependency: "direct main"
     description:
       path: "../dwi_protocol"
       relative: true
     source: path
-    version: "0.5.3"
+    version: "0.6.0"
   ffi:
     dependency: transitive
     description:

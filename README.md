@@ -9,10 +9,11 @@ Dart web applications have no `dart:isolate`. `Isolate.run`, `Isolate.spawn`,
 DWI investigates closing that gap with browser Web Workers, a versioned message
 protocol, and — where it is honest to do so — an isolate-shaped API.
 
-> **Status: all seven packages are published at 0.5.3 (2026-11-08); the scoped
-> lifetime helper and the first DWI-4 increment are implemented in this branch
-> and unreleased.** v0.5 adds long-lived worker handles (`DwiWorker`): one
-> dedicated worker or isolate per handle, with worker-local state retained
+> **Status: all seven packages are published at 0.5.3 (2026-11-08). 0.6.0 is
+> prepared for review in this branch and is not published.** It adds the scoped
+> lifetime helper (`DwiWorker.using`, ADR-015) and the first DWI-4 increment
+> (`Dwi.runFresh`, ADR-016). v0.5 adds long-lived worker handles (`DwiWorker`):
+> one dedicated worker or isolate per handle, with worker-local state retained
 > between calls. v0.4 adds cancellation, transferable bytes and crash detection.
 > DWI is not an isolate implementation and does not claim semantic parity with
 > `dart:isolate`. Read [`docs/limitations.md`](docs/limitations.md) and
@@ -38,7 +39,8 @@ Chrome-only: see [`docs/browser-matrix.md`](docs/browser-matrix.md).
 
 ## Packages
 
-All seven packages are published on pub.dev at **0.5.3** (2026-11-08).
+All seven packages are published on pub.dev at **0.5.3** (2026-11-08). The
+`0.6.0` versions in this branch are prepared for review and are not published.
 
 | Package | What it does | Status |
 | --- | --- | --- |

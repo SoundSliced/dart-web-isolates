@@ -5,23 +5,33 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.0] - 2026-11-08
 
 ### Added
 
 - `DwiWorker.using` (ADR-015): a scoped helper that spawns one dedicated
   handle, awaits the callback's `FutureOr<R>` value, and closes that handle on
-  every path. Spawn failures propagate unchanged; a callback error is rethrown
-  with its original stack even when cleanup also fails (the cleanup error is
-  reported to the current zone); closing inside the callback is allowed because
-  `close()` is idempotent. The helper does not wait for unawaited work — on exit
-  `close()` cancels it. `examples/scoped_worker/` shows the shape.
+  every path. Spawn failures propagate unchanged; closing inside the callback
+  is allowed because `close()` is idempotent. The helper does not wait for
+  unawaited work — on exit `close()` cancels it. `examples/scoped_worker/`
+  shows the shape.
 - `Dwi.runFresh` (ADR-016, DWI-4 increment 1): runs exactly one task in a fresh
   dedicated context and closes it before completing, so no worker-local state is
   shared between calls on either backend. Composed from `DwiWorker.using`; no
   backend or protocol change. `Dwi.run` keeps its pooled semantics.
-- No backend or protocol change. Not published: consumers receive this only in
-  the next release.
+
+### Fixed
+
+- A double failure in a scope (callback throws, then `close()` throws) keeps the
+  callback error as the returned future's error, unchanged, and appends the
+  cleanup failure to that error's stack trace. It is no longer delivered through
+  `Zone.current.handleUncaughtError`, which ordinary callers and plain
+  `package:test` runs treated as an uncaught error.
+
+### Changed
+
+- All seven packages move to `0.6.0`; `dwi` requires the other DWI packages at
+  `^0.6.0`. No backend or protocol change.
 
 ## [0.5.3] - 2026-11-08
 

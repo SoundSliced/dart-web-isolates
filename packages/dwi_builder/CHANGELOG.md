@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.0
+
+- Synchronised release with `dwi` 0.6.0. No code changes.
+
 ## 0.5.3
 
 - Upgrade `analyzer` to `^14.0.0` (resolved to 14.7.0) and port discovery to

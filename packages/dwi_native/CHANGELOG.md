@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.0
+
+- Synchronised release with `dwi` 0.6.0. No code changes.
+
 ## 0.5.3
 
 - Lengthen the package description so pub.dev's analysis accepts it. No code
