@@ -792,6 +792,103 @@ void main() {
       expect(zoneErrors.single, isA<StateError>());
       await bad.cancel();
     });
+
+    test('a paused stop listener does not hold close()', () async {
+      final handle = await spawn();
+      final events = <DwiWorkerStop>[];
+      final done = Completer<void>();
+      final subscription = handle.stops.listen(
+        events.add,
+        onDone: done.complete,
+      );
+      subscription.pause();
+
+      final running = handle.run('slow', 5000);
+      final queued = handle.run('count', null);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      final watch = Stopwatch()..start();
+      await handle.close().timeout(const Duration(seconds: 2));
+      expect(watch.elapsedMilliseconds, lessThan(2000));
+      expect(handle.state, DwiWorkerState.closed);
+      expect(handle.stopReason, DwiWorkerStop.callerClosed);
+      await expectLater(running, throwsA(isA<DwiWorkerClosedException>()));
+      await expectLater(queued, throwsA(isA<DwiWorkerClosedException>()));
+
+      subscription.resume();
+      await done.future.timeout(const Duration(seconds: 5));
+      expect(events, <DwiWorkerStop>[DwiWorkerStop.callerClosed]);
+
+      // Repeated close stays prompt and idempotent with the observer paused.
+      subscription.pause();
+      await handle.close().timeout(const Duration(seconds: 2));
+      expect(handle.state, DwiWorkerState.closed);
+      await subscription.cancel();
+    });
+
+    test('a paused stop listener does not hold backend close()', () async {
+      final backend = NativeBackend(registry);
+      final handle = await backend.spawnHandle();
+      final events = <DwiWorkerStop>[];
+      final done = Completer<void>();
+      final subscription = handle.stops.listen(
+        events.add,
+        onDone: done.complete,
+      );
+      subscription.pause();
+
+      final watch = Stopwatch()..start();
+      await backend.close().timeout(const Duration(seconds: 2));
+      expect(watch.elapsedMilliseconds, lessThan(2000));
+      expect(handle.state, DwiWorkerState.closed);
+      expect(handle.stopReason, DwiWorkerStop.callerClosed);
+
+      subscription.resume();
+      await done.future.timeout(const Duration(seconds: 5));
+      expect(events, <DwiWorkerStop>[DwiWorkerStop.callerClosed]);
+    });
+
+    test('close after a failure keeps the first reason while paused', () async {
+      final handle = await spawn(
+        const DwiConfig(taskTimeout: Duration(milliseconds: 100)),
+      );
+      final events = <DwiWorkerStop>[];
+      final done = Completer<void>();
+      final subscription = handle.stops.listen(
+        events.add,
+        onDone: done.complete,
+      );
+      subscription.pause();
+
+      await expectLater(
+        handle.run('spin', null),
+        throwsA(isA<DwiTimeoutException>()),
+      );
+      expect(handle.stopReason, DwiWorkerStop.timedOut);
+
+      final watch = Stopwatch()..start();
+      await handle.close().timeout(const Duration(seconds: 2));
+      expect(watch.elapsedMilliseconds, lessThan(2000));
+      expect(handle.state, DwiWorkerState.closed);
+      expect(handle.stopReason, DwiWorkerStop.timedOut);
+
+      subscription.resume();
+      await done.future.timeout(const Duration(seconds: 5));
+      expect(events, <DwiWorkerStop>[DwiWorkerStop.timedOut]);
+    });
+
+    test('a paused subscription can be cancelled after close', () async {
+      final handle = await spawn();
+      final subscription = handle.stops.listen((_) {});
+      subscription.pause();
+
+      await handle.close().timeout(const Duration(seconds: 2));
+      expect(handle.state, DwiWorkerState.closed);
+      await subscription.cancel().timeout(const Duration(seconds: 2));
+      await handle.close().timeout(const Duration(seconds: 2));
+      expect(handle.state, DwiWorkerState.closed);
+      expect(handle.stopReason, DwiWorkerStop.callerClosed);
+    });
   });
 }
 

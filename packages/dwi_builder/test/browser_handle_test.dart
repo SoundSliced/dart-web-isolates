@@ -684,6 +684,77 @@ Future<void> main() async {
     result['wReason'] = w.stopReason?.name;
     result['wThrown'] = wThrown;
 
+    // X–Z: a paused or slow stop listener must not hold close() (ADR-017).
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        taskTimeout: Duration(seconds: 5),
+      ),
+    );
+    final x = await DwiWorker.spawn();
+    final xEvents = <DwiWorkerStop>[];
+    final xDone = Completer<void>();
+    final xSub = x.stops.listen(xEvents.add, onDone: xDone.complete);
+    xSub.pause();
+    final xRunning = x.run<String>('slow', 5000);
+    final xQueued = x.run<int>('count', 0);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    final xWatch = Stopwatch()..start();
+    await x.close().timeout(const Duration(seconds: 2));
+    result['xCloseMs'] = xWatch.elapsedMilliseconds;
+    result['xState'] = x.state.name;
+    result['xReason'] = x.stopReason?.name;
+    result['xRunning'] = await _outcome(xRunning);
+    result['xQueued'] = await _outcome(xQueued);
+    xSub.resume();
+    await xDone.future.timeout(const Duration(seconds: 5));
+    result['xEvents'] = xEvents.map((reason) => reason.name).join(',');
+    await xSub.cancel();
+
+    // Y: Dwi.close() stays prompt with a paused listener after a timeout.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        taskTimeout: Duration(milliseconds: 300),
+      ),
+    );
+    final y = await DwiWorker.spawn();
+    final yEvents = <DwiWorkerStop>[];
+    final yDone = Completer<void>();
+    final ySub = y.stops.listen(yEvents.add, onDone: yDone.complete);
+    ySub.pause();
+    result['yOutcome'] = await _outcome(y.run<String>('spin', 3000));
+    result['yReasonBefore'] = y.stopReason?.name;
+    final yWatch = Stopwatch()..start();
+    await Dwi.close().timeout(const Duration(seconds: 2));
+    result['yCloseMs'] = yWatch.elapsedMilliseconds;
+    result['yState'] = y.state.name;
+    result['yReason'] = y.stopReason?.name;
+    ySub.resume();
+    await yDone.future.timeout(const Duration(seconds: 5));
+    result['yEvents'] = yEvents.map((reason) => reason.name).join(',');
+    await ySub.cancel();
+
+    // Z: cancelling a paused subscription is an alternative completion path.
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        taskTimeout: Duration(seconds: 5),
+      ),
+    );
+    final z = await DwiWorker.spawn();
+    final zSub = z.stops.listen((_) {});
+    zSub.pause();
+    final zWatch = Stopwatch()..start();
+    await z.close().timeout(const Duration(seconds: 2));
+    result['zCloseMs'] = zWatch.elapsedMilliseconds;
+    await zSub.cancel().timeout(const Duration(seconds: 2));
+    await z.close().timeout(const Duration(seconds: 2));
+    result['zState'] = z.state.name;
+    result['zReason'] = z.stopReason?.name;
+
     result['ok'] = true;
   } catch (error, stack) {
     result['ok'] = false;
@@ -1005,6 +1076,25 @@ void _expectContract(Map<String, dynamic> decoded) {
   expect(decoded['wState'], 'closed');
   expect(decoded['wReason'], 'callerClosed');
   expect(decoded['wThrown'], 1);
+
+  // X–Z: a paused listener cannot hold close() after teardown.
+  expect(decoded['xCloseMs'], lessThan(2000));
+  expect(decoded['xState'], 'closed');
+  expect(decoded['xReason'], 'callerClosed');
+  expect(decoded['xRunning'], 'DwiWorkerClosedException');
+  expect(decoded['xQueued'], 'DwiWorkerClosedException');
+  expect(decoded['xEvents'], 'callerClosed');
+
+  expect(decoded['yOutcome'], 'DwiTimeoutException');
+  expect(decoded['yReasonBefore'], 'timedOut');
+  expect(decoded['yCloseMs'], lessThan(2000));
+  expect(decoded['yState'], 'closed');
+  expect(decoded['yReason'], 'timedOut');
+  expect(decoded['yEvents'], 'timedOut');
+
+  expect(decoded['zCloseMs'], lessThan(2000));
+  expect(decoded['zState'], 'closed');
+  expect(decoded['zReason'], 'callerClosed');
 }
 
 /// Records one blocked engine with its exact reason (AGENTS.md rule 8).

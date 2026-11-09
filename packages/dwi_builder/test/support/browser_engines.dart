@@ -500,12 +500,16 @@ Future<BrowserRunResult> _probeFirefox(String executable, String url) async {
     '--remote-debugging-port=$port',
     'about:blank',
   ], environment: <String, String>{
-    // Firefox's own content-process sandbox cannot initialise inside a
-    // restricted (seatbelt) host session; it would crash every content process
-    // with `sandbox_init() failed with error "Operation not permitted"`.
+    // Firefox's own process sandbox cannot initialise inside a restricted
+    // (seatbelt) host session; it crashes each sandboxed process with
+    // `sandbox_init() failed with error "Operation not permitted"`. Disable
+    // every per-process sandbox this build exposes (there is no global switch).
     'MOZ_DISABLE_CONTENT_SANDBOX': '1',
     'MOZ_DISABLE_GMP_SANDBOX': '1',
+    'MOZ_DISABLE_GPU_SANDBOX': '1',
     'MOZ_DISABLE_RDD_SANDBOX': '1',
+    'MOZ_DISABLE_SOCKET_PROCESS_SANDBOX': '1',
+    'MOZ_DISABLE_UTILITY_SANDBOX': '1',
   });
   final log = StringBuffer();
   process.stdout.transform(utf8.decoder).listen(log.write);

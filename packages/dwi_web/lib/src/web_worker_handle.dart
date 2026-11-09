@@ -103,8 +103,14 @@ class WebWorkerHandle implements DwiWorkerHandle {
     _stops.add(reason);
   }
 
-  Future<void> _closeStops() async {
-    if (!_stops.isClosed) await _stops.close();
+  /// Queues the final event and stream completion without waiting for a
+  /// subscriber to process them (ADR-017).
+  ///
+  /// A paused or slow listener must not hold `close()` after the context has
+  /// been released. The controller delivers the already-queued event before
+  /// `done` to each subscriber; the close future's errors are marked handled.
+  void _closeStops() {
+    if (!_stops.isClosed) _stops.close().ignore();
   }
 
   @override
@@ -859,7 +865,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
     _terminateWorker();
     _state = DwiWorkerState.closed;
     _onClosed?.call();
-    await _closeStops();
+    _closeStops();
   }
 
   DwiException _mapError(DwiEnvelope envelope) {
