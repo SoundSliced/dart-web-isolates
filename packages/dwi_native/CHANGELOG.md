@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.0
+
+- Record and publish the terminal stop reason for a dedicated isolate
+  (ADR-017), including an idle exit that no call observed.
+- `close()` queues the final `stops` event and completion instead of awaiting a
+  subscriber, so a paused listener cannot hold teardown.
+
 ## 0.6.0
 
 - Synchronised release with `dwi` 0.6.0. No code changes.

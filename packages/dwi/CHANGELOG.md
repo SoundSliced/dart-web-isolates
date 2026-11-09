@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.0
+
+- Add `DwiWorker.stopReason` and `DwiWorker.stops` (ADR-017): observe why a
+  dedicated handle's context stopped, including an idle crash that no call
+  observed. One broadcast event per generation, first terminal cause wins, no
+  replay, and a queued timeout or remote task error emits nothing. This is
+  observation only; typed call, channel and startup errors are unchanged.
+- `close()` no longer waits for a stop listener to process the final event. A
+  paused or slow subscriber cannot hold teardown; it receives the event before
+  `done` when it resumes.
+
 ## 0.6.0
 
 - Add `DwiWorker.using` (ADR-015): spawns one dedicated handle, awaits a

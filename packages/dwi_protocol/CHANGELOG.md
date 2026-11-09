@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.0
+
+- Synchronised release with `dwi` 0.7.0. No code changes.
+
 ## 0.6.0
 
 - Synchronised release with `dwi` 0.6.0. No code changes.

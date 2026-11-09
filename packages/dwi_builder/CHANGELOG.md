@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.0
+
+- Synchronised release with `dwi` 0.7.0; depends on `dwi_annotations ^0.7.0`.
+  No public builder API change. The Firefox browser probe now disables every
+  per-process sandbox switch the installed build exposes so the ADR-017 matrix
+  can run under this host.
+
 ## 0.6.0
 
 - Synchronised release with `dwi` 0.6.0. No code changes.

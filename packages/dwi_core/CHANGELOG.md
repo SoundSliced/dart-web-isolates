@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0
+
+- Add `DwiWorkerStop` and the `stopReason`/`stops` members to
+  `DwiWorkerHandle` (ADR-017): one terminal reason per context generation and a
+  broadcast event per transition. Observation only; no protocol change.
+
 ## 0.6.0
 
 - Synchronised release with `dwi` 0.6.0. No code changes.
