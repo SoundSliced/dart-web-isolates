@@ -1032,7 +1032,8 @@ to `Dwi.run`; claiming `dart:isolate` parity; documenting `runFresh` as faster.
 and web JS. Not published. Acceptance tests: VM tests in
 `packages/dwi/test/run_fresh_test.dart`, and the browser harness case in
 `packages/dwi_builder/test/browser_handle_test.dart` (`runFresh` returns `1,1`
-while pooled `Dwi.run` returns `1,2` in Chromium and Safari).
+while pooled `Dwi.run` returns `1,2` in Chrome, Safari, Firefox and Edge, three
+page loads per engine).
 
 ## Consequences
 
