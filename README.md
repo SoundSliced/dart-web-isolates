@@ -43,12 +43,12 @@ All seven packages are published on pub.dev at **0.6.0** (2026-11-08).
 
 | Package | What it does | Status |
 | --- | --- | --- |
-| `dwi` | Public API: `Dwi.configure`, `Dwi.run`, `Dwi.runFresh`, `DwiWorker` (tasks, scoped lifetime, channels), `Dwi.capabilities`, re-exported `@DwiTask` | implemented, 37 tests |
+| `dwi` | Public API: `Dwi.configure`, `Dwi.run`, `Dwi.runFresh`, `DwiWorker` (tasks, scoped lifetime, channels, termination observation), `Dwi.capabilities`, re-exported `@DwiTask` | implemented, 38 tests |
 | `dwi_annotations` | `@DwiTask` marker | implemented, 2 tests |
 | `dwi_builder` | Analyzer discovery, worker/proxy/manifest generation, compile CLI, cache | implemented, 57 tests |
 | `dwi_core` | Config, capabilities, task registry, exceptions, channel endpoint, backend and handle interfaces | implemented, 32 tests |
 | `dwi_protocol` | Protocol v2 envelopes (tasks and channels), error payloads, validation | implemented, 14 tests |
-| `dwi_native` | Isolate backend plus dedicated persistent-isolate handles and channels | implemented, 46 tests |
+| `dwi_native` | Isolate backend plus dedicated persistent-isolate handles and channels | implemented, 58 tests |
 | `dwi_web` | Pooled Web Worker backend, dedicated-handle and channel backend, generated-worker runtime | implemented, 23 tests, browser-tested |
 
 ## Zero-boilerplate workers (v0.3)
@@ -125,6 +125,10 @@ try {
   `DwiWorkerFailedException`. Recovery is an explicit `restart()` (fresh state)
   or a new `spawn()`; DWI never retries a call.
 - `close()` is immediate and idempotent; `Dwi.close()` closes live handles too.
+- `stopReason` and `stops` (ADR-017) report *why* the current context stopped —
+  including an idle crash that no call observed — with one broadcast event per
+  context generation. A queued timeout or a remote task error emits nothing; the
+  first terminal cause wins. See [`examples/stop_observer/`](examples/stop_observer/).
 
 For one block of work, `DwiWorker.using` owns the handle instead of you:
 

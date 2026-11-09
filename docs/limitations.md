@@ -210,6 +210,36 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
 43. **Channel errors are lifecycle errors.** A remote task error remains a task
     result/error; a channel error always ends the channel.
 
+## v0.7 limitations (handle termination observation, ADR-017)
+
+44. **Observation only, not an event log.** `stopReason` holds one reason for
+    the current context generation and `stops` emits one broadcast event per
+    terminal transition. There is no history, no replay to late subscribers and
+    no exit message. Read `stopReason` when subscribing late.
+45. **The first terminal cause wins.** A later `close()` on a failed handle does
+    not overwrite `stopReason` and does not emit a second event. When a crash,
+    timeout, running cancellation and explicit close race, the transition that
+    started first is reported; the others are ignored.
+46. **A failed restart is not a stop event.** `restart()` clears `stopReason`
+    when the replacement starts. If the replacement cannot start, `restart()`
+    throws `DwiStartupException` and no stop event is emitted: no running
+    context stopped. A listener that was subscribed before the restart stays
+    subscribed for the next real termination.
+47. **Call-local failures are not stops.** A queued-call timeout, a full queue,
+    an unknown task, a call-local serialization failure and a task-level
+    `DwiRemoteException` leave the context healthy and emit nothing. `stops`
+    never replaces or suppresses the typed error delivered to a call.
+48. **No `dart:isolate` parity.** `stopReason`/`stops` are DWI concepts.
+    `dart:isolate` has no timeout, cancellation or restart-generation state, so
+    they are not `Isolate.onExit`/`onError` analogues.
+49. **Browser verification is partial for this increment.** Chrome 157.0.8103.38,
+    Safari 26.5 and Edge 157.0.4341.42 pass the termination contract on three
+    page loads. Firefox could not be run for the recorded matrix because the
+    host sandbox refused its startup (`sandbox_init() failed with error
+    "Operation not permitted"`); a single diagnostic page load of the same
+    harness passed, but that is not a recorded three-load result
+    (`docs/browser-matrix.md`).
+
 ## Research debt (unresolved, tracked)
 
 - Generated-registry tree shaking for every library shape (the tested shapes

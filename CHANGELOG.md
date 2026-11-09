@@ -5,6 +5,30 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `DwiWorker.stopReason` and `DwiWorker.stops` (ADR-017, DWI-4 increment 2):
+  observe why a dedicated handle's context stopped, including an idle crash that
+  no call observed. `stopReason` is `null` while the context is healthy and
+  records one of `DwiWorkerStop.callerClosed`, `crashed`, `timedOut`,
+  `cancelled` or `protocolViolation`; `stops` is a broadcast stream with one
+  event per context generation. The first terminal cause wins, a failed
+  `restart()` emits nothing, queued timeouts and remote task errors emit
+  nothing, and the stream closes after the final event of `close()` (including
+  `Dwi.close()`). Observation only: existing typed call, channel and startup
+  errors are unchanged, no protocol message or new error type was added, and
+  this is not `dart:isolate` `onExit`/`onError` parity.
+  `examples/stop_observer/` shows the public usage. Verified on native and in
+  Chrome, Safari and Edge; Firefox is blocked by the host sandbox for the
+  recorded browser matrix.
+
+### Changed
+
+- The hosted consumer fixture's opening comment now describes its actual default
+  (`DWI_HOSTED_VERSION`, `0.6.0`) instead of the historical `^0.5.3`.
+
 ## [0.6.0] - 2026-11-08
 
 Published to pub.dev on 2026-11-08 (`dwi_annotations`, `dwi_core`,

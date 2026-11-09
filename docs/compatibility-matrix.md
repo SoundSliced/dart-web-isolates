@@ -20,6 +20,7 @@ v0.3 unless marked proposed.** No cell claims parity.
 | `Isolate.kill` | yes | `Worker.terminate()` | abrupt; queued and in-flight work lost | R001 §5, R003 §6 |
 | Cancel a running task | `Isolate.kill` on a retained handle | `Worker.terminate()` | non-cooperative; no partial result | ADR-010 §10.1 |
 | Detect a dead idle worker | port error / explicit state | heartbeat envelope | heartbeat pings idle workers only | ADR-010 §10.3 |
+| Observe why a handle stopped (`stopReason`, `stops`) | yes | yes | observation only, one broadcast event per generation; no `onExit`/`onError` parity, no replay | ADR-017 |
 | dart2wasm host application | n/a | **supported** since the 2026-11-05 integral-double fix | worker is dart2js; measured in Chrome 156 only | audit/evidence/flutter-run-modes-and-wasm-fix-2026-11-05.txt |
 | Pause / resume / ping | yes | **no** | no browser equivalent | R003 §1 |
 | `onExit` / `onError` listeners | yes | envelope events | `error` events are coarse; promises rejections vanish | R003 §6 |
@@ -38,7 +39,7 @@ v0.3 unless marked proposed.** No cell claims parity.
 | DWI-1.6 | cancellation, transferable bytes, heartbeat crash detection | shipped in v0.4 (Chrome and Safari measured; Firefox/Edge unverified for this level) |
 | DWI-2 | long-lived workers, pooled scheduling | handles shipped for native and web JS (Chrome, Safari, Firefox and Edge verified); `Dwi.run` pool unchanged from v0.3 |
 | DWI-3 | port-like messaging | implemented under ADR-014: single-subscriber, named, bounded channels per handle; Chrome, Safari, Firefox and Edge verified |
-| DWI-4 | high `dart:isolate` API similarity | research; increment 1 implemented under ADR-016 (`Dwi.runFresh`, fresh context per call, no parity claim) |
+| DWI-4 | high `dart:isolate` API similarity | research; increment 1 implemented under ADR-016 (`Dwi.runFresh`, fresh context per call) and increment 2 implemented under ADR-017 (`stopReason`/`stops`, no parity claim) |
 | DWI-5 | compiler-supported arbitrary functions | research, no design |
 | DWI-6 | SDK-integrated web isolate | upstream proposal only |
 
