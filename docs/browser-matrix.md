@@ -318,6 +318,11 @@ DWI_EVIDENCE_DIR=../../.research/browser_evidence \
 
 Repeat for `safari`, `firefox` and `edge`.
 
+Run one engine (and one browser harness) at a time. A single parallel
+`dart test` starts several browser matrices at once and can exhaust each test's
+12-minute budget even when every engine passes in isolation; contention is not a
+result and must not be recorded as one.
+
 ## What remains unverified
 
 - The capability probe (§1) has only ever run in Chrome.
