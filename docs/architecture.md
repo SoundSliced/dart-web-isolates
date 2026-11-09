@@ -907,16 +907,27 @@ callback's failure, and a cleanup failure must not disappear:
 | returns `value` | succeeds | completes with `value` |
 | returns `value` | throws | completes with the close error |
 | throws `E` with stack `S` | succeeds | completes with `E`, original stack `S` |
-| throws `E` with stack `S` | throws `C` | completes with `E`, original stack `S`; `C` is reported to `Zone.current.handleUncaughtError(C, stack)` |
+| throws `E` with stack `S` | throws `C` | completes with `E`, same object, stack `S` extended with the cleanup failure |
 
-The last row is the only place the two errors collide. The original callback
-error and stack are preserved (rethrown with `Error.throwWithStackTrace`), and
-the cleanup error is delivered to the current zone so `runZonedGuarded`, a test
-harness, or `FlutterError` observes it instead of losing it. It is never
-silently swallowed and never replaces the callback error. Shipped backends
-implement `close()` without awaiting anything that can fail, so a throwing
-`close()` is a backend-contract violation; the rule exists so that violation is
-visible rather than mistaken for success.
+The last row is the only place the two errors collide. The callback error object
+is rethrown unchanged (`Error.throwWithStackTrace`), so `identical(caught, E)`
+holds, and the future does not switch to the cleanup error. Because one stack
+trace travels with one error, the cleanup failure `C` and its stack are appended
+to `S`; the caller obtains both from the `catch (error, stack)` pair. Stacks are
+where Dart reports a subordinate failure without changing the error, and it is
+observable in a plain caller, an ordinary `package:test` test, and
+`runZonedGuarded` alike.
+
+The cleanup failure is therefore never silently swallowed, never replaces the
+callback error, and is never reported with an uncaught `Zone.handleUncaughtError`
+call — that would turn a condition the returned future already describes into a
+process-level error and fail plain tests. Calling the zone was the earlier
+contract; it is rejected here because an ordinary (unguarded) test zone surfaces
+the call as a test failure while the future already carries the callback error.
+
+Shipped backends implement `close()` without awaiting anything that can fail, so
+a throwing `close()` is a backend-contract violation; the rule exists so that
+violation is visible rather than mistaken for success.
 
 **Decision 5 — The callback closes the handle itself.** Permitted. `close()` is
 idempotent (ADR-013 Decision 4), so the helper's close is a no-op and the scope

@@ -377,11 +377,11 @@ await DwiWorker.using<void>((worker) async {
   inside the callback. Unawaited work may be cancelled by the guaranteed
   `close()` and settle with `DwiWorkerClosedException`. Callers must await work
   they need; there is no implicit drain.
-- Error precedence: a callback failure is rethrown with its original stack. If
-  `close()` also fails, the callback error still wins and the close error is
-  reported to the current zone (`Zone.current.handleUncaughtError`), never
-  silently swallowed. If the callback succeeded, a close failure is the scope's
-  error.
+- Error precedence: a callback failure is rethrown unchanged (same object). If
+  `close()` also fails, the callback error still wins and the cleanup failure is
+  appended to its stack trace, so it is observable without being swallowed, and
+  without an uncaught zone error. If the callback succeeded, a close failure is
+  the scope's error.
 - Closing the handle inside the callback is allowed; the helper's second close
   is a no-op because `close()` is idempotent. Channels left open are failed at
   scope exit.

@@ -217,10 +217,11 @@ final class DwiWorker {
   /// - Work started in [body] is not tracked. On scope exit `close()` cancels
   ///   calls, sends and channels that are still active, so callers must await
   ///   every operation whose result they need.
-  /// - If [body] throws, that error and its stack are rethrown even when
-  ///   `close()` also throws; the cleanup error is then reported to the current
-  ///   zone ([Zone.handleUncaughtError]) instead of being silently lost. If
-  ///   [body] succeeded, a `close()` failure is this call's error.
+  /// - If [body] throws, that error object is rethrown unchanged even when
+  ///   `close()` also throws, and the returned future carries it. The cleanup
+  ///   error is appended to that error's stack trace instead of being silently
+  ///   lost or reported as an uncaught zone error. If [body] succeeded, a
+  ///   `close()` failure is this call's error.
   /// - Closing the handle inside [body] is allowed; the helper's close is a
   ///   no-op because `close()` is idempotent. Calls made after that close throw
   ///   [DwiWorkerClosedException]. Open channels are failed at scope exit.

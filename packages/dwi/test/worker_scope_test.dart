@@ -200,26 +200,55 @@ void main() {
     );
   });
 
-  test('a callback error wins over a cleanup error, which stays observable',
+  test('a callback error wins and the cleanup failure rides in its stack',
       () async {
+    // Deliberately no runZonedGuarded: an ordinary caller (and package:test's
+    // own zone) must neither lose the cleanup failure nor treat it as an
+    // uncaught error. The callback error stays the future's error.
     final bodyError = StateError('body failed');
     final cleanupError = StateError('cleanup failed');
-    final reported = <Object>[];
+    Object? caught;
+    StackTrace? caughtStack;
 
-    await runZonedGuarded<Future<void>>(
+    try {
+      await runScopedWorker<void>(
+        open: DwiWorker.spawn,
+        close: (_) async => throw cleanupError,
+        body: (_) => throw bodyError,
+      );
+      fail('expected the callback error');
+    } catch (error, stack) {
+      caught = error;
+      caughtStack = stack;
+    }
+
+    expect(identical(caught, bodyError), isTrue);
+    expect(caughtStack.toString(), contains(cleanupError.toString()));
+  });
+
+  test('an asynchronous cleanup failure also rides in the callback stack',
       () async {
-        await expectLater(
-          runScopedWorker<void>(
-            open: DwiWorker.spawn,
-            close: (_) async => throw cleanupError,
-            body: (_) => throw bodyError,
-          ),
-          throwsA(same(bodyError)),
-        );
-      },
-      (Object error, StackTrace stack) => reported.add(error),
-    );
+    final bodyError = StateError('body failed');
+    final cleanupError = StateError('async cleanup failed');
+    Object? caught;
+    StackTrace? caughtStack;
 
-    expect(reported, <Object>[cleanupError]);
+    try {
+      await runScopedWorker<void>(
+        open: DwiWorker.spawn,
+        close: (_) async {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          throw cleanupError;
+        },
+        body: (_) => throw bodyError,
+      );
+      fail('expected the callback error');
+    } catch (error, stack) {
+      caught = error;
+      caughtStack = stack;
+    }
+
+    expect(identical(caught, bodyError), isTrue);
+    expect(caughtStack.toString(), contains(cleanupError.toString()));
   });
 }
