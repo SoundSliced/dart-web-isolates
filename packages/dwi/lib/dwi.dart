@@ -41,6 +41,7 @@ export 'package:dwi_core/dwi_core.dart'
         DwiWorkerHandle,
         DwiWorkerState,
         DwiWorkerStateException,
+        DwiWorkerStop,
         DwiChannel,
         DwiChannelException,
         DwiChannelClosedException,
@@ -120,10 +121,7 @@ abstract final class Dwi {
   /// final task = Dwi.runCancellable<int>('primes', 5000000);
   /// final cancelled = await task.cancel();
   /// ```
-  static DwiCancellableTask<R> runCancellable<R>(
-    String task, [
-    Object? input,
-  ]) {
+  static DwiCancellableTask<R> runCancellable<R>(String task, [Object? input]) {
     final inner = _active.start(task, input);
     final outer = DwiCancellableTask<R>(cancel: inner.cancel);
     outer.result.ignore();
@@ -242,6 +240,29 @@ final class DwiWorker {
 
   /// Whether the handle can accept work right now.
   bool get isUsable => _handle.isUsable;
+
+  /// Why the current context stopped, or `null` while it is active (ADR-017).
+  ///
+  /// Unlike a call error, this is also set when an idle context crashes and no
+  /// call observed it. It is readable when the terminal transition starts,
+  /// before affected calls and channels settle, and is cleared when [restart]
+  /// starts a replacement. A failed [restart] leaves it `null`.
+  DwiWorkerStop? get stopReason => _handle.stopReason;
+
+  /// Terminal transitions of this handle, one event per context generation.
+  ///
+  /// Broadcast and replay-free: late subscribers read [stopReason]. The stream
+  /// carries no error, stays open across [restart], and closes after the last
+  /// event of a final [close] (including `Dwi.close()`).
+  ///
+  /// ```dart
+  /// final worker = await DwiWorker.spawn();
+  /// final subscription = worker.stops.listen((reason) => log('$reason'));
+  /// // ...
+  /// await subscription.cancel();
+  /// await worker.close();
+  /// ```
+  Stream<DwiWorkerStop> get stops => _handle.stops;
 
   /// Runs [task] with [input] and returns its result as [R].
   ///

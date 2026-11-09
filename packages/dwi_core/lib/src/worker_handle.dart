@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'cancellable_task.dart';
 import 'channel.dart';
 
@@ -35,6 +37,30 @@ enum DwiWorkerState {
   failed,
 }
 
+/// Why a [DwiWorkerHandle]'s execution context stopped (ADR-017).
+///
+/// Only a terminal transition emits a value; call-local failures such as a
+/// queued timeout or a remote task error do not stop the context. The first
+/// terminal cause for one generation wins, and [DwiWorkerHandle.restart] starts
+/// a new generation.
+enum DwiWorkerStop {
+  /// The handle was closed with [DwiWorkerHandle.close] or `Dwi.close()`.
+  callerClosed,
+
+  /// The context died unexpectedly: an isolate exit not caused by `close`, a
+  /// port error, a worker error, or missed idle heartbeats.
+  crashed,
+
+  /// A running call exceeded `DwiConfig.taskTimeout`.
+  timedOut,
+
+  /// A running call was cancelled; the context cannot be reused.
+  cancelled,
+
+  /// The context sent a malformed or protocol-invalid message.
+  protocolViolation,
+}
+
 /// One dedicated execution context owned by a single caller (ADR-013).
 ///
 /// Backend-facing: application code uses `DwiWorker` from `package:dwi`, which
@@ -51,6 +77,25 @@ abstract interface class DwiWorkerHandle {
   ///
   /// Equivalent to `state == DwiWorkerState.ready`.
   bool get isUsable;
+
+  /// Why the current context stopped, or `null` while it is active (ADR-017).
+  ///
+  /// Becomes readable when a terminal transition starts — before affected calls
+  /// and channels settle — and is cleared only when [restart] starts a
+  /// replacement. A failed `restart()` leaves this `null`: a startup failure is
+  /// not a running context stopping.
+  ///
+  /// Late observers read this instead of replaying [stops].
+  DwiWorkerStop? get stopReason;
+
+  /// Terminal transitions of this handle, one event per context generation.
+  ///
+  /// Broadcast: subscribers receive events independently and a throwing
+  /// listener cannot affect cleanup. There is no replay; read [stopReason] for
+  /// the latest cause. The stream carries no error, stays open across [restart]
+  /// and closes after the last event of a final [close] — including a close
+  /// performed by `Dwi.close()`.
+  Stream<DwiWorkerStop> get stops;
 
   /// Runs [task] with [input] and returns its decoded result.
   ///

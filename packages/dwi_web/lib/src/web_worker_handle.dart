@@ -76,12 +76,36 @@ class WebWorkerHandle implements DwiWorkerHandle {
   int _nextChannelGen = 1;
   final Map<String, _WebChannel> _channels = <String, _WebChannel>{};
   Map<Object?, Object?>? _capabilities;
+  final StreamController<DwiWorkerStop> _stops =
+      StreamController<DwiWorkerStop>.broadcast();
+  DwiWorkerStop? _stopReason;
 
   @override
   DwiWorkerState get state => _state;
 
   @override
   bool get isUsable => _state == DwiWorkerState.ready;
+
+  @override
+  DwiWorkerStop? get stopReason => _stopReason;
+
+  @override
+  Stream<DwiWorkerStop> get stops => _stops.stream;
+
+  /// Records and emits [reason] once per context generation (ADR-017).
+  ///
+  /// Called at the start of a terminal transition, before callers settle. A
+  /// reason is never inferred from an exception type: every failure path names
+  /// its cause explicitly.
+  void _recordStop(DwiWorkerStop reason) {
+    if (_stopReason != null || _stops.isClosed) return;
+    _stopReason = reason;
+    _stops.add(reason);
+  }
+
+  Future<void> _closeStops() async {
+    if (!_stops.isClosed) await _stops.close();
+  }
 
   @override
   Future<Object?> run(String task, Object? input) => start(task, input).result;
@@ -249,11 +273,13 @@ class WebWorkerHandle implements DwiWorkerHandle {
         'task "${call.task}" exceeded '
         '${_config.taskTimeout.inMilliseconds} ms',
       );
+      _recordStop(DwiWorkerStop.timedOut);
       _settle(call, error: error);
       _fail(
         const DwiWorkerFailedException(
           'worker handle failed after a task timeout',
         ),
+        DwiWorkerStop.timedOut,
       );
     } catch (error) {
       if (error is DwiException) {
@@ -301,11 +327,13 @@ class WebWorkerHandle implements DwiWorkerHandle {
     }
     if (identical(_activeCall, call)) {
       // A running task cannot answer a cancel envelope, so it is terminated.
+      _recordStop(DwiWorkerStop.cancelled);
       _settle(call, error: error);
       _fail(
         const DwiWorkerFailedException(
           'worker handle failed after cancelling a running task',
         ),
+        DwiWorkerStop.cancelled,
       );
       return true;
     }
@@ -330,9 +358,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
     }
     final worker = _worker;
     if (worker == null) {
-      throw const DwiWorkerFailedException(
-        'dedicated worker is not available',
-      );
+      throw const DwiWorkerFailedException('dedicated worker is not available');
     }
     final gen = _nextChannelGen++;
     final channel = _createChannel(name, gen);
@@ -457,6 +483,8 @@ class WebWorkerHandle implements DwiWorkerHandle {
 
   Future<void> _start() async {
     _state = DwiWorkerState.starting;
+    // A replacement generation starts with no remembered cause (ADR-017).
+    _stopReason = null;
     _queue.clear();
     _channels.clear();
     _capabilities = null;
@@ -466,7 +494,9 @@ class WebWorkerHandle implements DwiWorkerHandle {
     try {
       worker = web.Worker(_script.toJS);
     } catch (error) {
-      _state = DwiWorkerState.failed;
+      if (_state == DwiWorkerState.starting) {
+        _state = DwiWorkerState.failed;
+      }
       throw DwiStartupException(
         'could not create a worker for "$_script": $error',
       );
@@ -474,6 +504,9 @@ class WebWorkerHandle implements DwiWorkerHandle {
     _worker = worker;
     final ready = Completer<void>();
     _ready = ready;
+    // A close during startup fails this future before `_start` can await it;
+    // mark the error handled so that race cannot become an uncaught zone error.
+    ready.future.ignore();
 
     worker.onmessage = ((web.MessageEvent event) {
       if (!identical(_worker, worker)) return;
@@ -487,15 +520,18 @@ class WebWorkerHandle implements DwiWorkerHandle {
               ? 'dedicated worker reported an error'
               : event.message,
         ),
+        DwiWorkerStop.crashed,
       );
     }).toJS;
     worker.onmessageerror = ((web.Event event) {
       if (!identical(_worker, worker)) return;
       _fail(
         const DwiRemoteException(
-          message: 'dedicated worker sent a message that could not be '
+          message:
+              'dedicated worker sent a message that could not be '
               'deserialized',
         ),
+        DwiWorkerStop.protocolViolation,
       );
     }).toJS;
 
@@ -506,7 +542,9 @@ class WebWorkerHandle implements DwiWorkerHandle {
       _startHeartbeat();
       _pump();
     } on TimeoutException {
-      _state = DwiWorkerState.failed;
+      if (_state == DwiWorkerState.starting) {
+        _state = DwiWorkerState.failed;
+      }
       _ready = null;
       _terminateWorker();
       throw DwiStartupException(
@@ -514,13 +552,13 @@ class WebWorkerHandle implements DwiWorkerHandle {
         '${_config.startupTimeout.inMilliseconds} ms',
       );
     } catch (error) {
-      _state = DwiWorkerState.failed;
+      if (_state == DwiWorkerState.starting) {
+        _state = DwiWorkerState.failed;
+      }
       _ready = null;
       _terminateWorker();
       if (error is DwiException) rethrow;
-      throw DwiStartupException(
-        'worker "$_script" failed to start: $error',
-      );
+      throw DwiStartupException('worker "$_script" failed to start: $error');
     }
   }
 
@@ -536,6 +574,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
         const DwiWorkerFailedException(
           'dedicated worker sent a non-object message',
         ),
+        DwiWorkerStop.protocolViolation,
       );
       return;
     }
@@ -543,7 +582,10 @@ class WebWorkerHandle implements DwiWorkerHandle {
     try {
       envelope = DwiEnvelope.fromMap(Map<Object?, Object?>.from(data));
     } on DwiProtocolException catch (error) {
-      _fail(DwiWorkerFailedException(error.message));
+      _fail(
+        DwiWorkerFailedException(error.message),
+        DwiWorkerStop.protocolViolation,
+      );
       return;
     }
 
@@ -568,10 +610,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
             final message =
                 envelope.error?.message ?? 'worker could not send a message';
             if (seq != null) {
-              entry.endpoint.reject(
-                seq,
-                DwiChannelBufferException(message),
-              );
+              entry.endpoint.reject(seq, DwiChannelBufferException(message));
             } else {
               entry.endpoint.fail(DwiSerializationException(message));
             }
@@ -596,6 +635,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
             'dedicated worker sent an unexpected ${envelope.type.name} '
             'message',
           ),
+          DwiWorkerStop.protocolViolation,
         );
     }
   }
@@ -614,6 +654,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
         const DwiWorkerFailedException(
           'worker acknowledged a channel without a name',
         ),
+        DwiWorkerStop.protocolViolation,
       );
       return;
     }
@@ -640,6 +681,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
         const DwiWorkerFailedException(
           'worker sent a channel message without a name or sequence',
         ),
+        DwiWorkerStop.protocolViolation,
       );
       return;
     }
@@ -710,6 +752,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
           const DwiWorkerFailedException(
             'dedicated worker stopped answering heartbeats',
           ),
+          DwiWorkerStop.crashed,
         );
         return;
       }
@@ -742,13 +785,16 @@ class WebWorkerHandle implements DwiWorkerHandle {
 
   /// Moves the handle to `failed`, settles every caller, and terminates the
   /// worker exactly once.
-  void _fail(DwiException error) {
+  ///
+  /// [reason] is the terminal cause recorded for this generation (ADR-017).
+  void _fail(DwiException error, DwiWorkerStop reason) {
     if (_state == DwiWorkerState.failed ||
         _state == DwiWorkerState.closing ||
         _state == DwiWorkerState.closed) {
       return;
     }
     _state = DwiWorkerState.failed;
+    _recordStop(reason);
 
     final ready = _ready;
     _ready = null;
@@ -772,8 +818,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
         ),
       );
     }
-    final channels =
-        _channels.values.map((entry) => entry.endpoint).toList();
+    final channels = _channels.values.map((entry) => entry.endpoint).toList();
     _channels.clear();
     for (final channel in channels) {
       channel.fail(error);
@@ -783,11 +828,11 @@ class WebWorkerHandle implements DwiWorkerHandle {
 
   @override
   Future<void> close() async {
-    if (_state == DwiWorkerState.closed ||
-        _state == DwiWorkerState.closing) {
+    if (_state == DwiWorkerState.closed || _state == DwiWorkerState.closing) {
       return;
     }
     _state = DwiWorkerState.closing;
+    _recordStop(DwiWorkerStop.callerClosed);
     const error = DwiWorkerClosedException('worker handle was closed');
 
     final ready = _ready;
@@ -805,8 +850,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
     for (final call in waiting) {
       _settle(call, error: error);
     }
-    final channels =
-        _channels.values.map((entry) => entry.endpoint).toList();
+    final channels = _channels.values.map((entry) => entry.endpoint).toList();
     _channels.clear();
     for (final channel in channels) {
       channel.fail(error);
@@ -815,6 +859,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
     _terminateWorker();
     _state = DwiWorkerState.closed;
     _onClosed?.call();
+    await _closeStops();
   }
 
   DwiException _mapError(DwiEnvelope envelope) {

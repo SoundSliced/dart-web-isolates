@@ -66,10 +66,7 @@ void _handleChannel(_HandleStart start, Object? message) {
   final kind = message[0]! as String;
   final name = message[1];
   if (name is! String) {
-    _send(start.owner, <Object?>[
-      'protocol',
-      'channel message without a name',
-    ]);
+    _send(start.owner, <Object?>['protocol', 'channel message without a name']);
     return;
   }
   switch (kind) {
@@ -215,13 +212,19 @@ DwiChannelEndpoint _isolateChannel(
 
 Future<void> _handleRequest(_HandleStart start, Object? message) async {
   if (message is! List || message.length < 4 || message[0] != 'request') {
-    _send(start.owner, <Object?>['protocol', 'isolate received a malformed request']);
+    _send(start.owner, <Object?>[
+      'protocol',
+      'isolate received a malformed request',
+    ]);
     return;
   }
   final id = message[1];
   final task = message[2];
   if (id is! int || task is! String) {
-    _send(start.owner, <Object?>['protocol', 'request id or task has the wrong type']);
+    _send(start.owner, <Object?>[
+      'protocol',
+      'request id or task has the wrong type',
+    ]);
     return;
   }
   final implementation = start.tasks[task];
@@ -253,9 +256,7 @@ Future<void> _handleRequest(_HandleStart start, Object? message) async {
   }
 
   try {
-    final value = await Future<Object?>.sync(
-      () => implementation(input),
-    );
+    final value = await Future<Object?>.sync(() => implementation(input));
     _send(start.owner, <Object?>[id, true, _encodeForIsolate(value)]);
   } catch (error, stack) {
     _send(start.owner, <Object?>[
@@ -333,11 +334,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
     DwiConfig config, {
     void Function()? onClosed,
   }) async {
-    final handle = NativeWorkerHandle._(
-      registry,
-      config.validated(),
-      onClosed,
-    );
+    final handle = NativeWorkerHandle._(registry, config.validated(), onClosed);
     await handle._start();
     return handle;
   }
@@ -357,6 +354,9 @@ class NativeWorkerHandle implements DwiWorkerHandle {
   int _nextId = 1;
   int _nextChannelGen = 1;
   final Map<String, _HostChannel> _channels = <String, _HostChannel>{};
+  final StreamController<DwiWorkerStop> _stops =
+      StreamController<DwiWorkerStop>.broadcast();
+  DwiWorkerStop? _stopReason;
 
   @override
   DwiWorkerState get state => _state;
@@ -365,14 +365,33 @@ class NativeWorkerHandle implements DwiWorkerHandle {
   bool get isUsable => _state == DwiWorkerState.ready;
 
   @override
+  DwiWorkerStop? get stopReason => _stopReason;
+
+  @override
+  Stream<DwiWorkerStop> get stops => _stops.stream;
+
+  /// Records and emits [reason] once per context generation (ADR-017).
+  ///
+  /// Called at the start of a terminal transition, before callers settle. A
+  /// reason is never inferred from an exception type: every failure path names
+  /// its cause explicitly.
+  void _recordStop(DwiWorkerStop reason) {
+    if (_stopReason != null || _stops.isClosed) return;
+    _stopReason = reason;
+    _stops.add(reason);
+  }
+
+  Future<void> _closeStops() async {
+    if (!_stops.isClosed) await _stops.close();
+  }
+
+  @override
   Future<Object?> run(String task, Object? input) => start(task, input).result;
 
   @override
   DwiCancellableTask<Object?> start(String task, Object? input) {
     final call = _Call(task, input);
-    final handle = DwiCancellableTask<Object?>(
-      cancel: () => _cancel(call),
-    );
+    final handle = DwiCancellableTask<Object?>(cancel: () => _cancel(call));
     call.handle = handle;
     handle.result.ignore();
 
@@ -497,11 +516,11 @@ class NativeWorkerHandle implements DwiWorkerHandle {
         'task "${call.task}" exceeded '
         '${_config.taskTimeout.inMilliseconds} ms',
       );
+      _recordStop(DwiWorkerStop.timedOut);
       _settle(call, error: error);
       _fail(
-        DwiWorkerFailedException(
-          'worker handle failed after a task timeout',
-        ),
+        DwiWorkerFailedException('worker handle failed after a task timeout'),
+        DwiWorkerStop.timedOut,
       );
     } catch (error) {
       if (error is DwiException) {
@@ -541,9 +560,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
 
   Future<bool> _cancel(_Call call) async {
     if (call.handle.isDone) return false;
-    final error = DwiCancelledException(
-      'task "${call.task}" was cancelled',
-    );
+    final error = DwiCancelledException('task "${call.task}" was cancelled');
     if (call.queued && _queue.remove(call)) {
       // Queued cancellation keeps the isolate: nothing has been sent yet.
       _settle(call, error: error);
@@ -551,11 +568,13 @@ class NativeWorkerHandle implements DwiWorkerHandle {
     }
     if (identical(_activeCall, call)) {
       // A running task cannot observe a message, so the context is killed.
+      _recordStop(DwiWorkerStop.cancelled);
       _settle(call, error: error);
       _fail(
         const DwiWorkerFailedException(
           'worker handle failed after cancelling a running task',
         ),
+        DwiWorkerStop.cancelled,
       );
       return true;
     }
@@ -573,6 +592,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
         const DwiWorkerFailedException(
           'worker isolate sent a malformed channel message',
         ),
+        DwiWorkerStop.protocolViolation,
       );
       return;
     }
@@ -607,6 +627,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
             const DwiWorkerFailedException(
               'worker isolate sent a channel message without a sequence number',
             ),
+            DwiWorkerStop.protocolViolation,
           );
           return;
         }
@@ -618,6 +639,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
             DwiRemoteException(
               message: 'could not decode a channel message: $error',
             ),
+            DwiWorkerStop.protocolViolation,
           );
           return;
         }
@@ -661,6 +683,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
           DwiWorkerFailedException(
             'worker isolate sent an unexpected channel message "${message[0]}"',
           ),
+          DwiWorkerStop.protocolViolation,
         );
     }
   }
@@ -743,6 +766,8 @@ class NativeWorkerHandle implements DwiWorkerHandle {
 
   Future<void> _start() async {
     _state = DwiWorkerState.starting;
+    // A replacement generation starts with no remembered cause (ADR-017).
+    _stopReason = null;
     _queue.clear();
     _channels.clear();
     final port = ReceivePort();
@@ -755,12 +780,16 @@ class NativeWorkerHandle implements DwiWorkerHandle {
             message: 'isolate port error: $error',
             remoteStack: stack.toString(),
           ),
+          DwiWorkerStop.crashed,
         );
       },
     );
 
     final ready = Completer<SendPort>();
     _ready = ready;
+    // A close during startup fails this future before `_start` can await it;
+    // mark the error handled so that race cannot become an uncaught zone error.
+    ready.future.ignore();
     final names = _registry.names.toList(growable: false);
     final tasks = <String, DwiTaskFunction>{
       for (final name in names) name: _registry.lookup(name),
@@ -774,7 +803,9 @@ class NativeWorkerHandle implements DwiWorkerHandle {
         debugName: 'dwi-handle',
       );
     } catch (error) {
-      _state = DwiWorkerState.failed;
+      if (_state == DwiWorkerState.starting) {
+        _state = DwiWorkerState.failed;
+      }
       _port = null;
       _ready = null;
       port.close();
@@ -789,7 +820,9 @@ class NativeWorkerHandle implements DwiWorkerHandle {
       _state = DwiWorkerState.ready;
       _pump();
     } on TimeoutException {
-      _state = DwiWorkerState.failed;
+      if (_state == DwiWorkerState.starting) {
+        _state = DwiWorkerState.failed;
+      }
       _ready = null;
       _workerPort = null;
       _isolate = null;
@@ -801,7 +834,9 @@ class NativeWorkerHandle implements DwiWorkerHandle {
         '${_config.startupTimeout.inMilliseconds} ms',
       );
     } catch (error) {
-      _state = DwiWorkerState.failed;
+      if (_state == DwiWorkerState.starting) {
+        _state = DwiWorkerState.failed;
+      }
       _ready = null;
       _workerPort = null;
       _isolate = null;
@@ -812,6 +847,13 @@ class NativeWorkerHandle implements DwiWorkerHandle {
       throw DwiStartupException('worker isolate failed to start: $error');
     }
   }
+
+  /// Test seam: routes [message] through the normal inbound handler.
+  ///
+  /// It exists so tests can exercise the protocol-failure classification
+  /// (ADR-017) without adding a protocol message or exposing an isolate port.
+  /// Production code never calls it.
+  void debugDeliverInbound(Object? message) => _onMessage(message);
 
   void _onMessage(Object? message) {
     if (message is SendPort) {
@@ -831,6 +873,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
         const DwiWorkerFailedException(
           'worker isolate sent a malformed message',
         ),
+        DwiWorkerStop.protocolViolation,
       );
       return;
     }
@@ -843,6 +886,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
                 ? 'worker isolate reported a protocol error: ${message[1]}'
                 : 'worker isolate reported a protocol error',
           ),
+          DwiWorkerStop.protocolViolation,
         );
         return;
       }
@@ -856,6 +900,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
         const DwiWorkerFailedException(
           'worker isolate reported a protocol error',
         ),
+        DwiWorkerStop.protocolViolation,
       );
       return;
     }
@@ -875,6 +920,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
             message: 'could not decode the task result: $error',
             taskId: id,
           ),
+          DwiWorkerStop.protocolViolation,
         );
       }
       return;
@@ -885,6 +931,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
         const DwiWorkerFailedException(
           'worker isolate sent a malformed error reply',
         ),
+        DwiWorkerStop.protocolViolation,
       );
       return;
     }
@@ -918,6 +965,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
             remoteStack: remoteStack,
             taskId: id,
           ),
+          DwiWorkerStop.protocolViolation,
         );
     }
   }
@@ -929,20 +977,22 @@ class NativeWorkerHandle implements DwiWorkerHandle {
       return;
     }
     _fail(
-      const DwiWorkerFailedException(
-        'worker isolate exited unexpectedly',
-      ),
+      const DwiWorkerFailedException('worker isolate exited unexpectedly'),
+      DwiWorkerStop.crashed,
     );
   }
 
   /// Moves the handle to `failed`, settles every caller, and kills the isolate.
-  void _fail(DwiException error) {
+  ///
+  /// [reason] is the terminal cause recorded for this generation (ADR-017).
+  void _fail(DwiException error, DwiWorkerStop reason) {
     if (_state == DwiWorkerState.failed ||
         _state == DwiWorkerState.closing ||
         _state == DwiWorkerState.closed) {
       return;
     }
     _state = DwiWorkerState.failed;
+    _recordStop(reason);
 
     final ready = _ready;
     _ready = null;
@@ -965,8 +1015,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
     }
 
     _workerPort = null;
-    final channels =
-        _channels.values.map((entry) => entry.endpoint).toList();
+    final channels = _channels.values.map((entry) => entry.endpoint).toList();
     _channels.clear();
     for (final channel in channels) {
       channel.fail(error);
@@ -981,11 +1030,11 @@ class NativeWorkerHandle implements DwiWorkerHandle {
 
   @override
   Future<void> close() async {
-    if (_state == DwiWorkerState.closed ||
-        _state == DwiWorkerState.closing) {
+    if (_state == DwiWorkerState.closed || _state == DwiWorkerState.closing) {
       return;
     }
     _state = DwiWorkerState.closing;
+    _recordStop(DwiWorkerStop.callerClosed);
     const error = DwiWorkerClosedException('worker handle was closed');
 
     final ready = _ready;
@@ -1005,8 +1054,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
     }
 
     _workerPort = null;
-    final channels =
-        _channels.values.map((entry) => entry.endpoint).toList();
+    final channels = _channels.values.map((entry) => entry.endpoint).toList();
     _channels.clear();
     for (final channel in channels) {
       channel.fail(error);
@@ -1019,5 +1067,6 @@ class NativeWorkerHandle implements DwiWorkerHandle {
     isolate?.kill(priority: Isolate.immediate);
     _state = DwiWorkerState.closed;
     _onClosed?.call();
+    await _closeStops();
   }
 }

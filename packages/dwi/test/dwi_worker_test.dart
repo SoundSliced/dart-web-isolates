@@ -10,9 +10,7 @@ void main() {
     Dwi.registerTask('counter', (Object? input) => ++counter);
     Dwi.registerTask('echoWorker', (Object? input) => input);
     Dwi.registerTask('slowWorker', (Object? input) async {
-      await Future<void>.delayed(
-        Duration(milliseconds: input! as int),
-      );
+      await Future<void>.delayed(Duration(milliseconds: input! as int));
       return 'slow';
     });
     await Dwi.configure(const DwiConfig());
@@ -127,5 +125,18 @@ void main() {
       await worker.close();
       await Dwi.configure(const DwiConfig());
     }
+  });
+
+  test('facade forwards stopReason and stops (ADR-017)', () async {
+    final worker = await DwiWorker.spawn();
+    expect(worker.stopReason, isNull);
+    final events = <DwiWorkerStop>[];
+    final done = Completer<void>();
+    worker.stops.listen(events.add, onDone: done.complete);
+
+    await worker.close();
+    await done.future.timeout(const Duration(seconds: 5));
+    expect(events, <DwiWorkerStop>[DwiWorkerStop.callerClosed]);
+    expect(worker.stopReason, DwiWorkerStop.callerClosed);
   });
 }

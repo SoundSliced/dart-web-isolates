@@ -15,9 +15,7 @@ void main() {
     registry = DwiTaskRegistry()
       ..register('count', (Object? input) => ++counter)
       ..register('slow', (Object? input) async {
-        await Future<void>.delayed(
-          Duration(milliseconds: input! as int),
-        );
+        await Future<void>.delayed(Duration(milliseconds: input! as int));
         return 'slow';
       })
       ..register('spin', (Object? input) {
@@ -27,6 +25,11 @@ void main() {
       })
       ..register('boom', (Object? input) => throw StateError('boom'))
       ..register('die', (Object? input) => Isolate.exit())
+      ..register('dieAfter', (Object? input) {
+        // Answer first, then kill the persistent isolate while it is idle.
+        Timer(const Duration(milliseconds: 100), () => Isolate.exit());
+        return input;
+      })
       ..register('unsendable', (Object? input) => ReceivePort())
       ..register('startEcho', (Object? input) {
         final channel = DwiWorkerChannels.find(input! as String);
@@ -51,12 +54,9 @@ void main() {
       ..register('startBytesEcho', (Object? input) {
         final channel = DwiWorkerChannels.find(input! as String);
         if (channel == null) return 'missing';
-        channel.messages.listen(
-          (message) {
-            if (message is DwiTransferableBytes) channel.sendBytes(message);
-          },
-          onError: (Object error, StackTrace stack) {},
-        );
+        channel.messages.listen((message) {
+          if (message is DwiTransferableBytes) channel.sendBytes(message);
+        }, onError: (Object error, StackTrace stack) {});
         return 'listening';
       })
       ..register('echoTransferable', (Object? input) => input)
@@ -149,19 +149,22 @@ void main() {
     }
   });
 
-  test('a result that cannot cross the boundary fails only that call', () async {
-    final handle = await spawn();
-    try {
-      await expectLater(
-        handle.run('unsendable', null),
-        throwsA(isA<DwiSerializationException>()),
-      );
-      expect(handle.state, DwiWorkerState.ready);
-      expect(await handle.run('count', null), 1);
-    } finally {
-      await handle.close();
-    }
-  });
+  test(
+    'a result that cannot cross the boundary fails only that call',
+    () async {
+      final handle = await spawn();
+      try {
+        await expectLater(
+          handle.run('unsendable', null),
+          throwsA(isA<DwiSerializationException>()),
+        );
+        expect(handle.state, DwiWorkerState.ready);
+        expect(await handle.run('count', null), 1);
+      } finally {
+        await handle.close();
+      }
+    },
+  );
 
   test('unknown task fails only that call', () async {
     final handle = await spawn();
@@ -277,23 +280,25 @@ void main() {
     await handle.close();
   });
 
-  test('running cancellation terminates the isolate and fails the handle',
-      () async {
-    final handle = await spawn();
-    final task = handle.start('spin', null);
-    final queued = handle.run('count', null);
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+  test(
+    'running cancellation terminates the isolate and fails the handle',
+    () async {
+      final handle = await spawn();
+      final task = handle.start('spin', null);
+      final queued = handle.run('count', null);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
 
-    final watch = Stopwatch()..start();
-    expect(await task.cancel(), isTrue);
-    await expectLater(task.result, throwsA(isA<DwiCancelledException>()));
-    await expectLater(queued, throwsA(isA<DwiWorkerFailedException>()));
-    expect(handle.state, DwiWorkerState.failed);
-    expect(watch.elapsedMilliseconds, lessThan(2000));
-    // Cancel after completion changes nothing.
-    expect(await task.cancel(), isFalse);
-    await handle.close();
-  });
+      final watch = Stopwatch()..start();
+      expect(await task.cancel(), isTrue);
+      await expectLater(task.result, throwsA(isA<DwiCancelledException>()));
+      await expectLater(queued, throwsA(isA<DwiWorkerFailedException>()));
+      expect(handle.state, DwiWorkerState.failed);
+      expect(watch.elapsedMilliseconds, lessThan(2000));
+      // Cancel after completion changes nothing.
+      expect(await task.cancel(), isFalse);
+      await handle.close();
+    },
+  );
 
   test('cancel and completion race settles exactly once', () async {
     final handle = await spawn();
@@ -313,9 +318,7 @@ void main() {
   test('transfers an argument and a result', () async {
     final handle = await spawn();
     try {
-      final bytes = DwiTransferableBytes(
-        Uint8List.fromList(<int>[1, 2, 3]),
-      );
+      final bytes = DwiTransferableBytes(Uint8List.fromList(<int>[1, 2, 3]));
       final echoed = await handle.run('echoTransferable', bytes);
       expect(echoed, isA<DwiTransferableBytes>());
       expect((echoed! as DwiTransferableBytes).bytes, <int>[1, 2, 3]);
@@ -531,23 +534,25 @@ void main() {
     await handle.close();
   });
 
-  test('handle close errors open channels with DwiWorkerClosedException',
-      () async {
-    final handle = await spawn();
-    final channel = await handle.openChannel('chat');
-    Object? caught;
-    final done = Completer<void>();
-    channel.messages.listen(
-      (_) {},
-      onError: (Object error, StackTrace stack) {
-        caught = error;
-      },
-      onDone: done.complete,
-    );
-    await handle.close();
-    await done.future.timeout(const Duration(seconds: 5));
-    expect(caught, isA<DwiWorkerClosedException>());
-  });
+  test(
+    'handle close errors open channels with DwiWorkerClosedException',
+    () async {
+      final handle = await spawn();
+      final channel = await handle.openChannel('chat');
+      Object? caught;
+      final done = Completer<void>();
+      channel.messages.listen(
+        (_) {},
+        onError: (Object error, StackTrace stack) {
+          caught = error;
+        },
+        onDone: done.complete,
+      );
+      await handle.close();
+      await done.future.timeout(const Duration(seconds: 5));
+      expect(caught, isA<DwiWorkerClosedException>());
+    },
+  );
 
   test('transfers bytes over a channel', () async {
     final handle = await spawn();
@@ -569,6 +574,242 @@ void main() {
       await handle.close();
     }
   });
+
+  group('stop observation (ADR-017)', () {
+    test('a ready handle has no stop reason and does not replay', () async {
+      final handle = await spawn();
+      final log = _StopLog(handle.stops);
+      expect(handle.stopReason, isNull);
+      expect(await handle.run('count', null), 1);
+      expect(log.events, isEmpty);
+      expect(log.done.isCompleted, isFalse);
+
+      await handle.close();
+      await log.done.future.timeout(const Duration(seconds: 5));
+      expect(log.events, <DwiWorkerStop>[DwiWorkerStop.callerClosed]);
+      expect(handle.stopReason, DwiWorkerStop.callerClosed);
+
+      // Late subscribers read stopReason and get no history.
+      expect(await handle.stops.toList(), isEmpty);
+      await log.cancel();
+    });
+
+    test('an idle isolate death records crashed once', () async {
+      final handle = await spawn();
+      final log = _StopLog(handle.stops);
+      expect(await handle.run('dieAfter', 'alive'), 'alive');
+      await _waitFor(() => log.events.isNotEmpty);
+      expect(log.events, <DwiWorkerStop>[DwiWorkerStop.crashed]);
+      expect(handle.state, DwiWorkerState.failed);
+      expect(handle.stopReason, DwiWorkerStop.crashed);
+      // The handle can still restart, so the stream stays open.
+      expect(log.done.isCompleted, isFalse);
+
+      await handle.close();
+      await log.done.future.timeout(const Duration(seconds: 5));
+      // close after a failure preserves the first cause and emits no duplicate.
+      expect(log.events, <DwiWorkerStop>[DwiWorkerStop.crashed]);
+      expect(handle.stopReason, DwiWorkerStop.crashed);
+    });
+
+    test('a running task timeout records timedOut', () async {
+      final handle = await spawn(
+        const DwiConfig(taskTimeout: Duration(milliseconds: 100)),
+      );
+      final log = _StopLog(handle.stops);
+      await expectLater(
+        handle.run('spin', null),
+        throwsA(isA<DwiTimeoutException>()),
+      );
+      await _waitFor(() => log.events.isNotEmpty);
+      expect(log.events, <DwiWorkerStop>[DwiWorkerStop.timedOut]);
+      expect(handle.stopReason, DwiWorkerStop.timedOut);
+      expect(handle.state, DwiWorkerState.failed);
+      await handle.close();
+      await log.done.future.timeout(const Duration(seconds: 5));
+    });
+
+    test('cancelling a running call records cancelled', () async {
+      final handle = await spawn();
+      final log = _StopLog(handle.stops);
+      final task = handle.start('spin', null);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(await task.cancel(), isTrue);
+      await expectLater(task.result, throwsA(isA<DwiCancelledException>()));
+      await _waitFor(() => log.events.isNotEmpty);
+      expect(log.events, <DwiWorkerStop>[DwiWorkerStop.cancelled]);
+      expect(handle.stopReason, DwiWorkerStop.cancelled);
+      expect(handle.state, DwiWorkerState.failed);
+      await handle.close();
+      await log.done.future.timeout(const Duration(seconds: 5));
+    });
+
+    test('a malformed inbound message records protocolViolation', () async {
+      final handle = await spawn();
+      final log = _StopLog(handle.stops);
+      handle.debugDeliverInbound('not-a-message');
+      expect(handle.state, DwiWorkerState.failed);
+      await _waitFor(() => log.events.isNotEmpty);
+      expect(log.events, <DwiWorkerStop>[DwiWorkerStop.protocolViolation]);
+      expect(handle.stopReason, DwiWorkerStop.protocolViolation);
+      await handle.close();
+      await log.done.future.timeout(const Duration(seconds: 5));
+      expect(log.events, <DwiWorkerStop>[DwiWorkerStop.protocolViolation]);
+    });
+
+    test('a queued-call timeout emits nothing', () async {
+      final handle = await spawn(
+        const DwiConfig(
+          queueTimeout: Duration(milliseconds: 50),
+          taskTimeout: Duration(seconds: 5),
+        ),
+      );
+      final log = _StopLog(handle.stops);
+      final running = handle.run('slow', 300);
+      final queued = handle.run('count', null);
+      await expectLater(queued, throwsA(isA<DwiTimeoutException>()));
+      expect(await running, 'slow');
+      expect(handle.state, DwiWorkerState.ready);
+      expect(handle.stopReason, isNull);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(log.events, isEmpty);
+
+      await handle.close();
+      await log.done.future.timeout(const Duration(seconds: 5));
+      expect(log.events, <DwiWorkerStop>[DwiWorkerStop.callerClosed]);
+    });
+
+    test('a remote task failure emits nothing', () async {
+      final handle = await spawn();
+      final log = _StopLog(handle.stops);
+      await expectLater(
+        handle.run('boom', null),
+        throwsA(isA<DwiRemoteException>()),
+      );
+      expect(handle.state, DwiWorkerState.ready);
+      expect(handle.stopReason, isNull);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(log.events, isEmpty);
+
+      await handle.close();
+      await log.done.future.timeout(const Duration(seconds: 5));
+      expect(log.events, <DwiWorkerStop>[DwiWorkerStop.callerClosed]);
+    });
+
+    test('restart clears the snapshot and permits one new stop', () async {
+      final handle = await spawn();
+      final log = _StopLog(handle.stops);
+      expect(await handle.run('dieAfter', 'first'), 'first');
+      await _waitFor(() => log.events.length == 1);
+      expect(handle.stopReason, DwiWorkerStop.crashed);
+
+      await handle.restart();
+      expect(handle.state, DwiWorkerState.ready);
+      expect(handle.stopReason, isNull);
+      expect(await handle.run('dieAfter', 'second'), 'second');
+      await _waitFor(() => log.events.length == 2);
+      expect(log.events, <DwiWorkerStop>[
+        DwiWorkerStop.crashed,
+        DwiWorkerStop.crashed,
+      ]);
+
+      await handle.close();
+      await log.done.future.timeout(const Duration(seconds: 5));
+      expect(log.events.length, 2);
+    });
+
+    test('close during restart records the replacement close once', () async {
+      final handle = await spawn();
+      final log = _StopLog(handle.stops);
+      expect(await handle.run('dieAfter', 'first'), 'first');
+      await _waitFor(() => log.events.length == 1);
+
+      final restart = handle.restart();
+      final restartOutcome = restart.then<Object?>(
+        (_) => null,
+        onError: (Object error) => error,
+      );
+      await handle.close();
+      final restartError = await restartOutcome;
+      expect(restartError, anyOf(isNull, isA<DwiException>()));
+
+      await log.done.future.timeout(const Duration(seconds: 5));
+      expect(log.events, <DwiWorkerStop>[
+        DwiWorkerStop.crashed,
+        DwiWorkerStop.callerClosed,
+      ]);
+      expect(handle.stopReason, DwiWorkerStop.callerClosed);
+      expect(handle.state, DwiWorkerState.closed);
+    });
+
+    test('crash-versus-close settles once', () async {
+      final handle = await spawn();
+      final log = _StopLog(handle.stops);
+      expect(await handle.run('dieAfter', 'alive'), 'alive');
+      // Close before the isolate's 100 ms exit timer fires.
+      await handle.close();
+      await log.done.future.timeout(const Duration(seconds: 5));
+      expect(log.events, <DwiWorkerStop>[DwiWorkerStop.callerClosed]);
+      expect(handle.stopReason, DwiWorkerStop.callerClosed);
+
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      expect(log.events, <DwiWorkerStop>[DwiWorkerStop.callerClosed]);
+    });
+
+    test('backend close closes owned handles and their streams', () async {
+      final backend = NativeBackend(registry);
+      final handle = await backend.spawnHandle();
+      final log = _StopLog(handle.stops);
+      await backend.close();
+      await log.done.future.timeout(const Duration(seconds: 5));
+      expect(log.events, <DwiWorkerStop>[DwiWorkerStop.callerClosed]);
+      expect(handle.stopReason, DwiWorkerStop.callerClosed);
+      expect(handle.state, DwiWorkerState.closed);
+      await expectLater(
+        handle.run('count', null),
+        throwsA(isA<DwiWorkerClosedException>()),
+      );
+    });
+
+    test('a throwing listener cannot interrupt cleanup', () async {
+      final handle = await spawn();
+      final received = <DwiWorkerStop>[];
+      final done = Completer<void>();
+      handle.stops.listen(received.add, onDone: done.complete);
+
+      final zoneErrors = <Object>[];
+      final bad = runZonedGuarded<StreamSubscription<DwiWorkerStop>>(
+        () => handle.stops.listen((_) => throw StateError('listener boom')),
+        (error, stack) => zoneErrors.add(error),
+      )!;
+
+      await handle.close();
+      expect(handle.state, DwiWorkerState.closed);
+      await done.future.timeout(const Duration(seconds: 5));
+      expect(received, <DwiWorkerStop>[DwiWorkerStop.callerClosed]);
+      expect(handle.stopReason, DwiWorkerStop.callerClosed);
+      await _waitFor(() => zoneErrors.isNotEmpty);
+      expect(zoneErrors.single, isA<StateError>());
+      await bad.cancel();
+    });
+  });
+}
+
+/// Collects the stop events and completion of one handle's [stops] stream.
+class _StopLog {
+  _StopLog(Stream<DwiWorkerStop> stream) {
+    _subscription = stream.listen(
+      events.add,
+      onError: (Object error, StackTrace stack) {},
+      onDone: done.complete,
+    );
+  }
+
+  final List<DwiWorkerStop> events = <DwiWorkerStop>[];
+  final Completer<void> done = Completer<void>();
+  late final StreamSubscription<DwiWorkerStop> _subscription;
+
+  Future<void> cancel() => _subscription.cancel();
 }
 
 Future<void> _waitFor(
