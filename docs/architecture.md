@@ -1108,8 +1108,10 @@ running-call timeout records `timedOut`; cancelling a running call records
    calls settle, then open channels fail.
 4. The context is released (isolate killed, worker terminated).
 5. For `close()`, the state becomes `closed`, the backend's ownership callback
-   runs, and `stops` is closed. The `close()` future completes only after the
-   stream is done.
+   runs, and the final event plus stream completion are queued. `close()` does
+   not await subscriber processing: a paused, slow, or throwing listener cannot
+   hold teardown, and each subscriber still receives the queued event before
+   `done` when it resumes.
 
 Listeners are invoked asynchronously by the broadcast controller, so a listener
 never observes a partially settled transition: when it runs, `state` is already
@@ -1135,15 +1137,19 @@ termination of a running context and emits nothing.
 **Decision 6 — Stream completion.** `stops` is a single broadcast stream per
 handle and never carries an error. It survives failures and restarts. It closes
 only on a final `close()` — explicit or through `Dwi.close()` — after the last
-event, so `done` always follows any stop event. There is no replay: a late
-subscriber reads `stopReason` instead of receiving history, and there is no event
-log.
+event, so `done` always follows any stop event. Completion is *queued*, not
+awaited: closing the controller must not make `close()` wait for a subscriber,
+and the controller's close future is treated as handled. There is no replay: a
+late subscriber reads `stopReason` instead of receiving history, and there is no
+event log.
 
 **Decision 7 — Listener isolation.** Each listener receives events
 independently. Queueing an event is not synchronous with listener execution, and
 no transition awaits a listener, so a listener that throws cannot prevent
 cleanup, change `stopReason`, suppress another listener, or change a caller's
-result. A throwing listener error is reported to the zone in which it listened.
+result. A paused subscription buffers the queued event and `done`; it does not
+block teardown, and its eventual resume or cancellation is the subscriber's
+choice. A throwing listener error is reported to the zone in which it listened.
 
 **Decision 8 — Call-local outcomes are not stops.** A queued-call
 `queueTimeout`, a full queue, an unknown task, a call-local serialization
@@ -1183,10 +1189,13 @@ adding protocol messages for termination.
 nothing; late subscriber reads `stopReason`; restart clears and re-emits;
 close after failure does not duplicate; close during restart and crash-versus-
 close races settle once; the event precedes stream completion; `Dwi.close()`
-closes owned handles and streams; a throwing listener cannot interrupt cleanup.
-Browser: the same in Chrome, Safari, Firefox and Edge, including an idle
-heartbeat crash and a malformed inbound message. Existing suites must stay
-green. Results belong in `docs/browser-matrix.md`, per engine.
+closes owned handles and streams; a throwing listener cannot interrupt cleanup;
+a paused listener cannot hold `close()` (including through `Dwi.close()` and on
+a failed-then-closed handle) and still receives the event before `done` when it
+resumes, or can cancel instead. Browser: the same in Chrome, Safari, Firefox and
+Edge, including an idle heartbeat crash and a malformed inbound message.
+Existing suites must stay green. Results belong in `docs/browser-matrix.md`, per
+engine.
 
 **Implementation status.** Implemented in `packages/dwi_core`,
 `packages/dwi_native`, `packages/dwi_web` and `packages/dwi` on 2026-11-08; not
@@ -1198,17 +1207,21 @@ forwarded by `package:dwi`. Evidence:
   subscribers, restart, close-after-failure, close-during-restart,
   crash-versus-close, backend close, stream completion and a throwing listener.
 - Facade: `packages/dwi/test/dwi_worker_test.dart` verifies the public getters.
-- Browser: cases N–W in
+- Browser: cases N–Z in
   `packages/dwi_builder/test/browser_handle_test.dart`; three page loads pass in
-  Chrome 157.0.8103.38, Safari 26.5 and Edge 157.0.4341.42. Firefox is recorded
-  as blocked by the host sandbox (`sandbox_init() failed with error "Operation
-  not permitted"`), not as a pass; see `docs/browser-matrix.md`.
+  Chrome 157.0.8103.38, Safari 26.5, Firefox 159.0.1 and Edge 157.0.4341.42,
+  after the close fix. Firefox needs every per-process sandbox switch this build
+  exposes; see `docs/browser-matrix.md`.
+- Prompt close: `close()` queues the final event and stream completion without
+  awaiting subscriber processing. Native tests cover a paused listener, the
+  backend path, a failed-then-closed handle and cancelling a paused
+  subscription; the browser harness covers the paused native/web equivalents.
 - Checkout consumer: `examples/stop_observer/` uses only `package:dwi` and
   prints the reason and stream event. The hosted `0.6.0` fixture still passes as
   a regression, but cannot exercise this surface until a later release.
 - Repository gates: analysis clean for `dwi_core`, `dwi_native`, `dwi_web`,
-  `dwi` and `dwi_builder`; core, native, web and facade suites pass; the builder
-  suite is run separately.
+  `dwi` and `dwi_builder`; core, native, web and facade suites pass; non-browser
+  builder tests pass; browser harnesses are run one engine at a time.
 
 No protocol message, no new error type, and no public backend type were added.
 

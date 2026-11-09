@@ -232,13 +232,17 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
 48. **No `dart:isolate` parity.** `stopReason`/`stops` are DWI concepts.
     `dart:isolate` has no timeout, cancellation or restart-generation state, so
     they are not `Isolate.onExit`/`onError` analogues.
-49. **Browser verification is partial for this increment.** Chrome 157.0.8103.38,
-    Safari 26.5 and Edge 157.0.4341.42 pass the termination contract on three
-    page loads. Firefox could not be run for the recorded matrix because the
-    host sandbox refused its startup (`sandbox_init() failed with error
-    "Operation not permitted"`); a single diagnostic page load of the same
-    harness passed, but that is not a recorded three-load result
-    (`docs/browser-matrix.md`).
+49. **Closing a handle does not wait for a stop listener.** The final event and
+    stream completion are queued when `close()` runs; a paused or slow
+    subscriber cannot hold worker teardown. It receives the queued event before
+    `done` when it resumes, or it can cancel. This applies to an explicit
+    `close()`, `Dwi.close()`, and a failed-then-closed handle, and repeated
+    `close()` remains prompt and idempotent.
+50. **All four engines are measured for this increment.** Chrome 157.0.8103.38,
+    Safari 26.5, Firefox 159.0.1 and Edge 157.0.4341.42 each pass three page
+    loads of the ADR-017 contract. Firefox requires disabling every per-process
+    sandbox its build exposes under this host; the engine result is independent
+    and recorded in `docs/browser-matrix.md`.
 
 ## Research debt (unresolved, tracked)
 

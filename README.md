@@ -39,7 +39,8 @@ Chrome-only: see [`docs/browser-matrix.md`](docs/browser-matrix.md).
 
 ## Packages
 
-All seven packages are published on pub.dev at **0.6.0** (2026-11-08).
+All seven packages are published on pub.dev at **0.6.0** (2026-11-08). This
+checkout prepares **0.7.0** for release review; it is **not** published.
 
 | Package | What it does | Status |
 | --- | --- | --- |
@@ -48,7 +49,7 @@ All seven packages are published on pub.dev at **0.6.0** (2026-11-08).
 | `dwi_builder` | Analyzer discovery, worker/proxy/manifest generation, compile CLI, cache | implemented, 57 tests |
 | `dwi_core` | Config, capabilities, task registry, exceptions, channel endpoint, backend and handle interfaces | implemented, 32 tests |
 | `dwi_protocol` | Protocol v2 envelopes (tasks and channels), error payloads, validation | implemented, 14 tests |
-| `dwi_native` | Isolate backend plus dedicated persistent-isolate handles and channels | implemented, 58 tests |
+| `dwi_native` | Isolate backend plus dedicated persistent-isolate handles and channels | implemented, 62 tests |
 | `dwi_web` | Pooled Web Worker backend, dedicated-handle and channel backend, generated-worker runtime | implemented, 23 tests, browser-tested |
 
 ## Zero-boilerplate workers (v0.3)

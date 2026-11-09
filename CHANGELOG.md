@@ -5,7 +5,9 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.0] - 2026-11-09
+
+Prepared for release review; not published.
 
 ### Added
 
@@ -20,12 +22,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Dwi.close()`). Observation only: existing typed call, channel and startup
   errors are unchanged, no protocol message or new error type was added, and
   this is not `dart:isolate` `onExit`/`onError` parity.
-  `examples/stop_observer/` shows the public usage. Verified on native and in
-  Chrome, Safari and Edge; Firefox is blocked by the host sandbox for the
-  recorded browser matrix.
+  `examples/stop_observer/` shows the public usage. Verified on native and on
+  three page loads in each of Chrome, Safari, Firefox and Edge.
+
+### Fixed
+
+- `DwiWorker.close()` no longer waits for a subscriber to process the final
+  `stops` event. The event and stream completion are queued, so a paused or slow
+  listener cannot hold worker teardown after the context is released; the event
+  is still delivered before `done` when the subscriber resumes. This also covers
+  `Dwi.close()`, a failed-then-closed handle and cancelling a paused
+  subscription, and repeated `close()` stays prompt and idempotent.
 
 ### Changed
 
+- The Firefox browser probe disables every per-process sandbox switch the
+  installed build exposes, so the ADR-017 matrix can record Firefox instead of a
+  blocked cell under this host.
 - The hosted consumer fixture's opening comment now describes its actual default
   (`DWI_HOSTED_VERSION`, `0.6.0`) instead of the historical `^0.5.3`.
 

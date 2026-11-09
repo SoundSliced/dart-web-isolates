@@ -92,7 +92,8 @@ await worker.close();
   and nothing is emitted (a failed startup is not a running context stopping).
 - `stops` is broadcast, never carries an error, has no replay, and closes only
   on a final `close()` — including one performed by `Dwi.close()` — after the
-  last event. A late subscriber reads `stopReason`.
+  last event. Completion is queued, not awaited: a paused or slow listener
+  cannot hold `close()`, and a late subscriber reads `stopReason`.
 - A listener that throws cannot interrupt cleanup, change `stopReason`, or
   change another caller's result.
 - This is not `dart:isolate` `onExit`/`onError` parity: DWI's timeout,
