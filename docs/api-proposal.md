@@ -27,6 +27,29 @@ Rules:
   mismatched `R` throws `DwiResultTypeException`.
 - No closure overload exists. There is no `Dwi.run(fn)` in v0.3.
 
+### Fresh-context one-shot call (DWI-4 increment 1, ADR-016)
+
+`Dwi.run` is a pool. On web a call may reuse a pooled worker, so worker-local
+state can persist across calls; on native each call starts a fresh isolate. When
+a call must start from a clean context, use:
+
+```dart
+final count = await Dwi.runFresh<int>('primes', 5000000);
+```
+
+- `runFresh` spawns one dedicated handle, runs exactly one task, and closes the
+  handle before completing. No state enters or leaves the call and two calls
+  never share a context on either backend.
+- It is `DwiWorker.using((worker) => worker.run<R>(task, input))`: the same typed
+  results and typed failures, including `DwiResultTypeException` on a type
+  mismatch and an unchanged spawn error (`DwiUnsupportedException`,
+  `DwiStartupException`). Nothing is retried.
+- Startup is paid per call (a fresh isolate or Web Worker), so this is for
+  isolation from pooled state, not for speed. `Dwi.run` keeps its pooled
+  semantics.
+- The task is still selected by name: `runFresh` is **not** `Isolate.run(fn)`
+  and does not promise `dart:isolate` parity. See `research/R014_DWI4_SCOPE.md`.
+
 ## Level 1.5 — annotated task and generated proxy (v0.3)
 
 A public top-level function is annotated once:

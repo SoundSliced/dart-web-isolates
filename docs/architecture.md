@@ -967,6 +967,73 @@ spawn failure (callback not entered); callback closing the handle itself;
 timeout during the callback; channels opened within the scope; close exactly
 once and no live handle after exit; callback error plus cleanup error.
 
+## ADR-016 — DWI-4 increment 1: fresh-context one-shot execution (`Dwi.runFresh`)
+
+**Status.** Accepted for implementation (2026-11-08). This ADR defines one
+narrow DWI-4 increment selected in `research/R014_DWI4_SCOPE.md`. It is additive:
+`Dwi.run`, `DwiWorker`, channels, errors and transferables are unchanged. The
+increment is **not** `dart:isolate` parity and does not add closure execution
+(DWI-5) or a Wasm worker.
+
+**Problem.** `Dwi.run` is a pool. On native it starts a fresh isolate per call
+(`native_backend.dart:122`), which matches `Isolate.run`'s fresh-context
+guarantee. On web it acquires an idle pooled worker and releases it afterwards
+(`web_backend.dart:341-352`), so worker-local state can persist between calls.
+Measured with the published 0.5.3 packages: two sequential
+`Dwi.run<int>('tick', 0)` calls in Chromium 156 returned `1` then `2`, proving
+the second call reused the first call's worker. That is a real cross-platform
+semantic difference and a gap against `Isolate.run`.
+
+**Public surface.**
+
+```dart
+final value = await Dwi.runFresh<int>('primes', 5000000);
+```
+
+```dart
+abstract final class Dwi {
+  static Future<R> runFresh<R>(String task, [Object? input]);
+}
+```
+
+**Decision 1 — One call, one fresh context.** `runFresh` spawns a dedicated
+handle through the existing backend, runs exactly one task on it, and closes it
+before completing the returned future. No worker or isolate is reused, so no
+worker-local state enters or leaves the call, and two calls never share a
+context. This holds on native and web alike.
+
+**Decision 2 — Composition, not a second implementation.** `runFresh` is
+`DwiWorker.using((worker) => worker.run<R>(task, input))`. It therefore inherits
+ADR-015's cleanup guarantee and error precedence and needs no backend or
+protocol change. `Dwi.run` keeps its pooled semantics; it is not redefined.
+
+**Decision 3 — Typing and errors.** The result is checked against `R` exactly as
+`Dwi.run` and `DwiWorker.run` do (`DwiResultTypeException` on mismatch). A
+spawn failure propagates unchanged (`DwiUnsupportedException`,
+`DwiStartupException`); a task failure propagates its typed error
+(`DwiRemoteException`, `DwiUnknownTaskException`, `DwiTimeoutException`,
+`DwiSerializationException`, or a handle-state error). There is no fallback and
+no retry. Failure paths are identical to running one call on a scoped handle.
+
+**Decision 4 — Cost is explicit.** Startup is paid per call: a fresh isolate on
+native and a fresh Web Worker (7–60 ms measured, R003 §7) on web. `Dwi.runFresh`
+is for callers who need `Isolate.run`-style isolation from pooled state; it is
+not a performance improvement and not a replacement for the pool.
+
+**Decision 5 — What this does not close.** Entry selection is still by task name,
+so `Dwi.runFresh` is not `Isolate.run(fn)`. Ports, graceful exit with a message,
+closure execution, `onExit`/`onError` streams, and Wasm workers remain open; each
+needs its own ADR and evidence.
+
+**Forbids.** Reusing a pooled worker in `runFresh`; adding state-clearing hooks
+to `Dwi.run`; claiming `dart:isolate` parity; documenting `runFresh` as faster.
+
+**Implementation status.** Implemented in `packages/dwi` (facade only) for native
+and web JS. Not published. Acceptance tests: VM tests in
+`packages/dwi/test/run_fresh_test.dart`, and the browser harness case in
+`packages/dwi_builder/test/browser_handle_test.dart` (`runFresh` returns `1,1`
+while pooled `Dwi.run` returns `1,2` in Chromium and Safari).
+
 ## Consequences
 
 - The first release is deliberately narrow: named tasks, one worker pool, typed

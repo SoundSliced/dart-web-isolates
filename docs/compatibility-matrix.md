@@ -7,6 +7,7 @@ v0.3 unless marked proposed.** No cell claims parity.
 | --- | --- | --- | --- | --- |
 | `Isolate.run(fn)` | via registered task | **not supported** | closures are not cloneable; compiler cannot ship them | R001 §1, R004 §2 |
 | `Isolate.run(task, input)` (named) | yes | yes | requires precompiled worker registry | ADR-002 |
+| `Isolate.run` fresh context per call | yes for `Dwi.run` and `Dwi.runFresh` | only `Dwi.runFresh`; pooled `Dwi.run` may reuse a worker and its state | `Dwi.run` on web is a pool; `Dwi.runFresh` spawns and closes a dedicated context per call | ADR-016, R014, probe in `docs/limitations.md` |
 | `Isolate.spawn` | yes — one persistent isolate per handle | yes — one dedicated worker per handle | one task at a time per handle; no heap sharing | ADR-013 |
 | Long-lived handle with retained worker-local state | yes (`DwiWorker`) | yes (`DwiWorker`) | state is lost on close, restart, crash or timeout | ADR-013 |
 | Restart a failed handle | yes, explicit `restart()` | yes, explicit `restart()` | fresh context and fresh state; no replay | ADR-013 |
@@ -37,7 +38,7 @@ v0.3 unless marked proposed.** No cell claims parity.
 | DWI-1.6 | cancellation, transferable bytes, heartbeat crash detection | shipped in v0.4 (Chrome and Safari measured; Firefox/Edge unverified for this level) |
 | DWI-2 | long-lived workers, pooled scheduling | handles shipped for native and web JS (Chrome, Safari, Firefox and Edge verified); `Dwi.run` pool unchanged from v0.3 |
 | DWI-3 | port-like messaging | implemented under ADR-014: single-subscriber, named, bounded channels per handle; Chrome, Safari, Firefox and Edge verified |
-| DWI-4 | high `dart:isolate` API similarity | research |
+| DWI-4 | high `dart:isolate` API similarity | research; increment 1 implemented under ADR-016 (`Dwi.runFresh`, fresh context per call, no parity claim) |
 | DWI-5 | compiler-supported arbitrary functions | research, no design |
 | DWI-6 | SDK-integrated web isolate | upstream proposal only |
 

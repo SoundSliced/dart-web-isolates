@@ -20,6 +20,14 @@ limitation is not here or in `compatibility-matrix.md`, that is a bug.
 6. **Errors are reconstructed, not propagated.** A `DwiRemoteException` carries
    what the worker captured; the local stack trace is the host side only.
 
+**Pooled state differs between backends.** `Dwi.run` starts a fresh isolate per
+call on native, but on web it reuses an idle pooled worker, so worker-local state
+can persist between `Dwi.run` calls. Measured with the published 0.5.3 packages:
+two sequential `Dwi.run('tick')` calls returned `1` then `2` in Chromium 156.
+Use `Dwi.runFresh` (ADR-016) when a call must not observe earlier state; it pays
+startup per call. `dart:isolate`'s `Isolate.run` always starts fresh, so this is
+a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
+
 ## Engineering limitations
 
 7. **Worker compilation is automatic for Flutter web on Flutter 3.47+, with one
