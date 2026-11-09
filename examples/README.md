@@ -9,6 +9,7 @@ the recommended way to use DWI and must not reach into implementation details.
 | `automatic_worker/` | Zero-boilerplate `@DwiTask` discovery, worker generation and compilation. |
 | `stateful_worker/` | Dedicated `DwiWorker` handle and worker-local state that persists between calls. |
 | `scoped_worker/` | `DwiWorker.using` scope ownership and `Dwi.runFresh` fresh-context calls. |
+| `stop_observer/` | `DwiWorker.stopReason` / `stops` termination observation (ADR-017). |
 
 Earlier revisions of this index listed `json_parser/`, `image_processing/`,
 `worker_pool/`, `flutter_counter/` and `flutter_jank_demo/`. They are **not in

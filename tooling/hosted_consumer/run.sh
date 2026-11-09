@@ -2,9 +2,9 @@
 # Published-consumer regression fixture.
 #
 # Builds a throwaway Flutter Web app whose ONLY DWI dependencies are hosted
-# `^0.5.3` packages from pub.dev (no path overrides, isolated PUB_CACHE), then
-# drives Chrome, Safari, Firefox and Edge against the site root and a
-# `/sub/app/` mount.
+# packages at `^$DWI_HOSTED_VERSION` from pub.dev (default `0.6.0`; no path
+# overrides, isolated PUB_CACHE), then drives Chrome, Safari, Firefox and Edge
+# against the site root and a `/sub/app/` mount.
 #
 # It also records the first-build limitation precisely:
 #   * the generated-proxy app must NOT build on the first ordinary Flutter

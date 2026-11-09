@@ -1,0 +1,11 @@
+name: dwi_stop_observer_example
+description: Observe why a DwiWorker context stopped (ADR-017).
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  dwi:
+    path: ../../packages/dwi
