@@ -1,6 +1,6 @@
 name: dwi_core
 description: Platform-independent abstractions for Dart Web Isolates.
-version: 0.6.0
+version: 0.7.0
 repository: https://github.com/SoundSliced/dart-web-isolates
 topics:
   - isolate
