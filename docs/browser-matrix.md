@@ -12,7 +12,7 @@ another engine's cell.
 | --- | --- | --- | --- |
 | Browser capability probe (static page, `.research/browser_matrix/`, gitignored) | raw browser features: worker startup, structured clone, transfer, module workers, dart2wasm-in-worker, SAB | Chrome 156 | 2026-11-03 |
 | v0.4 runtime benchmark (`benchmarks/browser_matrix`, committed) | `Dwi.run` pool timings: cold start, dispatch, copy vs transfer, cancellation, sustained load, dead-worker recovery, UI responsiveness | Chrome 156, Safari 26.5 | 2026-11-04 / 2026-11-05 |
-| v0.5 handle lifecycle matrix (`packages/dwi_builder/test/browser_handle_test.dart`, committed) | the public `DwiWorker` handle contract at the DWI API level, including ADR-016's `runFresh` vs pooled-state case | Chrome 156/157.0.8103.38, Safari 26.5, Firefox 159.0/159.0.1, Edge 156.0.4314.58/157.0.4341.42 | 2026-11-05/06 and 2026-11-08 |
+| v0.5 handle lifecycle matrix (`packages/dwi_builder/test/browser_handle_test.dart`, committed) | the public `DwiWorker` handle contract at the DWI API level, including ADR-016's `runFresh` vs pooled-state case and ADR-017's termination observation | Chrome 156/157.0.8103.38, Safari 26.5, Firefox 159.0/159.0.1, Edge 156.0.4314.58/157.0.4341.42 for the earlier cases; ADR-017 cases pass in Chrome 157.0.8103.38, Safari 26.5 and Edge 157.0.4341.42, Firefox blocked (§7) | 2026-11-05/06, 2026-11-08 and 2026-11-09 |
 | Published-consumer regression fixture (`tooling/hosted_consumer/run.sh`, committed) | published `^0.6.0` resolution from pub.dev (no path overrides), generated typed proxy, `runFresh`/`using`/explicit handle, channel exchange, typed remote error then success, worker asset fetch, first-build gate, at the site root and under `/sub/app/` | Chrome 157.0.8103.38, Safari 26.5, Firefox 159.0.1, Edge 157.0.4341.42 | 2026-11-08 |
 | Compiler matrix (Flutter application host) | a Flutter web app calling `Dwi.run` with a dart2js worker, built with dart2js and with dart2wasm | Chrome 156 | 2026-11-05 |
 
@@ -284,6 +284,39 @@ DWI_EVIDENCE_DIR=../../audit/evidence \
 ```
 
 Repeat the last line for `safari`, `firefox` and `edge`.
+
+## 7. Handle termination observation (ADR-017, 2026-11-08)
+
+**Scope of this section: the checkout packages, browser JS only.** Cases N–W in
+`packages/dwi_builder/test/browser_handle_test.dart` exercise
+`DwiWorker.stopReason`/`stops`: ready-is-silent, explicit close, idle crash,
+running timeout, running cancellation, malformed inbound message, call-local
+failures emitting nothing, restart, close-during-restart, `Dwi.close()` ownership
+and a throwing listener. Native coverage is the VM suite, not this section.
+
+| Engine | Version | Page loads | Status |
+| --- | --- | --- | --- |
+| Chrome | 157.0.8103.38 | 3/3 | **pass** |
+| Safari | 26.5 | 3/3 | **pass** |
+| Firefox | 159.0.1 | 0/3 | **blocked**: host sandbox refused Firefox startup (`sandbox_init() failed with error "Operation not permitted"`); the BiDi endpoint never came up |
+| Edge | 157.0.4341.42 | 3/3 | **pass** |
+
+Measured 2026-11-08/09 on macOS arm64 26.5.1 with Dart 3.13.5. Evidence:
+`.research/browser_evidence/handle-matrix-<engine>-20261109.json` (gitignored;
+the filename uses the harness's UTC date stamp). A single diagnostic page load
+of the same harness passed in Firefox before the sandbox refused it, but it is
+**not** counted as a matrix result: it was not a three-load run.
+
+Reproduce one engine at a time:
+
+```bash
+cd packages/dwi_builder
+DWI_EVIDENCE_DIR=../../.research/browser_evidence \
+  dart test test/browser_handle_test.dart \
+  --plain-name "handle lifecycle contract in chrome"
+```
+
+Repeat for `safari`, `firefox` and `edge`.
 
 ## What remains unverified
 

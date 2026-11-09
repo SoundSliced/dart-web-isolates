@@ -150,6 +150,37 @@ Future<String> _outcome(Future<Object?> future) async {
   }
 }
 
+Future<String> _voidOutcome(Future<void> future) async {
+  try {
+    await future;
+    return 'OK';
+  } catch (error) {
+    return _classify(error);
+  }
+}
+
+/// Collects stop events and stream completion for one handle (ADR-017).
+class _StopLog {
+  _StopLog(Stream<DwiWorkerStop> stream) {
+    _subscription = stream.listen(
+      events.add,
+      onError: (Object error, StackTrace stack) {},
+      onDone: () {
+        if (!done.isCompleted) done.complete();
+      },
+    );
+  }
+
+  final List<DwiWorkerStop> events = <DwiWorkerStop>[];
+  final Completer<void> done = Completer<void>();
+  late final StreamSubscription<DwiWorkerStop> _subscription;
+
+  String get names => events.map((reason) => reason.name).join(',');
+  String? get lastReason => events.isEmpty ? null : events.last.name;
+
+  Future<void> cancel() => _subscription.cancel();
+}
+
 Future<String> _openOutcome(DwiWorker worker, String name) async {
   try {
     await worker.openChannel(name);
@@ -442,6 +473,217 @@ Future<void> main() async {
     result['mState'] = m.state.name;
     await m.close();
 
+    // N–W: handle termination observation (ADR-017). Every case records the
+    // event list before asserting, so an event arriving after `done` is visible.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        taskTimeout: Duration(seconds: 5),
+        heartbeatInterval: Duration(milliseconds: 150),
+        heartbeatMisses: 1,
+      ),
+    );
+
+    // N: ready has no reason; close emits once, ends the stream, no replay.
+    final n = await DwiWorker.spawn();
+    final nLog = _StopLog(n.stops);
+    result['nReady'] = n.stopReason == null;
+    result['nCount'] = await n.run<int>('count', 0);
+    await n.close();
+    await nLog.done.future.timeout(const Duration(seconds: 5));
+    result['nEvents'] = nLog.names;
+    result['nReason'] = n.stopReason?.name;
+    result['nState'] = n.state.name;
+    result['nLate'] = (await n.stops.toList()).length;
+    await nLog.cancel();
+
+    // O: an idle crash is observed with no call pending, and stays open.
+    final o = await DwiWorker.spawn();
+    final oLog = _StopLog(o.stops);
+    result['oValue'] = await _outcome(o.run<Object?>('dieAfter', 'alive'));
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    result['oState'] = o.state.name;
+    result['oReason'] = o.stopReason?.name;
+    result['oEvents'] = oLog.names;
+    result['oOpen'] = !oLog.done.isCompleted;
+    await o.close();
+    await oLog.done.future.timeout(const Duration(seconds: 5));
+    result['oAfterCloseEvents'] = oLog.names;
+    result['oAfterCloseReason'] = o.stopReason?.name;
+
+    // P: a running timeout records timedOut once.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        taskTimeout: Duration(milliseconds: 300),
+      ),
+    );
+    final p = await DwiWorker.spawn();
+    final pLog = _StopLog(p.stops);
+    result['pOutcome'] = await _outcome(p.run<String>('spin', 3000));
+    result['pState'] = p.state.name;
+    result['pReason'] = p.stopReason?.name;
+    result['pEvents'] = pLog.names;
+    await p.close();
+    await pLog.done.future.timeout(const Duration(seconds: 5));
+    result['pAfterCloseEvents'] = pLog.names;
+
+    // Q: cancelling a running call records cancelled once.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        taskTimeout: Duration(seconds: 5),
+      ),
+    );
+    final q = await DwiWorker.spawn();
+    final qLog = _StopLog(q.stops);
+    final qTask = q.runCancellable<String>('spin', 3000);
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    result['qCancel'] = await qTask.cancel();
+    result['qOutcome'] = await _outcome(qTask.result);
+    result['qReason'] = q.stopReason?.name;
+    result['qEvents'] = qLog.names;
+    await q.close();
+    await qLog.done.future.timeout(const Duration(seconds: 5));
+
+    // R: a malformed inbound message records protocolViolation.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        taskTimeout: Duration(seconds: 5),
+      ),
+    );
+    final r = await DwiWorker.spawn();
+    final rLog = _StopLog(r.stops);
+    result['rOutcome'] = await _outcome(r.run<Object?>('sendGarbage', 'x'));
+    result['rState'] = r.state.name;
+    result['rReason'] = r.stopReason?.name;
+    result['rEvents'] = rLog.names;
+    await r.close();
+    await rLog.done.future.timeout(const Duration(seconds: 5));
+
+    // S: queue overflow, queued timeout and remote error emit nothing.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        taskTimeout: Duration(seconds: 5),
+        queueTimeout: Duration(milliseconds: 150),
+        maxQueuedTasks: 1,
+      ),
+    );
+    final s = await DwiWorker.spawn();
+    final sLog = _StopLog(s.stops);
+    final sRunning = s.run<String>('slow', 400);
+    final sQueued = s.run<int>('count', 0);
+    result['sQueueFull'] = await _outcome(s.run<int>('count', 0));
+    result['sQueued'] = await _outcome(sQueued);
+    result['sRunning'] = await _outcome(sRunning);
+    result['sRemote'] = await _outcome(s.run<Object?>('boom', 'x'));
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    result['sState'] = s.state.name;
+    result['sReason'] = s.stopReason?.name ?? 'null';
+    result['sEvents'] = sLog.names;
+    await s.close();
+    await sLog.done.future.timeout(const Duration(seconds: 5));
+
+    // T: restart clears the snapshot and permits one new stop.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        taskTimeout: Duration(seconds: 5),
+        heartbeatInterval: Duration(milliseconds: 150),
+        heartbeatMisses: 1,
+      ),
+    );
+    final t = await DwiWorker.spawn();
+    final tLog = _StopLog(t.stops);
+    result['tFirst'] = await _outcome(t.run<Object?>('dieAfter', 'first'));
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    result['tFirstReason'] = t.stopReason?.name;
+    result['tFirstEvents'] = tLog.names;
+    await t.restart();
+    result['tRestartState'] = t.state.name;
+    result['tRestartReason'] = t.stopReason?.name ?? 'null';
+    result['tSecond'] = await _outcome(t.run<Object?>('dieAfter', 'second'));
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    result['tSecondEvents'] = tLog.names;
+    await t.close();
+    await tLog.done.future.timeout(const Duration(seconds: 5));
+    result['tFinalEvents'] = tLog.names;
+
+    // U: close during restart records the replacement close once.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        taskTimeout: Duration(seconds: 5),
+        heartbeatInterval: Duration(milliseconds: 150),
+        heartbeatMisses: 1,
+      ),
+    );
+    final u = await DwiWorker.spawn();
+    final uLog = _StopLog(u.stops);
+    result['uFirst'] = await _outcome(u.run<Object?>('dieAfter', 'x'));
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    final uRestart = _voidOutcome(u.restart());
+    await u.close();
+    result['uRestart'] = await uRestart;
+    await uLog.done.future.timeout(const Duration(seconds: 5));
+    result['uEvents'] = uLog.names;
+    result['uReason'] = u.stopReason?.name;
+    result['uState'] = u.state.name;
+
+    // V: Dwi.close() closes owned handles and their streams.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        taskTimeout: Duration(seconds: 5),
+      ),
+    );
+    final v = await DwiWorker.spawn();
+    final vLog = _StopLog(v.stops);
+    result['vBefore'] = await _outcome(v.run<int>('count', 0));
+    await Dwi.close();
+    await vLog.done.future.timeout(const Duration(seconds: 5));
+    result['vEvents'] = vLog.names;
+    result['vReason'] = v.stopReason?.name;
+    result['vState'] = v.state.name;
+    result['vAfter'] = await _outcome(v.run<int>('count', 0));
+
+    // W: a throwing listener cannot interrupt cleanup or another listener.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        taskTimeout: Duration(seconds: 5),
+      ),
+    );
+    final w = await DwiWorker.spawn();
+    final wLog = _StopLog(w.stops);
+    var wThrown = 0;
+    runZonedGuarded<void>(
+      () {
+        w.stops.listen((_) {
+          wThrown++;
+          throw StateError('listener boom');
+        });
+      },
+      (Object error, StackTrace stack) {},
+    );
+    await w.close();
+    await wLog.done.future.timeout(const Duration(seconds: 5));
+    result['wEvents'] = wLog.names;
+    result['wState'] = w.state.name;
+    result['wReason'] = w.stopReason?.name;
+    result['wThrown'] = wThrown;
+
     result['ok'] = true;
   } catch (error, stack) {
     result['ok'] = false;
@@ -564,15 +806,12 @@ void main() {
           }
         }
 
-        await _recordRun(
-          engine,
-          browserVersion: browserVersion,
-          runs: runs,
-        );
+        await _recordRun(engine, browserVersion: browserVersion, runs: runs);
         expect(
           failures,
           0,
-          reason: '$failures of ${runs.length} runs failed in ${engine.name}: '
+          reason:
+              '$failures of ${runs.length} runs failed in ${engine.name}: '
               '$runs',
         );
       },
@@ -659,7 +898,12 @@ void _expectContract(Map<String, dynamic> decoded) {
   // J: repeated spawn/close always starts from fresh state, and the pool keeps
   // working alongside dedicated handles.
   expect(decoded['jStress'], <int>[1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
-  expect(decoded['jPoolStress'], <String>['OK:pool-0', 'OK:pool-3', 'OK:pool-6', 'OK:pool-9']);
+  expect(decoded['jPoolStress'], <String>[
+    'OK:pool-0',
+    'OK:pool-3',
+    'OK:pool-6',
+    'OK:pool-9',
+  ]);
 
   // K: bounded queue and caller-local queue deadline.
   expect(decoded['kQueueFull'], 'DwiUnsupportedException');
@@ -685,6 +929,82 @@ void _expectContract(Map<String, dynamic> decoded) {
   expect(decoded['mRawFirst'], 'OK:null');
   expect(decoded['mRawSecond'], 'DwiChannelBufferException');
   expect(decoded['mState'], 'ready');
+
+  // N–W: termination observation (ADR-017).
+  // N: ready is silent; close emits once, ends the stream, and does not replay.
+  expect(decoded['nReady'], isTrue);
+  expect(decoded['nCount'], 1);
+  expect(decoded['nEvents'], 'callerClosed');
+  expect(decoded['nReason'], 'callerClosed');
+  expect(decoded['nState'], 'closed');
+  expect(decoded['nLate'], 0);
+
+  // O: an idle crash is observed; close after it preserves the first cause.
+  expect(decoded['oValue'], 'OK:alive');
+  expect(decoded['oState'], 'failed');
+  expect(decoded['oReason'], 'crashed');
+  expect(decoded['oEvents'], 'crashed');
+  expect(decoded['oOpen'], isTrue);
+  expect(decoded['oAfterCloseEvents'], 'crashed');
+  expect(decoded['oAfterCloseReason'], 'crashed');
+
+  // P: a running timeout.
+  expect(decoded['pOutcome'], 'DwiTimeoutException');
+  expect(decoded['pState'], 'failed');
+  expect(decoded['pReason'], 'timedOut');
+  expect(decoded['pEvents'], 'timedOut');
+  expect(decoded['pAfterCloseEvents'], 'timedOut');
+
+  // Q: cancelling a running call.
+  expect(decoded['qCancel'], isTrue);
+  expect(decoded['qOutcome'], 'DwiCancelledException');
+  expect(decoded['qReason'], 'cancelled');
+  expect(decoded['qEvents'], 'cancelled');
+
+  // R: a malformed inbound message.
+  expect(decoded['rOutcome'], 'DwiWorkerFailedException');
+  expect(decoded['rState'], 'failed');
+  expect(decoded['rReason'], 'protocolViolation');
+  expect(decoded['rEvents'], 'protocolViolation');
+
+  // S: call-local failures emit nothing and leave the context healthy.
+  expect(decoded['sQueueFull'], 'DwiUnsupportedException');
+  expect(decoded['sQueued'], 'DwiTimeoutException');
+  expect(decoded['sRunning'], 'OK:slow');
+  expect(decoded['sRemote'], 'DwiRemoteException');
+  expect(decoded['sState'], 'ready');
+  expect(decoded['sReason'], 'null');
+  expect(decoded['sEvents'], isEmpty);
+
+  // T: restart clears the snapshot and permits exactly one new stop.
+  expect(decoded['tFirst'], 'OK:first');
+  expect(decoded['tFirstReason'], 'crashed');
+  expect(decoded['tFirstEvents'], 'crashed');
+  expect(decoded['tRestartState'], 'ready');
+  expect(decoded['tRestartReason'], 'null');
+  expect(decoded['tSecond'], 'OK:second');
+  expect(decoded['tSecondEvents'], 'crashed,crashed');
+  expect(decoded['tFinalEvents'], 'crashed,crashed');
+
+  // U: close during restart settles with one reason for the replacement.
+  expect(decoded['uFirst'], 'OK:x');
+  expect(decoded['uRestart'], anyOf('OK', 'DwiWorkerClosedException'));
+  expect(decoded['uEvents'], 'crashed,callerClosed');
+  expect(decoded['uReason'], 'callerClosed');
+  expect(decoded['uState'], 'closed');
+
+  // V: Dwi.close() owns live handles and their streams.
+  expect(decoded['vBefore'], 'OK:1');
+  expect(decoded['vEvents'], 'callerClosed');
+  expect(decoded['vReason'], 'callerClosed');
+  expect(decoded['vState'], 'closed');
+  expect(decoded['vAfter'], 'DwiWorkerClosedException');
+
+  // W: a throwing listener cannot interrupt cleanup.
+  expect(decoded['wEvents'], 'callerClosed');
+  expect(decoded['wState'], 'closed');
+  expect(decoded['wReason'], 'callerClosed');
+  expect(decoded['wThrown'], 1);
 }
 
 /// Records one blocked engine with its exact reason (AGENTS.md rule 8).
@@ -710,7 +1030,7 @@ Future<void> _recordRun(
     'harness': 'packages/dwi_builder/test/browser_handle_test.dart',
     'command':
         'dart test test/browser_handle_test.dart --plain-name '
-            '"handle lifecycle contract in ${engine.name}"',
+        '"handle lifecycle contract in ${engine.name}"',
     'environment': <String, Object?>{
       'os': Platform.operatingSystemVersion,
       'dartVersion': Platform.version,
