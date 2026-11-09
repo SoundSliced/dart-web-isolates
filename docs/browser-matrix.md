@@ -202,13 +202,13 @@ failure). Firefox, Safari and Edge were not measured for either compiler.
 
 ## 5. Published-consumer regression fixture
 
-**Scope of this section: the published 0.6.0 packages resolved from pub.dev, not
-the checkout.** The fixture accepts `DWI_HOSTED_VERSION` (default `0.6.0`); the
-historical 0.5.3 baseline predates `using`/`runFresh` and used the explicit
-handle only.
+**Scope of this section: the published 0.7.0 packages resolved from pub.dev, not
+the checkout.** The fixture accepts `DWI_HOSTED_VERSION` (default `0.7.0`). The
+page needs 0.7.0 or later because it exercises `stopReason`/`stops`; the earlier
+0.6.0 page did not.
 
 Harness: `tooling/hosted_consumer/run.sh` (committed). It creates a throwaway
-Flutter Web app, sets an isolated `PUB_CACHE`, writes only hosted `^0.6.0`
+Flutter Web app, sets an isolated `PUB_CACHE`, writes only hosted `^0.7.0`
 constraints (no `pubspec_overrides.yaml`, no `path` entries), and asserts every
 `dwi*` package in `pubspec.lock` is `source: hosted` at `https://pub.dev`.
 It then builds the app for the site root and with `--base-href /sub/app/` and
@@ -216,8 +216,10 @@ drives the four engines through the same page.
 
 The page checks: generated typed proxy, `Dwi.runFresh` fresh state (`[1, 1]`),
 one `DwiWorker.using` scope retaining state (`[1, 2]`), an explicit
-`spawn`/`close` handle retaining state, channel exchange (`ping` → `echo:ping`),
-a typed `DwiRemoteException` followed by another successful call, and a fetch of
+`spawn`/`close` handle retaining state, termination observation
+(`stopReason` null before close and `callerClosed` after, `stops` emitting
+`callerClosed`), channel exchange (`ping` → `echo:ping`), a typed
+`DwiRemoteException` followed by another successful call, and a fetch of
 `dwi/worker.dart.js` at the deployment mount. The first-build gate is asserted,
 not assumed: the generated-proxy app fails its first ordinary build (exit 1 on
 the missing `dwi_tasks.g.dart`), the fixture runs
@@ -231,15 +233,14 @@ app builds on its first ordinary command.
 | Firefox | 159.0.1 | **pass** | **pass** |
 | Edge | 157.0.4341.42 | **pass** | **pass** |
 
-Measured 2026-11-08 on macOS arm64 with Flutter 3.47.6 / Dart 3.13.5. One page
+Measured 2026-11-09 on macOS arm64 with Flutter 3.47.6 / Dart 3.13.5. One page
 load per engine per mount; the fixture validates the payload and exits non-zero
-on any mismatch. A post-publish run against 0.6.0 returned `fresh [1,1]`,
-`scoped [1,2]`, `handle [1,2]`, `channel echo:ping`, `remote
-DwiRemoteException`, `afterError ok` and a non-zero worker asset size on every
-engine at both mounts. Reproduce with
-`FLUTTER=/path/to/flutter ./tooling/hosted_consumer/run.sh` (add
-`DWI_HOSTED_VERSION=0.5.3` for the historical baseline); results (`root.json`,
-`sub.json`) are written under `WORK_DIR`.
+on any mismatch. The post-publish run against 0.7.0 returned `fresh [1,1]`,
+`scoped [1,2]`, `handle [1,2]`, `stopBefore true`, `stopReason callerClosed`,
+`stopEvents callerClosed`, `channel echo:ping`, `remote DwiRemoteException`,
+`afterError ok` and a non-zero worker asset size on every engine at both mounts.
+Reproduce with `FLUTTER=/path/to/flutter ./tooling/hosted_consumer/run.sh`;
+results (`root.json`, `sub.json`) are written under `WORK_DIR`.
 
 ## 6. Checkout-consumer scoped-helper matrix (ADR-015 / ADR-016)
 

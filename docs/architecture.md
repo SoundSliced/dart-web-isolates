@@ -1217,8 +1217,9 @@ forwarded by `package:dwi`. Evidence:
   backend path, a failed-then-closed handle and cancelling a paused
   subscription; the browser harness covers the paused native/web equivalents.
 - Checkout consumer: `examples/stop_observer/` uses only `package:dwi` and
-  prints the reason and stream event. The hosted `0.6.0` fixture still passes as
-  a regression, but cannot exercise this surface until a later release.
+  prints the reason and stream event. The hosted `0.7.0` fixture passes in
+  Chrome, Safari, Firefox and Edge at the site root and `/sub/app/`, including
+  `stopReason`/`stops`, and the hosted-resolution and first-build gates hold.
 - Repository gates: analysis clean for `dwi_core`, `dwi_native`, `dwi_web`,
   `dwi` and `dwi_builder`; core, native, web and facade suites pass; non-browser
   builder tests pass; browser harnesses are run one engine at a time.

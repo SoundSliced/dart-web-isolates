@@ -1,8 +1,8 @@
-# DWI 0.7.0 — release notes (prepared, not published)
+# DWI 0.7.0 — release notes (published)
 
-Status: **prepared for release review; not uploaded.** All seven packages move
-to `0.7.0` together. This is a minor, additive release over published `0.6.0`;
-no protocol change.
+Status: **published to pub.dev on 2026-11-09.** All seven packages were uploaded
+in the dependency order below at `0.7.0`. This is a minor, additive release over
+`0.6.0`; no protocol change.
 
 | Package | Version | Upload order |
 | --- | --- | --- |
@@ -74,17 +74,21 @@ failed-then-closed handle and repeated close.
   Chrome 157.0.8103.38, Safari 26.5, Firefox 159.0.1 and Edge 157.0.4341.42.
   Firefox requires disabling every per-process sandbox switch its build exposes
   under this host.
-- Published-consumer fixture: the hosted `0.6.0` regression still passes in all
-  four engines at the site root and `/sub/app/`. It cannot verify `0.7.0` until
-  this release is published.
+- Published-consumer fixture against hosted `0.7.0`: **PASS** in Chrome, Safari,
+  Firefox and Edge at the site root and `/sub/app/`, including
+  `stopBefore true`, `stopReason callerClosed` and `stopEvents callerClosed`.
+  Hosted resolution, the first-build gate and the proxy-free first build held.
 - Checkout consumer: `examples/stop_observer/` prints the public reason and
   stream event.
-- `dart pub publish --dry-run` for all seven packages: see the release review.
+- `dart pub publish --dry-run` for all seven packages: zero warnings, exit 0.
+  All seven were then uploaded in dependency order; the server accepted each
+  version. The package listing took up to the documented ten-minute window to
+  propagate to every CDN edge, so a fresh resolver saw `0.6.0` briefly.
 
 ## Remaining limits
 
-- A released package cannot be exercised by the hosted fixture until after
-  upload; the checkout example is the pre-release evidence.
+- The hosted fixture now targets `0.7.0`; rebinding it to `0.6.0` requires
+  removing the ADR-017 check because that API does not exist before `0.7.0`.
 - Firefox under this host needs the sandbox switches listed above; that is an
   automation environment requirement, not a browser capability claim.
 - No `dart:isolate` parity claim. No dart2wasm worker backend; the existing
