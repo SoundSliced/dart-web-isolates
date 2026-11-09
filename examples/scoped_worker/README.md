@@ -22,3 +22,10 @@ dart run bin/main.dart
 
 The helper does not await work the callback forgot to await: `close()` cancels
 active calls and channels. Await what you need before returning.
+
+For a single call that must not touch pooled state, `Dwi.runFresh` applies the
+same ownership rule (ADR-016):
+
+```dart
+final value = await Dwi.runFresh<int>('counter'); // fresh context, always 1
+```

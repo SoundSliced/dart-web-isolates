@@ -22,6 +22,11 @@ Future<void> main() async {
     print('void scope: ${await worker.run<int>('counter')}'); // 1 (fresh context)
   });
 
+  // Dwi.runFresh is the same ownership rule for a single call: a fresh context
+  // that never shares state with the pool or with another call.
+  print('fresh: ${await Dwi.runFresh<int>('counter')}'); // 1
+  print('fresh: ${await Dwi.runFresh<int>('counter')}'); // 1 again
+
   // The scope closed the handle; using it now throws a typed error.
   await Dwi.close();
 }

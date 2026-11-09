@@ -90,6 +90,26 @@ abstract final class Dwi {
     );
   }
 
+  /// Runs exactly one [task] in a fresh execution context (ADR-016).
+  ///
+  /// Unlike [run], which may reuse a pooled Web Worker, this spawns a dedicated
+  /// handle for the call and closes it before completing. No worker-local state
+  /// enters or leaves the call and two calls never share a context, matching
+  /// `Isolate.run`'s fresh-context guarantee on both native and web. The task is
+  /// still selected by name, so this is not `Isolate.run(fn)`.
+  ///
+  /// ```dart
+  /// final count = await Dwi.runFresh<int>('primes', 5000000);
+  /// ```
+  ///
+  /// Startup is paid per call, so this is for isolation from pooled state, not
+  /// a performance improvement. Errors are the same typed failures [run] and
+  /// [DwiWorker.run] raise; a spawn failure propagates unchanged and nothing is
+  /// retried.
+  static Future<R> runFresh<R>(String task, [Object? input]) {
+    return DwiWorker.using<R>((worker) => worker.run<R>(task, input));
+  }
+
   /// Runs [task] with [input] and returns a handle that can be cancelled.
   ///
   /// The task settles exactly once through [DwiCancellableTask.result] with a

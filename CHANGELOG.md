@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reported to the current zone); closing inside the callback is allowed because
   `close()` is idempotent. The helper does not wait for unawaited work — on exit
   `close()` cancels it. `examples/scoped_worker/` shows the shape.
+- `Dwi.runFresh` (ADR-016, DWI-4 increment 1): runs exactly one task in a fresh
+  dedicated context and closes it before completing, so no worker-local state is
+  shared between calls on either backend. Composed from `DwiWorker.using`; no
+  backend or protocol change. `Dwi.run` keeps its pooled semantics.
 - No backend or protocol change. Not published: consumers receive this only in
   the next release.
 

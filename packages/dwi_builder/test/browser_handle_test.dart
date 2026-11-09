@@ -179,6 +179,16 @@ Future<void> main() async {
     );
     result['aPoolBefore'] = await _outcome(Dwi.run<Object?>('echo', 'pool'));
 
+    // ADR-016: runFresh never shares a context; the pool may reuse one worker.
+    result['freshCount'] = <int>[
+      await Dwi.runFresh<int>('count', 0),
+      await Dwi.runFresh<int>('count', 0),
+    ];
+    result['poolCount'] = <int>[
+      await Dwi.run<int>('count', 0),
+      await Dwi.run<int>('count', 0),
+    ];
+
     // A: retained state, isolated handles, typed healthy errors, close.
     final first = await DwiWorker.spawn();
     result['aState'] = first.state.name;
@@ -583,6 +593,10 @@ void _expectContract(Map<String, dynamic> decoded) {
 
   // A: identity, retained state, isolated handles, healthy errors.
   expect(decoded['aPoolBefore'], 'OK:pool');
+  // ADR-016: fresh contexts never share worker-local state; the pool may reuse
+  // one worker, so its counter advances across calls.
+  expect(decoded['freshCount'], <int>[1, 1]);
+  expect(decoded['poolCount'], <int>[1, 2]);
   expect(decoded['aState'], 'ready');
   expect(decoded['aUsable'], isTrue);
   expect(decoded['aCount'], <int>[1, 2, 3]);
