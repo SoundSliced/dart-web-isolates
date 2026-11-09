@@ -50,10 +50,10 @@ final count = await Dwi.runFresh<int>('primes', 5000000);
 - The task is still selected by name: `runFresh` is **not** `Isolate.run(fn)`
   and does not promise `dart:isolate` parity. See `research/R014_DWI4_SCOPE.md`.
 
-### Handle termination observation (DWI-4 increment 2, ADR-017 — proposed)
+### Handle termination observation (DWI-4 increment 2, ADR-017)
 
-**Not implemented.** Selected for design in `research/R015_DWI4_NEXT_INCREMENT.md`;
-no code lands until a separate implementation change.
+Implemented under ADR-017. The contract is observation only: typed call,
+channel and startup errors are unchanged, and no second error channel exists.
 
 ```dart
 enum DwiWorkerStop {
@@ -68,17 +68,33 @@ abstract interface class DwiWorker {
   DwiWorkerStop? get stopReason;   // latest terminal reason, null while active
   Stream<DwiWorkerStop> get stops; // broadcast, one per terminal transition
 }
+
+final worker = await DwiWorker.spawn();
+final stops = worker.stops.listen((reason) => log('stopped: $reason'));
+// ... later, including after an idle crash:
+final reason = worker.stopReason; // null while the context is healthy
+await stops.cancel();
+await worker.close();
 ```
 
 - Reports why a context stopped, including an idle crash that no call observed.
-  It is observation only: typed call, channel and startup errors are unchanged,
-  and no second error channel is added.
+  `stopReason` becomes readable when the terminal transition starts, before
+  affected calls and channels settle.
 - Only a transition to `failed` or to a final `closed` emits. A queued-call
-  timeout and a task-level remote error keep the context and emit nothing.
+  timeout, a full queue, an unknown task, and a task-level remote error keep the
+  context and emit nothing.
 - The first terminal cause wins; a later `close()` on a failed handle does not
-  overwrite it or emit again.
-- `restart()` clears `stopReason`; the stream stays open and the next terminal
-  transition emits once. Late subscribers read `stopReason`; there is no replay.
+  overwrite it or emit again. Reason mapping (and every backend failure path)
+  is defined in ADR-017 Decision 10.
+- `restart()` clears `stopReason` when the replacement starts. `stops` stays
+  open and the next terminal transition emits once. If the replacement cannot
+  start, `restart()` throws `DwiStartupException`, `stopReason` stays `null`,
+  and nothing is emitted (a failed startup is not a running context stopping).
+- `stops` is broadcast, never carries an error, has no replay, and closes only
+  on a final `close()` — including one performed by `Dwi.close()` — after the
+  last event. A late subscriber reads `stopReason`.
+- A listener that throws cannot interrupt cleanup, change `stopReason`, or
+  change another caller's result.
 - This is not `dart:isolate` `onExit`/`onError` parity: DWI's timeout,
   cancellation and restart generation have no `dart:isolate` equivalent.
 

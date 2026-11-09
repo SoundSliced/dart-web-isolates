@@ -1048,9 +1048,10 @@ page loads per engine).
 
 ## ADR-017 — DWI-4 increment 2: handle termination observation
 
-**Status.** Accepted for design (2026-11-08); **not implemented**. Selected in
-`research/R015_DWI4_NEXT_INCREMENT.md` after the 0.6.0 release gate. This ADR
-does not add code, change the protocol, or claim `dart:isolate` parity.
+**Status.** Accepted (2026-11-08); **not implemented** in this revision of the
+document. Selected in `research/R015_DWI4_NEXT_INCREMENT.md` after the 0.6.0
+release gate. This ADR does not change the protocol or claim `dart:isolate`
+parity. Implementation status is recorded at the end of the ADR.
 
 **Problem.** A handle has six states (`created`, `starting`, `ready`, `closing`,
 `closed`, `failed`) and callers receive cause-specific typed errors. But a
@@ -1060,7 +1061,7 @@ yet nothing public is delivered; afterwards `state == failed` collapses timeout,
 cancellation, crash and protocol failure into one value. Consumers cannot log or
 react to the cause.
 
-**Public surface (proposed).**
+**Public surface.**
 
 ```dart
 enum DwiWorkerStop {
@@ -1071,7 +1072,7 @@ enum DwiWorkerStop {
   protocolViolation,
 }
 
-abstract interface class DwiWorker {
+abstract interface class DwiWorkerHandle {
   /// Latest terminal reason for the current context, or null while active.
   DwiWorkerStop? get stopReason;
 
@@ -1080,10 +1081,14 @@ abstract interface class DwiWorker {
 }
 ```
 
+`package:dwi` forwards both getters on `DwiWorker`; the enum is exported from
+`package:dwi_core` and re-exported by `package:dwi`.
+
 **Decision 1 — Observation only.** The API reports a reason a context stopped.
 It does not add an exit message, a drain, pause/resume, or a second error
 channel. Typed call, channel and startup errors keep their current contracts;
-`DwiWorkerStoppedException` is not introduced.
+`DwiWorkerStoppedException` is not introduced. `stops` reports the handle's
+termination and never replaces or suppresses an error delivered to a call.
 
 **Decision 2 — One reason, first terminal transition wins.** `close()` records
 `callerClosed`; context death detected by the backend records `crashed`; a
@@ -1092,33 +1097,120 @@ running-call timeout records `timedOut`; cancelling a running call records
 `protocolViolation`. A later `close()` on a failed handle neither overwrites
 `stopReason` nor emits a second event.
 
-**Decision 3 — Call-local outcomes are not stops.** A queued-call
-`queueTimeout` keeps the context and emits nothing. A task `DwiRemoteException`
-does not stop the context and emits nothing. Only a transition to `failed` or
-to a final `closed` emits.
+**Decision 3 — Event ordering.** A terminal transition runs in this order:
 
-**Decision 4 — Restart and stream lifetime.** `restart()` clears
-`stopReason`; the next terminal transition emits once. `stops` is broadcast,
-never carries an error, and closes when the handle can no longer restart (a
-final `closed`) or when `Dwi.close()` tears it down. A subscriber that attaches
-late reads `stopReason` instead of replaying history; there is no event log.
+1. The handle state changes to `failed` (failure) or `closing` (explicit
+   `close()`).
+2. If no reason is recorded for the current generation, the reason is stored in
+   `stopReason` and queued on the `stops` broadcast controller synchronously.
+   From here `stopReason` is readable and always equals the last emitted event.
+3. The in-flight reply/task settles with its existing typed error, then queued
+   calls settle, then open channels fail.
+4. The context is released (isolate killed, worker terminated).
+5. For `close()`, the state becomes `closed`, the backend's ownership callback
+   runs, and `stops` is closed. The `close()` future completes only after the
+   stream is done.
 
-**Decision 5 — Startup has no handle to observe.** A failed `spawn()` still
+Listeners are invoked asynchronously by the broadcast controller, so a listener
+never observes a partially settled transition: when it runs, `state` is already
+`failed`/`closed`, `stopReason` matches the event, and affected callers have
+already been settled.
+
+**Decision 4 — Race resolution.** Only the first recorded cause is published.
+Because the state is set before settlement, a crash that arrives during
+`close()`, a timeout that races a running cancellation, or a second failure
+during cleanup sees a terminal state and returns without recording or emitting.
+A crash-versus-close race therefore settles exactly once, with the reason of
+whichever transition started first.
+
+**Decision 5 — Restart generation.** `restart()` is allowed only from `failed`.
+The snapshot is cleared when the replacement actually starts: inside the
+backend start path, after the state becomes `starting`. `stops` stays open and
+a listener subscribed before the restart receives the next stop of the
+replacement generation exactly once. If the replacement cannot start,
+`restart()` throws the same `DwiStartupException` as `spawn`, the handle returns
+to `failed`, and `stopReason` remains `null`: a failed startup is not the
+termination of a running context and emits nothing.
+
+**Decision 6 — Stream completion.** `stops` is a single broadcast stream per
+handle and never carries an error. It survives failures and restarts. It closes
+only on a final `close()` — explicit or through `Dwi.close()` — after the last
+event, so `done` always follows any stop event. There is no replay: a late
+subscriber reads `stopReason` instead of receiving history, and there is no event
+log.
+
+**Decision 7 — Listener isolation.** Each listener receives events
+independently. Queueing an event is not synchronous with listener execution, and
+no transition awaits a listener, so a listener that throws cannot prevent
+cleanup, change `stopReason`, suppress another listener, or change a caller's
+result. A throwing listener error is reported to the zone in which it listened.
+
+**Decision 8 — Call-local outcomes are not stops.** A queued-call
+`queueTimeout`, a full queue, an unknown task, a call-local serialization
+failure, and a task-level `DwiRemoteException` keep the context and emit
+nothing. Only a transition to `failed` or to a final `closed` emits.
+
+**Decision 9 — Startup has no handle to observe.** A failed `spawn()` still
 throws `DwiStartupException`; no handle exists, so it cannot emit a stop.
 
-**Decision 6 — Naming.** `stopReason`/`stops` describe DWI's own terminal
+**Decision 10 — Classification is explicit per failure path.** Every backend
+`_fail` site names its reason; a reason is never inferred from an exception
+type, because the same type (for example `DwiRemoteException`) is used for both
+crashes and malformed inbound traffic.
+
+| Terminal cause | Reason |
+| --- | --- |
+| `close()` or `Dwi.close()` | `callerClosed` |
+| Unexpected isolate exit (not caused by `close`), isolate port error, `Worker.onerror` | `crashed` |
+| Missed heartbeats while idle | `crashed` |
+| Running-call task timeout | `timedOut` |
+| Cancelling a running call | `cancelled` |
+| Native `protocol` report, malformed inbound message/reply/channel message, result or channel payload decode failure, unknown reply code | `protocolViolation` |
+| Web non-object message, protocol envelope decode failure, unexpected envelope, channel message missing name/sequence, `Worker.onmessageerror` | `protocolViolation` |
+| Queued-call timeout, full queue, unknown task, remote task error, call-local serialization failure | none |
+| Failed `spawn()` / failed `restart()` startup | none (throws) |
+
+**Decision 11 — Naming.** `stopReason`/`stops` describe DWI's own terminal
 causes. They are not `Isolate.onExit`/`onError` analogues: `dart:isolate` has no
 timeout or cancellation states and no restart generation.
 
 **Forbids.** Emitting from call-local failures; replaying events to late
 subscribers; a lifecycle event log; adding an error stream in the same
-increment; claiming `dart:isolate` parity; exposing `Worker`/`Isolate` types.
+increment; claiming `dart:isolate` parity; exposing `Worker`/`Isolate` types;
+adding protocol messages for termination.
 
-**Testing (when implemented).** VM: every reason; queued timeout emits nothing;
-late subscriber reads `stopReason`; restart clears and re-emits; close after
-failure does not duplicate; stream closes at final close. Browser: the same plus
-an idle heartbeat crash in Chrome, Safari, Firefox and Edge. Existing suites
-must stay green.
+**Testing.** VM: every reason; queued timeout and remote task failure emit
+nothing; late subscriber reads `stopReason`; restart clears and re-emits;
+close after failure does not duplicate; close during restart and crash-versus-
+close races settle once; the event precedes stream completion; `Dwi.close()`
+closes owned handles and streams; a throwing listener cannot interrupt cleanup.
+Browser: the same in Chrome, Safari, Firefox and Edge, including an idle
+heartbeat crash and a malformed inbound message. Existing suites must stay
+green. Results belong in `docs/browser-matrix.md`, per engine.
+
+**Implementation status.** Implemented in `packages/dwi_core`,
+`packages/dwi_native`, `packages/dwi_web` and `packages/dwi` on 2026-11-08; not
+published. The enum and both getters are exported from `package:dwi_core` and
+forwarded by `package:dwi`. Evidence:
+
+- Native VM: `packages/dwi_native/test/native_worker_handle_test.dart` covers
+  every reason, queued timeout and remote failure emitting nothing, late
+  subscribers, restart, close-after-failure, close-during-restart,
+  crash-versus-close, backend close, stream completion and a throwing listener.
+- Facade: `packages/dwi/test/dwi_worker_test.dart` verifies the public getters.
+- Browser: cases N–W in
+  `packages/dwi_builder/test/browser_handle_test.dart`; three page loads pass in
+  Chrome 157.0.8103.38, Safari 26.5 and Edge 157.0.4341.42. Firefox is recorded
+  as blocked by the host sandbox (`sandbox_init() failed with error "Operation
+  not permitted"`), not as a pass; see `docs/browser-matrix.md`.
+- Checkout consumer: `examples/stop_observer/` uses only `package:dwi` and
+  prints the reason and stream event. The hosted `0.6.0` fixture still passes as
+  a regression, but cannot exercise this surface until a later release.
+- Repository gates: analysis clean for `dwi_core`, `dwi_native`, `dwi_web`,
+  `dwi` and `dwi_builder`; core, native, web and facade suites pass; the builder
+  suite is run separately.
+
+No protocol message, no new error type, and no public backend type were added.
 
 ## Consequences
 
