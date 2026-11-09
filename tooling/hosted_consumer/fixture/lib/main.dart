@@ -71,10 +71,12 @@ Future<void> main() async {
     ];
 
     // 3. A scoped helper owns one handle and retains state (ADR-015).
-    result['scoped'] = await DwiWorker.using((worker) async => <int>[
-          await worker.run<int>('counter', 0),
-          await worker.run<int>('counter', 0),
-        ]);
+    result['scoped'] = await DwiWorker.using(
+      (worker) async => <int>[
+        await worker.run<int>('counter', 0),
+        await worker.run<int>('counter', 0),
+      ],
+    );
 
     // 4. The explicit spawn/close handle API keeps its state too.
     final worker = await DwiWorker.spawn();
@@ -87,7 +89,22 @@ Future<void> main() async {
       await worker.close();
     }
 
-    // 5. Channel exchange on a dedicated handle.
+    // 5. Termination observation (ADR-017) on the published surface.
+    final stopWorker = await DwiWorker.spawn();
+    final stopEvents = <DwiWorkerStop>[];
+    final stopDone = Completer<void>();
+    final stopSubscription = stopWorker.stops.listen(
+      stopEvents.add,
+      onDone: stopDone.complete,
+    );
+    result['stopBefore'] = stopWorker.stopReason == null;
+    await stopWorker.close();
+    await stopDone.future.timeout(const Duration(seconds: 5));
+    result['stopReason'] = stopWorker.stopReason?.name;
+    result['stopEvents'] = stopEvents.map((reason) => reason.name).join(',');
+    await stopSubscription.cancel();
+
+    // 6. Channel exchange on a dedicated handle.
     final channelWorker = await DwiWorker.spawn();
     final channel = await channelWorker.openChannel('progress');
     final reply = channel.messages.first;
@@ -96,7 +113,7 @@ Future<void> main() async {
     result['channel'] = await reply.timeout(const Duration(seconds: 5));
     await channelWorker.close();
 
-    // 6. Typed remote error, then another successful pooled call.
+    // 7. Typed remote error, then another successful pooled call.
     try {
       await DwiTasks.boom('x');
       result['remote'] = 'NO_ERROR';

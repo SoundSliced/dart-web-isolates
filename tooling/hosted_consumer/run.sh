@@ -2,7 +2,7 @@
 # Published-consumer regression fixture.
 #
 # Builds a throwaway Flutter Web app whose ONLY DWI dependencies are hosted
-# packages at `^$DWI_HOSTED_VERSION` from pub.dev (default `0.6.0`; no path
+# packages at `^$DWI_HOSTED_VERSION` from pub.dev (default `0.7.0`; no path
 # overrides, isolated PUB_CACHE), then drives Chrome, Safari, Firefox and Edge
 # against the site root and a `/sub/app/` mount.
 #
@@ -37,7 +37,7 @@ work="${WORK_DIR:-$(mktemp -d)}"
 export PUB_CACHE="${PUB_CACHE:-$work/pub-cache}"
 export PUB_HOSTED_URL="${PUB_HOSTED_URL:-https://pub.dev}"
 engines="${ENGINES:-chrome,safari,firefox,edge}"
-version="${DWI_HOSTED_VERSION:-0.6.0}"
+version="${DWI_HOSTED_VERSION:-0.7.0}"
 
 app="$work/app"
 proxyfree="$work/app_proxyfree"
@@ -248,6 +248,9 @@ expected = {
     'fresh': [1, 1],
     'scoped': [1, 2],
     'handle': [1, 2],
+    'stopBefore': True,
+    'stopReason': 'callerClosed',
+    'stopEvents': 'callerClosed',
     'channel': 'echo:ping',
     'remote': 'DwiRemoteException',
     'afterError': 'ok',
