@@ -20,6 +20,7 @@ repository. Research agents do not modify the Dart or Flutter SDKs.
 | R010 | `R010_UPSTREAM_DART_ISSUES.md` | Relevant Dart/Flutter issues and design discussions |
 | R013 | `R013_RUNTIME_WORKER_COMPILATION.md` | Automatic worker compilation strategies and the v0.3 decision |
 | R014 | `R014_DWI4_SCOPE.md` | DWI-4 scope: `dart:isolate` API comparison and the selected increment |
+| R015 | `R015_DWI4_NEXT_INCREMENT.md` | DWI-4 next increment: termination observation, native transfer, error stream; selects lifecycle observation |
 
 ## Notes directories
 

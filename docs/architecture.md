@@ -1046,6 +1046,80 @@ and web JS. Not published. Acceptance tests: VM tests in
 while pooled `Dwi.run` returns `1,2` in Chrome, Safari, Firefox and Edge, three
 page loads per engine).
 
+## ADR-017 — DWI-4 increment 2: handle termination observation
+
+**Status.** Accepted for design (2026-11-08); **not implemented**. Selected in
+`research/R015_DWI4_NEXT_INCREMENT.md` after the 0.6.0 release gate. This ADR
+does not add code, change the protocol, or claim `dart:isolate` parity.
+
+**Problem.** A handle has six states (`created`, `starting`, `ready`, `closing`,
+`closed`, `failed`) and callers receive cause-specific typed errors. But a
+caller learns *why* a context stopped only if it had a call in flight. An idle
+context that crashes is detected (web heartbeat, native isolate-exit listener)
+yet nothing public is delivered; afterwards `state == failed` collapses timeout,
+cancellation, crash and protocol failure into one value. Consumers cannot log or
+react to the cause.
+
+**Public surface (proposed).**
+
+```dart
+enum DwiWorkerStop {
+  callerClosed,
+  crashed,
+  timedOut,
+  cancelled,
+  protocolViolation,
+}
+
+abstract interface class DwiWorker {
+  /// Latest terminal reason for the current context, or null while active.
+  DwiWorkerStop? get stopReason;
+
+  /// Broadcast; one event per terminal transition. Stays open across restart.
+  Stream<DwiWorkerStop> get stops;
+}
+```
+
+**Decision 1 — Observation only.** The API reports a reason a context stopped.
+It does not add an exit message, a drain, pause/resume, or a second error
+channel. Typed call, channel and startup errors keep their current contracts;
+`DwiWorkerStoppedException` is not introduced.
+
+**Decision 2 — One reason, first terminal transition wins.** `close()` records
+`callerClosed`; context death detected by the backend records `crashed`; a
+running-call timeout records `timedOut`; cancelling a running call records
+`cancelled`; a malformed or protocol-invalid worker message records
+`protocolViolation`. A later `close()` on a failed handle neither overwrites
+`stopReason` nor emits a second event.
+
+**Decision 3 — Call-local outcomes are not stops.** A queued-call
+`queueTimeout` keeps the context and emits nothing. A task `DwiRemoteException`
+does not stop the context and emits nothing. Only a transition to `failed` or
+to a final `closed` emits.
+
+**Decision 4 — Restart and stream lifetime.** `restart()` clears
+`stopReason`; the next terminal transition emits once. `stops` is broadcast,
+never carries an error, and closes when the handle can no longer restart (a
+final `closed`) or when `Dwi.close()` tears it down. A subscriber that attaches
+late reads `stopReason` instead of replaying history; there is no event log.
+
+**Decision 5 — Startup has no handle to observe.** A failed `spawn()` still
+throws `DwiStartupException`; no handle exists, so it cannot emit a stop.
+
+**Decision 6 — Naming.** `stopReason`/`stops` describe DWI's own terminal
+causes. They are not `Isolate.onExit`/`onError` analogues: `dart:isolate` has no
+timeout or cancellation states and no restart generation.
+
+**Forbids.** Emitting from call-local failures; replaying events to late
+subscribers; a lifecycle event log; adding an error stream in the same
+increment; claiming `dart:isolate` parity; exposing `Worker`/`Isolate` types.
+
+**Testing (when implemented).** VM: every reason; queued timeout emits nothing;
+late subscriber reads `stopReason`; restart clears and re-emits; close after
+failure does not duplicate; stream closes at final close. Browser: the same plus
+an idle heartbeat crash in Chrome, Safari, Firefox and Edge. Existing suites
+must stay green.
+
 ## Consequences
 
 - The first release is deliberately narrow: named tasks, one worker pool, typed

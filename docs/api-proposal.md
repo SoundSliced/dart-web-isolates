@@ -50,6 +50,38 @@ final count = await Dwi.runFresh<int>('primes', 5000000);
 - The task is still selected by name: `runFresh` is **not** `Isolate.run(fn)`
   and does not promise `dart:isolate` parity. See `research/R014_DWI4_SCOPE.md`.
 
+### Handle termination observation (DWI-4 increment 2, ADR-017 — proposed)
+
+**Not implemented.** Selected for design in `research/R015_DWI4_NEXT_INCREMENT.md`;
+no code lands until a separate implementation change.
+
+```dart
+enum DwiWorkerStop {
+  callerClosed,
+  crashed,
+  timedOut,
+  cancelled,
+  protocolViolation,
+}
+
+abstract interface class DwiWorker {
+  DwiWorkerStop? get stopReason;   // latest terminal reason, null while active
+  Stream<DwiWorkerStop> get stops; // broadcast, one per terminal transition
+}
+```
+
+- Reports why a context stopped, including an idle crash that no call observed.
+  It is observation only: typed call, channel and startup errors are unchanged,
+  and no second error channel is added.
+- Only a transition to `failed` or to a final `closed` emits. A queued-call
+  timeout and a task-level remote error keep the context and emit nothing.
+- The first terminal cause wins; a later `close()` on a failed handle does not
+  overwrite it or emit again.
+- `restart()` clears `stopReason`; the stream stays open and the next terminal
+  transition emits once. Late subscribers read `stopReason`; there is no replay.
+- This is not `dart:isolate` `onExit`/`onError` parity: DWI's timeout,
+  cancellation and restart generation have no `dart:isolate` equivalent.
+
 ## Level 1.5 — annotated task and generated proxy (v0.3)
 
 A public top-level function is annotated once:
