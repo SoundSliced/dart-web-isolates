@@ -9,8 +9,10 @@ The rebasable prototype patch is
 `../../audit/evidence/flutter-web-hook-ordering-2026-11-10.txt`.
 
 Measured on Flutter 3.47.6 stable (framework `5fc346839b`, engine
-`692136cb65`, Dart 3.13.5), macOS arm64. The source check covers 3.47.9 stable
-and `master` as of 2026-11-10.
+`692136cb65`, Dart 3.13.5), then re-measured on **3.47.9** (framework
+`c197ca5199e`, engine `89c39edfdf`, Dart 3.13.7) on both an unmodified and a
+patched 3.47.9 checkout — see [3.47.9 measurement](#3479-measurement-2026-11-10).
+macOS arm64 throughout.
 
 ## The problem
 
@@ -32,10 +34,10 @@ developer experience is "annotate, then build" hits it.
 - `web_release_bundle` still depends on
   `LinkHooks(platform: HookPlatform.web, extraDependencies: compileTargets)`,
   so `BuildHooks(platform: web)` remains a linking input, not a compiler input.
-- The current stable release is **3.47.9** (2026-10-29), newer than the
-  3.47.6 used for the measurements below. The 3.47.9 sources were inspected,
-  not built: no 3.47.9 engine artifacts were available offline in the
-  measurement environment.
+- The current stable release is **3.47.9** (2026-10-29). It has since been
+  built here on both an unmodified and a patched checkout; the results are in
+  [3.47.9 measurement](#3479-measurement-2026-11-10) and reproduce the 3.47.6
+  behaviour exactly.
 - [dart-lang/sdk#56512](https://github.com/dart-lang/sdk/issues/56512)
   (`hook/generate.dart`) is open, with 30 comments and no decision recorded on
   how generated Dart sources are ordered relative to compilation. The last
@@ -163,6 +165,56 @@ Every web compile now waits for every dependency's web build hook.
   machine and are indicative, not a benchmark.
 - For a slow hook the cost moves **before** compilation instead of overlapping
   it. That is the trade the ordering guarantee buys.
+
+## 3.47.9 measurement (2026-11-10)
+
+Two writable 3.47.9 checkouts under gitignored `.research/`: `flutter-sdk`
+(unmodified) and `flutter-sdk-patched` (same revision plus this patch, own
+`flutter_tools` snapshot). The patch applied to 3.47.9 **without rebase**; the
+build graph at `targets/web.dart:143` is unchanged from 3.47.6.
+
+Fresh app per command, generated proxy / worker / manifest / build output
+asserted absent first:
+
+| First command | Unmodified 3.47.9 | Patched 3.47.9 |
+| --- | --- | --- |
+| `build web --release` (js worker) | exit 1, 27 s | exit 0, 43 s |
+| `build web --release` (wasm worker) | exit 1, 27 s | exit 0, 28 s |
+| `build web --wasm` (js worker) | exit 1, 12 s | exit 0, 29 s |
+| `build web --wasm` (wasm worker) | exit 1, 13 s | exit 0, 27 s |
+| `build web --debug` (js worker) | exit 1, 20 s | exit 0, 30 s |
+| `build web --profile` (js worker) | exit 1, 23 s | exit 0, 28 s |
+| `run -d chrome` (debug) | reaches key commands, 28 s | reaches key commands, 32 s |
+
+In every patched row the verbose trace shows `build_hooks: Complete` **before**
+`dart2js: Starting` and `dart2wasm: Starting`; in every unmodified row the hook
+completes after the compiler has already failed on
+`Error when reading 'lib/dwi_tasks.g.dart'`.
+
+Tests on the patched checkout: `flutter_tools` web target suite **623 passed,
+0 failed** (including the two added dependency assertions); the added
+integration test **1 passed in 21 s** — a fresh app whose hook writes an
+imported `lib/generated.g.dart` builds on its first `flutter build web
+--release`.
+
+Regression shapes, all on the patched SDK: asset-only hook (builds, one hook
+run); two hook dependencies (both run once, both complete before compilation);
+one of two hooks throwing (exit 1, `Target build_hooks failed`, compiler never
+starts); no-hook app (cold 17 s vs 18 s unmodified, unchanged 14 s both,
+`Skipping target: build_hooks`); unchanged build with a hook (hook skipped);
+`dwi.yaml` js → wasm → js → deleted (correct artefact each time, stale Wasm
+artefacts retained, hook reruns only while the optional file is absent).
+
+Browser evidence from those production builds, driven by the repository
+harness: dart2js host with a JS worker returns the typed result **168** on
+Chrome 157.0.8103.50, Safari 26.5, Firefox 159.0.1 and Edge 157.0.4341.42, at
+both `/` and `/sub/app/`, with `dwi/worker.dart.js` served 200. The
+dart2wasm host with a Wasm worker boots on all four engines and serves
+`worker.boot.mjs` and the `gen-<hash>` trio 200, but reports
+`minified:hp: worker error` — a DWI worker runtime failure recorded as an open
+issue, not a packaging or ordering result.
+
+Evidence: `../../audit/evidence/flutter-web-hook-ordering-3.47.9-2026-11-10.txt`.
 
 ## Design comparison for maintainers
 
