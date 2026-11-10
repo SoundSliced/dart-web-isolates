@@ -111,4 +111,21 @@ void main() {
     Dwi.registerTask('typed', task);
     expect(Dwi.registry.contains('typed'), isTrue);
   });
+
+  test('close keeps the applied configuration for the next call', () async {
+    Dwi.registerTask('slowPooled', (Object? input) async {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      return 1;
+    });
+    await Dwi.configure(
+      const DwiConfig(taskTimeout: Duration(milliseconds: 50)),
+    );
+    await Dwi.close();
+    // No reconfigure: the replacement backend must already carry the settings.
+    await expectLater(
+      Dwi.run<int>('slowPooled', null),
+      throwsA(isA<DwiTimeoutException>()),
+    );
+    await Dwi.configure(const DwiConfig());
+  });
 }

@@ -4,7 +4,10 @@
 
 - Pick up `dwi_web` 0.8.1: a missing worker asset now settles `Dwi.run` and
   `DwiWorker.spawn` with `DwiStartupException` instead of an uncaught page
-  error. No API change.
+  error.
+- `Dwi.close()` keeps the applied `DwiConfig`. The next call gets a fresh
+  backend configured with the same settings instead of silently falling back to
+  the defaults (for example the JS worker script in a Wasm-configured app).
 
 ## 0.8.0
 

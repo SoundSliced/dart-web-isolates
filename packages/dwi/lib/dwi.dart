@@ -150,13 +150,24 @@ abstract final class Dwi {
   /// Reports what the selected backend can actually do here.
   static Future<DwiCapabilities> capabilities() => _active.capabilities();
 
-  /// Terminates workers/isolates and forgets configuration.
+  /// Terminates workers/isolates and keeps the applied [DwiConfig].
+  ///
+  /// The next [run], [runFresh], [DwiWorker.spawn] or [capabilities] call
+  /// creates a fresh backend already configured with the same settings, so a
+  /// page or application teardown cannot silently fall back to the defaults
+  /// (for example the default JS worker script in an app configured for Wasm).
   ///
   /// Live [DwiWorker] handles are closed first (ADR-013), so page or
   /// application teardown cannot leak a dedicated context.
   static Future<void> close() async {
-    await _backend?.close();
+    final backend = _backend;
     _backend = null;
+    await backend?.close();
+    // A closed backend cannot be reused, so arm its replacement with the
+    // configuration that was in effect instead of leaving it unconfigured.
+    final next = impl.createBackend(registry);
+    await next.configure(_config);
+    _backend = next;
   }
 }
 
