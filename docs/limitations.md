@@ -96,6 +96,22 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
     Flutter hook integration are covered by the 2026-11-10 matrices (ADR-018,
     `audit/evidence/dart2wasm-worker-deployment-2026-11-10.txt`,
     `audit/evidence/flutter-wasm-worker-matrix-2026-11-10.txt`).
+
+    **Retention is the deployment's job, not the build's.** A build never
+    deletes a published `gen-*` generation, because a browser can keep the
+    `worker.boot.mjs` it cached and that bootstrap names one generation until it
+    is revalidated. Removing a generation is an explicit deployment-maintenance
+    action, after the window in which the deployment promises cached bootstraps
+    stay valid. A cached bootstrap whose generation was removed fails with a
+    typed `DwiStartupException`; it never loads a mixed generation. Serving the
+    entry with a long cache lifetime combined with short generation retention is
+    therefore unsupported. Flutter 3.47.6's generated service worker caches
+    nothing (it unregisters itself), so these are HTTP cache-header decisions;
+    a client is safe only while its generation is either retained by the
+    deployment or still in the browser cache. Measured in Chrome, Safari,
+    Firefox and Edge
+    (`audit/evidence/cached-bootstrap-deployment-2026-11-10.txt`,
+    `audit/evidence/flutter-production-cache-2026-11-10.txt`).
 15. **Runtime compilation is not implemented and is not planned for v0.x.** A
     browser-hosted Dart compiler, CSP `eval` restrictions, size and attack
     surface make it non-viable on current evidence (R013 §4.5).

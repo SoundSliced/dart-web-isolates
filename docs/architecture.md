@@ -1320,10 +1320,9 @@ default and there is no release-number claim in this ADR.
    `dwi check` verifies the target, the recorded generation, the entry and every
    generation file against the manifest. `clean` removes the entry, all
    `gen-*` directories and interrupted temporary directories. A successful
-   build retains the current and the immediately previous generation and prunes
-   older ones, so a worker that started from the old entry can still load its
-   files. Live workers are unaffected by a switch: their assets are already
-   loaded. `watch` republishes the same order.
+   build never deletes a published `gen-*` directory (amended 2026-11-10; see
+   "Retention and cache contract" below). Live workers are unaffected by a
+   switch: their assets are already loaded. `watch` republishes the same order.
    Deployment contract: upload generation directories before replacing the
    entry, and serve the entry without long-lived caching. A reader that arrives
    between those two steps gets a typed startup error (missing generation), not
@@ -1343,12 +1342,82 @@ default and there is no release-number claim in this ADR.
     silently selecting the other backend, and the hook can never replace a
     requested Wasm worker with a JS one.
 
+**Retention and cache contract (amended 2026-11-10).**
+
+The 0.8.0 implementation pruned generations automatically, keeping only the
+current and the immediately previous one. Measurement showed that is unsafe: a
+browser that keeps the `worker.boot.mjs` response it cached during deployment A
+requests `gen-A/worker.mjs` after two later builds, receives 404, and the host
+raises `DwiStartupException`
+(`audit/evidence/cached-bootstrap-reproduction-2026-11-10.txt`,
+`audit/evidence/flutter-production-cache-2026-11-10.txt`). The same measurement
+showed Flutter 3.47.6's generated service worker is a self-unregistering stub
+that caches nothing, so the deployment's HTTP headers, not Flutter, decide
+whether a cached bootstrap survives.
+
+The contract is therefore:
+
+1. **A build never deletes a published generation.** `dwi build`, `dwi watch`
+   and the Flutter build hook create `gen-<generation>/` directories and the
+   entry; they do not remove any `gen-*` directory. Only an explicit action
+   removes one.
+2. **A cached bootstrap may reference its generation for as long as that
+   bootstrap can be served from any cache.** Because a bootstrap is immutable
+   for a generation, the only safe rule is that every generation ever served
+   stays reachable while a client may still hold its bootstrap. The builder
+   cannot know that lifetime, so it does not guess it.
+3. **The deployment owner decides when a generation can be removed.** Removal is
+   an explicit maintenance action by the deployment system or operator, after
+   the retention window that system promises for cached bootstraps. No
+   automatic retention rule is applied by the tool, and no prune command is
+   added in this release because a correct one needs that operator-supplied
+   window first.
+4. **A default build must not delete assets still used by deployed clients.**
+   This is why pruning is gone. A build that would need to delete a generation
+   to stay under a storage budget is a deployment decision, not a build
+   decision.
+5. **Local development storage.** Generations are content-addressed: rebuilding
+   without changing the worker hash reuses the existing `gen-<hash>/` and adds
+   nothing. Storage grows only with genuinely different worker content, plus at
+   most one transient `.dwi-wasm-*` directory per interrupted build, which the
+   next wasm build removes. `dwi clean` removes generated sources, the manifest,
+   the entry, every `gen-*` directory and abandoned `.dwi-wasm-*` directories.
+6. **Deployment order.** Upload every `gen-<generation>/` directory the new
+   entry references *before* replacing `worker.boot.mjs`. Delete old generations
+   *last*, and only when no bootstrap that names them can still be served. Old
+   entries must never outlive their generations.
+7. **Serving the entry.** Serve `worker.boot.mjs` without a long-lived cache
+   (`no-cache`, or a `max-age` shorter than the generation retention window) so
+   a reload after a deployment picks up the new entry. Serve `gen-*` files as
+   immutable (`Cache-Control: public, max-age=31536000, immutable`). A long
+   cached entry combined with short generation retention is the configuration
+   that produced the failure; it is unsupported unless the operator keeps every
+   generation that entry can name.
+8. **Clients open across releases.** A running worker is unaffected: its loader
+   and module are already loaded. A new spawn from an open page resolves against
+   whatever the deployment (or the browser cache) can serve at that moment.
+   With generations retained and served immutably, the cached generation is
+   used. With the generation gone and not cached, the spawn fails with a typed
+   `DwiStartupException`. No configuration loads a mixed generation: the
+   bootstrap only ever requests its own generation's `worker.mjs` and
+   `worker.wasm`.
+9. **`dwi clean` and deployed clients.** `dwi clean` intentionally removes all
+   generated worker assets. Deployed clients whose cached bootstrap names a
+   removed generation get the typed startup failure described above. `clean` is
+   a local reset, not a deployment operation; a deployment must not publish the
+   result of a clean while older bootstraps are still reachable.
+
+The supported configuration is therefore: retained generations, an uncached
+(or short-lived) entry, immutable generation files, and generation directories
+uploaded before the entry and deleted only after their retention window.
+
 **Consequences and open gates.**
 
 - The builder's single-file publication path becomes a content-addressed
   generation publication: generation files first, then one atomic entry switch,
-  then the manifest. The old generation is retained for one build so live pages
-  can finish loading it.
+  then the manifest. Generations are retained until an explicit maintenance
+  action, because a cached bootstrap can name any generation the deployment has
+  served (amended 2026-11-10).
 - The Wasm runtime artefact graph is larger (a generation directory plus one
   entry) and each request still crosses a structured-clone boundary. Startup and
   dispatch cost must be measured, not assumed, before any performance statement.

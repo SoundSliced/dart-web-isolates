@@ -482,4 +482,46 @@ A dart2wasm host receives a worker's channel `gen` as `double`; the host now
 normalizes integral doubles, which is why channels pass in this matrix.
 
 Not measured: `flutter run -d chrome`, hot restart, debug/profile wasm builds,
-service-worker/PWA caching, and performance (benchmarks are separate).
+and performance (benchmarks are separate).
+
+## 9. Cached bootstrap and generation retention (2026-11-10)
+
+**Scope: a client that keeps an older `worker.boot.mjs` while the deployment
+moves on. This is the contract ADR-018 was amended for; it is not a parity
+claim.** Environment: macOS 26.5.1, Dart 3.13.5, Chrome 157.0.8103.50, Edge
+157.0.4341.42, Firefox 159.0.1, Safari 26.5. Engines run sequentially.
+Evidence: `audit/evidence/cached-bootstrap-reproduction-2026-11-10.txt`,
+`audit/evidence/cached-bootstrap-deployment-2026-11-10.txt`,
+`audit/evidence/flutter-production-cache-2026-11-10.txt`.
+
+Harness: `packages/dwi_builder/test/cached_bootstrap_test.dart` (committed). It
+builds A, saves the exact `worker.boot.mjs` bytes, builds B, C and D, and serves
+the saved bootstrap against a deployment that retains every generation. It is
+deterministic: it substitutes the cached response instead of relying on HTTP
+cache heuristics, and records every request with its status.
+
+| Case | Chrome 157 | Edge 157 | Firefox 159 | Safari 26.5 |
+| --- | --- | --- | --- | --- |
+| cached A bootstrap, A retained, at `/` | pass ([A]) | pass ([A]) | pass ([A]) | pass ([A]) |
+| cached A bootstrap, A retained, at `/sub/app/` | pass ([A]) | pass ([A]) | pass ([A]) | pass ([A]) |
+| cached A bootstrap, A removed, at `/` and sub | typed `DwiStartupException` | typed | typed | typed |
+
+The removal case never requests a later generation's files; the failure is the
+missing generation, not a mixed load. Before the retention amendment the same
+retained case failed in every engine with a 404 for `gen-A/worker.mjs`.
+
+Live rebuild with deployment headers (`worker.boot.mjs` `no-cache`, `gen-*`
+`immutable`) passes in Chrome, Edge, Firefox and Safari across three successive
+deployments: `packages/dwi_builder/test/browser_wasm_publication_test.dart`.
+
+Flutter 3.47.6 production build (Chrome 157): the generated
+`flutter_service_worker.js` is a self-unregistering stub with no `RESOURCES` map
+and no cache, and `navigator.serviceWorker.controller` stayed `null`. Flutter
+caches nothing here; the deployment headers decide the outcome. With immutable
+generations a cached client keeps working across A, B and C; with a cached
+bootstrap and uncached generations a reload or a later spawn fails with a typed
+startup error once A is gone. Details and request logs in
+`audit/evidence/flutter-production-cache-2026-11-10.txt`.
+
+Not measured: browser cache eviction or revalidation timing; a dart2wasm host in
+the cached-bootstrap fixture (it uses a dart2js host).

@@ -149,8 +149,10 @@ Keep the two sides apart:
   DwiWorkerBackend.wasm` and `workerScript: DwiConfig.defaultWasmWorkerScript`.
   A dart2js host with this worker passed the contracts in
   `docs/browser-matrix.md` §7 on Chrome, Edge, Firefox and Safari at `/` and
-  `/sub/app/`. A dart2wasm host with a dart2wasm worker is not measured, and
-  the Flutter hook does not select the target.
+  `/sub/app/`. A dart2wasm host with a dart2wasm worker is covered by the
+  Flutter matrix in §8; the Flutter hook selects the target from `dwi.yaml`.
+  A build never deletes a published generation: a cached bootstrap can name an
+  older one, so retention is an explicit deployment decision (ADR-018).
 
 The measured boundaries are recorded: Flutter target selection, dart2wasm host +
 dart2wasm worker, deployment (MIME/CSP/same-origin) and benchmarks. The backend

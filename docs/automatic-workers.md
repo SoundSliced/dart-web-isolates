@@ -137,7 +137,11 @@ entry references it, so a reader sees either the old pair or the new pair
 (ADR-018). `dwi check` verifies every listed file and digest, and fails when any
 file is missing, truncated or from the other target. The Wasm backend is
 experimental. Deployment must upload `gen-*` directories before the entry and
-serve the entry without long-lived caching.
+serve the entry without long-lived caching. A build never deletes a published
+generation: a browser can keep the bootstrap it cached, and that bootstrap names
+one generation until it is revalidated. Remove a generation only as an explicit
+deployment-maintenance action, after the retention window that cached
+bootstraps need (ADR-018).
 
 The developer never edits this file. It is written only by `dwi build` when
 compilation is enabled; `dwi generate` and `dwi build --no-compile` write the
