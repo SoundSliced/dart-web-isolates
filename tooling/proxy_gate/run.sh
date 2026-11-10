@@ -58,6 +58,28 @@ flutter:
   uses-material-design: true
 EOF
 
+# `dwi_builder` is published, so its own `dwi_annotations` constraint names the
+# hosted package. An app that also depends on `dwi_annotations` by path is
+# rejected by pub (source conflict). Pin the whole checkout by path so the
+# fixture resolves hermetically and tests the same code as the working tree.
+cat > pubspec_overrides.yaml <<EOF
+dependency_overrides:
+  dwi:
+    path: $repo/packages/dwi
+  dwi_annotations:
+    path: $repo/packages/dwi_annotations
+  dwi_builder:
+    path: $repo/packages/dwi_builder
+  dwi_core:
+    path: $repo/packages/dwi_core
+  dwi_native:
+    path: $repo/packages/dwi_native
+  dwi_protocol:
+    path: $repo/packages/dwi_protocol
+  dwi_web:
+    path: $repo/packages/dwi_web
+EOF
+
 test ! -e lib/dwi_tasks.g.dart
 test ! -e web/dwi
 test ! -e .dwi
