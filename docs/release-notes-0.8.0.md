@@ -95,8 +95,8 @@ an older generation:
 - Analysis: zero issues in all seven packages and `benchmarks/wasm_worker`.
 - VM suites: `dwi_core` 35, `dwi_protocol` 14, `dwi_native` 62, `dwi_web` 24,
   `dwi` 38 — all pass.
-- `dwi_builder` non-browser suite: 59/59, including publication fault injection,
-  mixed-set rejection, pruning, and the shared target switch.
+- `dwi_builder` non-browser suite: 65/65, including publication fault injection,
+  mixed-set rejection, generation retention and the shared target switch.
 - Browser regression (dart2js worker): 10/10, including the handle and scoped
   contracts in Chrome, Safari, Firefox and Edge.
 - Wasm-worker deployment: the live-rebuild test with realistic cache headers
