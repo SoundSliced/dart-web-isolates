@@ -95,7 +95,16 @@ paths need no rebuild.
 
 ## Archive inspection and dry-runs
 
-Filled in below by the release-preparation run. Publishing remains unauthorized.
+Run on 2026-11-10 with Dart 3.13.5: `dart pub publish --dry-run` in all seven
+packages. **7/7 completed with exit 0 and zero warnings.** Compressed archive
+sizes: `dwi_annotations` 3 KB, `dwi_protocol` 5 KB, `dwi_core` 15 KB,
+`dwi_native` 16 KB, `dwi_web` 19 KB, `dwi_builder` 66 KB, `dwi` 10 KB.
+
+The only notices were hints that `pubspec_overrides.yaml` (present for local
+path development in `dwi`, `dwi_builder`, `dwi_native` and `dwi_web`) overrides
+non-dev dependencies. That is expected on this checkout; the published
+constraints are `^0.8.0` and uploads must follow the order above. No archive was
+uploaded. Publishing requires separate authorization.
 
 ## Compatibility and limits
 
