@@ -1,0 +1,161 @@
+DWI — fresh typed-proxy Flutter build gate, re-measured (2026-11-10)
+
+Environment
+  macOS 26.5.1 (25F80), arm64 (Apple silicon)
+  Flutter 3.47.6 stable, framework revision 5fc346839b, engine
+  692136cb6582dbfc5af3fb33c2515a069f2f66d0 (content hash b8c8d3d8d5d0),
+  Dart 3.13.5, DevTools 2.60.0
+  DWI checkout 536ecb7 (clean main), all seven packages at 0.8.0
+  Browsers: Chrome 157.0.8103.50, Firefox 159.0.1, Edge 157.0.4341.42,
+  Safari 26.5
+  The machine-wide SDK at ~/Development/flutter is read-only in this session
+  (`Operation not permitted` writing bin/cache), so a byte-identical copy of the
+  same checkout was used at a writable temp path. No SDK file was modified for
+  any measurement in this file except the prototype in "SDK prototype" below,
+  which lives only in that disposable copy.
+  PUB_CACHE: a writable directory whose `hosted` entry symlinks the read-only
+  hosted cache (2.9 GB); dependency resolution used `--offline`.
+
+Fixture
+  tooling/proxy_gate (committed): flutter create --no-pub --platforms=web,
+  path dependencies on dwi, dwi_annotations, dwi_builder, lib/main.dart
+  importing dwi_tasks.g.dart before it exists, lib/tasks.dart with
+  @DwiTask() int countPrimes(int limit).
+  Before the first build: no lib/dwi_tasks.g.dart, no .dwi/, no web/dwi/,
+  no build/.
+  Harness change made for this run: the generated app now gets a
+  pubspec_overrides.yaml pinning all DWI packages to the checkout. Without it
+  the gate cannot resolve at all, because dwi_builder (published) requires
+  hosted dwi_annotations while the app depends on it by path, and pub rejects
+  the source conflict. Exit codes are unchanged.
+
+1. flutter build web --release, first command, clean project
+   Exit: 1
+   Key output:
+     dwi_builder: generated lib/dwi_tasks.g.dart during this build. ...
+     Error: Error when reading 'lib/dwi_tasks.g.dart': ... (No such file or
+       directory)
+     Error: Undefined name 'DwiTasks'.
+     Error: Failed to compile application for the Web.
+   Harness result: `REPRODUCED: first build failed (exit 1), second build
+   packaged the worker.` (run.sh exit 0)
+
+2. Second identical build
+   Exit: 0, `✓ Built build/web`
+   build/web/main.dart.js 1,757,372 B
+   build/web/dwi/worker.dart.js 310,699 B
+
+3. Verbose first build — ordering evidence (dart2js)
+   +287 ms  build_hooks: Starting due to {}
+   +1 ms    web_static_assets: Starting due to {...}
+            dart2js: Starting due to {}
+            dart2wasm: Starting due to {}
+   +11 ms   Running build hooks for web.
+            dart2js reports: Error when reading 'lib/dwi_tasks.g.dart'
+   +14,705 ms  dwi_builder: generated lib/dwi_tasks.g.dart during this build.
+   +57 ms   Running build hooks for web done.
+   +10 ms   Target dart2js failed: ProcessException ... exit code 1
+   The hook is scheduled in the same wave as the compiler and finishes ~14.7 s
+   later; the compiler has already read the import by then.
+
+4. What the failed build leaves behind
+   lib/dwi_tasks.g.dart                1,640 B
+   .dwi/generated_worker.dart            931 B
+   .dwi/worker_manifest.json             701 B
+   web/dwi/worker.dart.js            310,699 B
+   .dart_tool/flutter_build/<hash>/build_hooks_result.json   7,329 B
+   build/web/ contains index.html, flutter.js, flutter_bootstrap.js and
+   canvaskit/ only — no main.dart.js and no dwi/worker.dart.js.
+
+5. dart2wasm host build — flutter build web --wasm, first command
+   Exit: 1
+   Same missing-proxy errors in the dart2wasm half of the log
+   (`lib/main.dart:5:8: Error: Error when reading 'lib/dwi_tasks.g.dart'`,
+   `Undefined name 'DwiTasks'`, `Error: Compilation failed.`), and the hook still
+   wrote the proxy, worker source, manifest and web/dwi/worker.dart.js. No
+   build/web/dwi/worker.dart.js and no build/web/main.dart.wasm.
+
+6. flutter build web --debug, first command
+   Exit: 1, same missing-proxy errors. The build_system path fails in every
+   mode.
+
+7. flutter run -d chrome (debug) — DIFFERENT RESULT: first command succeeds
+   Two clean apps, two runs: the app compiled, connected to the Dart VM service
+   and printed its key commands with no proxy error; `web/dwi/worker.dart.js` and
+   `lib/dwi_tasks.g.dart` existed before the debug service connected.
+   Verbose log order: `Skipping target: gen_localizations`, `Skipping target:
+   gen_dart_plugin_registrant`, `_composite: Complete`, `Updating assets`,
+   `runHooks() with {... BuildMode: debug} and TargetPlatform.web_javascript`,
+   `Running build hooks for web`, then the frontend_server (dartdevc) command.
+   Source: isolated/resident_web_runner.dart `_updateDevFS` awaits
+   `dartBuilder?.runHooks(...)` inside `assetBundle.build(...)` before calling
+   `devFS.update(...)`. The debug resident path orders hooks before compilation;
+   the build_system path does not. This is not a race that happened to win.
+
+8. App-root hook probe (correction to ADR-009)
+   An app with `hook/build.dart` and `hooks: ^2.2.0` in dependencies DOES run
+   that hook during `flutter build web` on 3.47.6: `build_hooks: Starting due to
+   {}` (+304 ms), `Running build hooks for web` (+3 ms), and the hook's marker
+   file appears. ADR-009's earlier "an app-root hook/build.dart did not run"
+   observation does not reproduce on this SDK. It does not change the ordering
+   conclusion: the root hook is still scheduled with the compiler, not before
+   it.
+
+SDK prototype (disposable checkout only; installed SDK untouched)
+  Change: add `BuildHooks(platform: HookPlatform.web)` to
+  `Dart2WebTarget.dependencies` in
+  flutter_tools/lib/src/build_system/targets/web.dart, next to
+  WebEntrypointTarget and GenerateLocalizationsTarget.
+  Results, each from a genuinely clean app:
+    flutter build web --release (prototype)   exit 0, ✓ Built build/web,
+      build/web/dwi/worker.dart.js packaged — twice, two independent apps
+    flutter build web --wasm (prototype)      exit 0, worker plus
+      build/web/main.dart.wasm
+    Flutter tool test web_test.dart           623 tests pass, including two
+      added assertions that Dart2JSTarget and Dart2WasmTarget depend on
+      BuildHooks(platform: web)
+  Costs measured: the compiler now waits for every dependency's web build hook.
+  The DWI hook took ~14.7 s on its first run and is skipped when unchanged
+  (`Skipping target: build_hooks`).
+
+Acceptance checks under the prototype
+  Task execution: a probe app whose task returns 424242 + seed reported
+  `RESULT:424243` in document.title and the server logged
+  `GET /dwi/worker.dart.js 200` — the task ran in the worker.
+  Root and subpath: with `--base-href=/sub/app/`, the page fetched
+  `GET /sub/app/dwi/worker.dart.js 200` and still reported RESULT:424243.
+  Regeneration: editing the task and then a helper file changed the packaged
+  worker (c2079… → 207943… → f035e9…) and rebuilt successfully.
+  Cache: an unchanged rebuild logged `Skipping target: build_hooks` and
+  `Skipping target: dart2js`.
+  Wasm worker target: with `dwi.yaml: target: wasm`, a rebuild published
+  build/web/dwi/gen-<hash>/{worker.mjs,worker.wasm} and worker.boot.mjs.
+  Missing worker asset (fails): removing build/web/dwi/worker.dart.js makes the
+  page request it (404) and throw an uncaught
+  `TypeError: Cannot read properties of undefined (reading 'gq')` from
+  main.dart.js's Worker error callback. The caller's future never settles and no
+  typed DWI error reaches the app. This is independent of build ordering and is
+  a separate defect.
+  Caveat found: creating `dwi.yaml` after a first build does not invalidate the
+  hook (the hook only declares dwi.yaml as a dependency when it already exists),
+  so the target change needs a source edit or a clean build to take effect.
+
+Browser runtime
+  The in-app Chromium browser loaded the prototype build, fetched the worker and
+  reported RESULT:424243 at `/` and `/sub/app/`.
+  Headless Chrome and Edge abort in this sandbox (Trace/BPT trap 5) and headless
+  Firefox refuses to start while another instance is running, so Firefox, Edge
+  and Safari are recorded as environment blocks for this session, not passes.
+  The ordering result is a build-time property and is engine-independent; the
+  four-engine runtime evidence for the worker path is the earlier committed
+  set (audit/evidence/flutter-production-cache-four-engines-2026-11-10.txt and
+  the handle/scoped matrices).
+
+Conclusion
+  The gate does not pass on the shipped package for any first ordinary
+  `flutter build web` (js, wasm, debug). `flutter run -d chrome` (debug) passes
+  because Flutter's resident web runner orders hooks before its compile; that is
+  one mode, not the gate. A one-line build-graph change makes every mode pass in
+  the prototype. Until Flutter ships an ordering/output contract for build hooks,
+  the supported first-build workflow stays `dart run dwi_builder:dwi build`
+  once, before the first Flutter build.
