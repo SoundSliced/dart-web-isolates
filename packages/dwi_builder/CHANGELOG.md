@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Detect a `dwi.yaml` created after an earlier Flutter build by declaring the
+  optional path as a hook dependency even when absent.
+- Serialize browser test files so Safari WebDriver sessions do not overlap.
+
 ## 0.8.0
 
 - Add `--target=wasm` and `dwi.yaml` (`target: js|wasm`), shared by the CLI and

@@ -522,11 +522,17 @@ class WebWorkerHandle implements DwiWorkerHandle {
     }).toJS;
     worker.onerror = ((web.ErrorEvent event) {
       if (!identical(_worker, worker)) return;
+      String message;
+      try {
+        message = event.message;
+        if (message.isEmpty) message = 'dedicated worker reported an error';
+      } catch (_) {
+        // Browsers may omit the details for a failed worker script load.
+        message = 'dedicated worker reported an error';
+      }
       _fail(
         DwiRemoteException(
-          message: event.message.isEmpty
-              ? 'dedicated worker reported an error'
-              : event.message,
+          message: message,
         ),
         DwiWorkerStop.crashed,
       );

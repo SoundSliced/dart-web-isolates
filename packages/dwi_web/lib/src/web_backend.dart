@@ -432,7 +432,15 @@ class WebBackend implements DwiBackend {
     }).toJS;
 
     slot.worker.onerror = ((web.ErrorEvent event) {
-      _fail(slot, event.message.isEmpty ? 'worker error' : event.message);
+      String message;
+      try {
+        message = event.message;
+        if (message.isEmpty) message = 'worker error';
+      } catch (_) {
+        // Browsers may omit the details for a failed worker script load.
+        message = 'worker error';
+      }
+      _fail(slot, message);
     }).toJS;
 
     // Fires when the browser could not deserialize an inbound message. Without

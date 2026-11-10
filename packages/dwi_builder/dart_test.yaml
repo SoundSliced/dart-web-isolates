@@ -1,0 +1,3 @@
+# Several browser suites create real Safari WebDriver sessions. Safari only
+# permits one automation session at a time, so run test files sequentially.
+concurrency: 1

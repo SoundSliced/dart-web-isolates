@@ -98,8 +98,10 @@ SDK untouched):
   assertions that `Dart2JSTarget` and `Dart2WasmTarget` depend on
   `BuildHooks(platform: HookPlatform.web)`.
 - Cost: every web compile now waits for every dependency's web build hook.
-  Measured 14.7 s for a first cold hook run; unchanged builds skip it
-  (`Skipping target: build_hooks`).
+  Measured 14.7 s for a first cold hook run. An unchanged DWI build skips the
+  hook when `dwi.yaml` exists. When it is absent, Flutter reruns the hook to
+  detect its later creation; DWI's content hash avoids recompiling unchanged
+  worker code.
 
 Regression test (as prototyped):
 

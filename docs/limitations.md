@@ -288,18 +288,20 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
     loads of the ADR-017 contract. Firefox requires disabling every per-process
     sandbox its build exposes under this host; the engine result is independent
     and recorded in `docs/browser-matrix.md`.
-51. **A missing worker asset is not reported as a typed failure (measured
-    2026-11-10).** If `build/web/dwi/worker.dart.js` (or the Wasm entry) is
-    absent, the page requests it, gets a 404, and throws an uncaught
-    `TypeError: Cannot read properties of undefined (reading 'gq')` from the
-    worker error callback in `main.dart.js`; the caller's future never settles
-    and no `DwiStartupException` reaches the app. This is independent of build
-    ordering and is unresolved. A present-but-incompatible worker is rejected
-    normally (protocol/compiler mismatch in `ready`).
-52. **Creating `dwi.yaml` after a first build does not re-run the hook.** The
-    hook declares `dwi.yaml` as a build dependency only when the file exists, so
-    switching `target: wasm` on an already-built project needs a source touch or
-    a clean build before the next ordinary command picks it up.
+51. **A missing worker asset fails startup.** The worker error event may omit
+    its message when the script returns 404. Both pooled calls and dedicated
+    handle creation now settle with `DwiStartupException` in that case; there
+    is no fallback to another worker generation or to the main thread. The
+    regression is covered for missing JS and Wasm entries by a real-browser
+    test in Chrome.
+52. **An absent optional `dwi.yaml` costs an incremental hook run.** Flutter's
+    file cache marks missing inputs dirty, so the hook declares `dwi.yaml` even
+    when absent. Creating it after a successful build now selects the requested
+    target on the next ordinary build, without a source touch or clean. While
+    it remains absent, Flutter reruns the hook on every build (the builder's
+    content hash still avoids recompiling an unchanged worker). A disposable
+    Flutter 3.47.6 release app was measured switching js → wasm → js by file
+    creation and deletion alone.
 
 ## Research debt (unresolved, tracked)
 

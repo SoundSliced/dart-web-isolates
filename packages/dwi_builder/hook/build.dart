@@ -54,7 +54,8 @@ void main(List<String> args) async {
 
     // Declare everything that changes the worker so Flutter's build system
     // re-runs this hook instead of serving a stale artefact. Unchanged builds
-    // skip the hook entirely.
+    // skip the hook when dwi.yaml exists; a missing optional config remains a
+    // dirty input so its later creation is detected.
     for (final path in result.discovery.dependencyFiles) {
       output.dependencies.add(Uri.file(path));
     }
@@ -67,8 +68,8 @@ void main(List<String> args) async {
     final projectConfig = File(
       '$root${separator}${DwiProjectConfig.fileName}',
     );
-    if (projectConfig.existsSync()) {
-      output.dependencies.add(Uri.file(projectConfig.path));
-    }
+    // A missing file must also be tracked: otherwise creating dwi.yaml after
+    // the first build does not invalidate Flutter's cached hook result.
+    output.dependencies.add(Uri.file(projectConfig.path));
   });
 }

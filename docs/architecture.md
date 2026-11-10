@@ -173,10 +173,10 @@ is wrong for Flutter 3.47. Re-probing the installed SDK (3.47.6, engine
   `dev_dependencies` hook did not run, and an app-root `hook/build.dart` did not
   run. A dependency hook can be given the app's package config path through
   `Platform.packageConfig` (confirmed in the log and at runtime).
-- Flutter caches the hook and re-runs it only when its declared
-  `output.dependencies` change. Observed: editing a task re-ran the hook and
-  changed the worker hash; an unchanged build printed
-  `Skipping target: build_hooks`.
+- Flutter caches the hook against declared `output.dependencies`. Editing a
+  task re-ran it and changed the worker hash. An unchanged build with existing
+  dependencies can print `Skipping target: build_hooks`; a missing optional
+  `dwi.yaml` is now declared as a dirty input so creating it is detected.
 
 **Decision.** `dwi_builder` ships `hook/build.dart`. An application opts in by
 listing `dwi_builder` as a **normal dependency** (not `dev_dependencies`).

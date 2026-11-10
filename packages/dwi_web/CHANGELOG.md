@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Report missing JS or Wasm worker assets as typed startup failures for pooled
+  calls and dedicated handles, even when the browser omits error details.
+
 ## 0.8.0
 
 - Load a Wasm worker as a module worker, report the observed worker backend and

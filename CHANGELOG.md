@@ -7,8 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-No package code changed. Evidence, documentation and the upstream proposal for
-the fresh typed-proxy ordering gap.
+The web runtime now settles missing worker assets as typed startup failures,
+and the Flutter hook detects a `dwi.yaml` created after an earlier build.
 
 ### Changed
 
@@ -30,9 +30,18 @@ the fresh typed-proxy ordering gap.
   in `Dart2WebTarget.dependencies`), two Flutter tool regression tests, and
   measured js/wasm results.
 - `audit/evidence/flutter-fresh-build-ordering-2026-11-10.txt`.
-- Limitations 51 (a missing worker asset surfaces as an uncaught JS `TypeError`,
-  not a typed failure) and 52 (creating `dwi.yaml` after a first build does not
-  re-run the hook).
+- Limitations 51 and 52 record the original findings and the verified fixes.
+- A real-browser regression covers missing JS and Wasm worker assets for pooled
+  calls and dedicated handles. Browser test files run sequentially to avoid
+  Safari WebDriver session contention.
+
+### Fixed
+
+- Guard worker-error details that browsers may omit, so a missing worker
+  script settles with `DwiStartupException`.
+- Track optional `dwi.yaml` as a Flutter hook input even when absent; creating
+  it on an already-built app switches targets on the next build. While absent,
+  Flutter reruns the hook to detect creation.
 
 ## [0.8.0] - 2026-11-10
 

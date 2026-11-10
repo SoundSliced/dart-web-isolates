@@ -337,10 +337,11 @@ DWI_EVIDENCE_DIR=../../.research/browser_evidence \
 
 Repeat for `safari`, `firefox` and `edge`.
 
-Run one engine (and one browser harness) at a time. A single parallel
-`dart test` starts several browser matrices at once and can exhaust each test's
-12-minute budget even when every engine passes in isolation; contention is not a
-result and must not be recorded as one.
+Browser test files now run sequentially through
+`packages/dwi_builder/dart_test.yaml`, because Safari permits one WebDriver
+session at a time. The scoped and handle Safari suites passed together under
+this setting. Independent test processes can still contend for the same
+browser; run one test process at a time when recording matrix evidence.
 
 ## What remains unverified
 
