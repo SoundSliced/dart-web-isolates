@@ -20,9 +20,11 @@ succeeds. On Flutter 3.47.6 we measured exit 1 for `--release`, `--wasm` and
 `--debug`, with the hook reporting generation at +8.5 s, +6.0 s and +7.7 s
 respectively, after `dart2js`/`dart2wasm` had already failed.
 `flutter run -d chrome` (debug) succeeds because the resident runner awaits the
-hooks before its DDC compile. The situation is unchanged in 3.47.9 and on
-`master`: `Dart2WebTarget.dependencies` is
-`[WebEntrypointTarget, GenerateLocalizationsTarget]`, while
+hooks before its DDC compile. On Flutter 3.47.6, clean first builds were
+measured to fail. We inspected the 3.47.9 and current `master` build graphs and
+found the same missing compiler-to-hook dependency; we have not run the
+clean-build fixture on those newer revisions. On both, `Dart2WebTarget.dependencies`
+is `[WebEntrypointTarget, GenerateLocalizationsTarget]`, while
 `BuildHooks(platform: web)` is reachable only through `LinkHooks`, whose
 outputs feed linking after compilation. A hook cannot declare a Dart source as a
 compiler input; its only declared output is `build_hooks_result.json`.
@@ -60,3 +62,7 @@ build and compilation does not start.
 We are not proposing that the Flutter patch be merged as-is, and we will keep
 our documented one-time pre-build step until a released SDK supports one of
 these contracts.
+
+Full evidence, including the prototype diff, first-build matrix, browser runs
+and build costs:
+https://github.com/SoundSliced/dart-web-isolates/blob/main/docs/upstream/flutter-web-hook-ordering.md
