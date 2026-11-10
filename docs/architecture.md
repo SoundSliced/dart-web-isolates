@@ -1226,6 +1226,108 @@ forwarded by `package:dwi`. Evidence:
 
 No protocol message, no new error type, and no public backend type were added.
 
+## ADR-018 — dart2wasm worker backend: explicit opt-in behind a build target
+
+**Status.** Accepted for an experimental vertical slice. No release claim and no
+version number. This ADR records the backend choice and the packaging contract;
+it does not declare the backend supported.
+
+**Context.** The measured baseline separates the two sides:
+
+- A **dart2wasm host** can host DWI (`flutter build web --wasm`, Chrome only,
+  ADR-017 evidence). Its worker was still dart2js and that result says nothing
+  about a Wasm worker.
+- A **dart2wasm worker** capability probe passed on 2026-11-10 in Chrome
+  157.0.8103.50, Edge 157.0.4341.42, Firefox 159.0.1 and Safari 26.5, at `/`
+  and `/sub/app/` (`audit/evidence/dart2wasm-worker-probe-2026-11-10.txt`).
+  `dart compile wasm` (Dart 3.13.5) emits `worker.wasm` and `worker.mjs`; the
+  loader exports `compileStreaming`/`compile` and `instantiate` but **never
+  invokes `main`**. A generic module-worker bootstrap is therefore a required
+  runtime artefact. `application/wasm` serving is mandatory, and a missing or
+  corrupt module, wrong MIME, or missing loader is an engine-specific typed
+  startup failure. Uncaught Wasm failures reach the host through the coarse
+  worker `error` event (Safari reports only `Script error.`), so failures that
+  must reach a caller have to be encoded in-band as typed envelopes.
+- The probe is a capability test, not a DWI worker acceptance test. It did not
+  exercise DWI's protocol, channels, transferables, cancellation, heartbeat,
+  lifecycle or performance.
+
+**Decision.**
+
+1. **One build target per worker.** `dwi_builder` gains a build-time `target`
+   (`js` | `wasm`), default `js`. A single worker id always refers to one
+   backend; a manifest never mixes JS and Wasm artefacts for the same worker.
+   The target is part of the content hash, so switching it invalidates the
+   cache and a stale artefact of the other kind is never reused.
+2. **Explicit runtime selection, no silent fallback.** `DwiConfig` gains
+   `workerBackend` (`DwiWorkerBackend.js` | `.wasm`, default `.js`). The default
+   `workerScript` (`dwi/worker.dart.js`) is unchanged. A Wasm worker is
+   selected by pointing `workerScript` at the generated `dwi/worker.boot.mjs`
+   and setting `workerBackend: DwiWorkerBackend.wasm`. The host then creates a
+   **module** worker; the JS path keeps a classic worker. DWI never retries on
+   the main thread and never silently switches backend.
+3. **Packaging.** For `target=wasm` the builder publishes three files into the
+   worker directory:
+   - `worker.wasm` — the compiled module;
+   - `worker.mjs` — the compiler-emitted loader, byte-identical to the
+     compiler output;
+   - `worker.boot.mjs` — a generated, versioned, application-independent
+     bootstrap that imports the loader and fetches the module.
+   The source map is not published. `worker.support.js` is not required at
+   runtime for the module-worker path (the probe logged zero fetches) and is
+   not published. The manifest records the entry URL, the file list and a
+   SHA-256 digest per file. For `target=js` the existing single-file
+   `worker.dart.js` layout is unchanged.
+4. **URL resolution.** Every reference inside `worker.boot.mjs` is relative to
+   `import.meta.url` (`./worker.mjs`, `./worker.wasm`). No absolute or
+   base-href-specific path is embedded. The probe verified the same artefacts
+   at `/` and `/sub/app/` without recompilation.
+5. **Protocol.** Wire protocol v1 is unchanged. The worker `ready` envelope's
+   `capabilities` map gains `'backend': 'dart2wasm' | 'dart2js'`; the host
+   compares the observed value with `workerBackend` and treats a mismatch as
+   `DwiStartupException`. Channels, transferables, cancellation, heartbeat,
+   restart/`stopReason`/`stops` keep their existing contracts; each must be
+   proven on the Wasm backend before any cell is marked supported.
+6. **Capability reporting.** `Dwi.capabilities()` reports both the transport
+   (`worker`) and the observed worker backend. The requested backend is not
+   reported as the observed one.
+7. **Unsupported browsers/assets.** If WasmGC or the `js-string` builtins are
+   missing, or the loader/module is missing, corrupt or mis-served, the
+   bootstrap emits a typed `startup-error`; the host raises
+   `DwiStartupException` naming the failed phase. There is no main-thread
+   execution and no implicit JS retry.
+8. **Cache, check, clean and watch.** The worker hash includes `target`.
+   `dwi check` verifies every published file and its recorded digest, and fails
+   on a missing, truncated or mismatched companion. `clean` removes all Wasm
+   artefacts and the bootstrap. `watch` republishes the whole file set.
+   Publication is all-or-nothing: companions are written to temporary names and
+   the manifest is written only after every file is in place.
+9. **Version compatibility.** The manifest carries the target, a bootstrap
+   format version and the per-file digests. A host/loader/worker mismatch of
+   the bootstrap format, protocol version or requested backend is rejected
+   before the first request, not worked around.
+10. **Defaults.** JS remains the default and the only backend in any supported
+    release statement. Wasm is opt-in and experimental until the acceptance
+    gates in this milestone pass on all four engines for every contract.
+
+**Consequences and open gates.**
+
+- The builder's single-file publication path must become a small multi-file
+  publication path; the existing atomic-rename discipline applies per file.
+- The Wasm runtime artefact graph is larger (three files) and each request still
+  crosses a structured-clone boundary. Startup and dispatch cost must be
+  measured, not assumed, before any performance statement.
+- A module worker is required, so a deployment that serves `.mjs` with the
+  wrong MIME now has a new failure mode; it is a typed startup failure.
+- The generated bootstrap is an application-independent DWI artefact. It is not
+  a place for user code, and it must remain deterministic.
+- Open: whether `DwiWorkerRuntime` and the generated registry compile and run
+  unmodified under dart2wasm; whether channels and transferables behave
+  identically; Safari's opaque uncaught-error reporting; Firefox/Safari/Edge
+  Wasm-host combinations.
+- Not decided here: any `flutter build web --wasm` hook integration, any
+  automatic backend negotiation, and any default change.
+
 ## Consequences
 
 - The first release is deliberately narrow: named tasks, one worker pool, typed

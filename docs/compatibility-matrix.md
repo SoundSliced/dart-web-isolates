@@ -22,6 +22,7 @@ v0.3 unless marked proposed.** No cell claims parity.
 | Detect a dead idle worker | port error / explicit state | heartbeat envelope | heartbeat pings idle workers only | ADR-010 §10.3 |
 | Observe why a handle stopped (`stopReason`, `stops`) | yes | yes | observation only, one broadcast event per generation; no `onExit`/`onError` parity, no replay | ADR-017 |
 | dart2wasm host application | n/a | **supported** since the 2026-11-05 integral-double fix | worker is dart2js; measured in Chrome 156 only | audit/evidence/flutter-run-modes-and-wasm-fix-2026-11-05.txt |
+| dart2wasm worker backend | n/a | **experimental, not shipped** (ADR-018) | capability probe passed in Chrome 157, Edge 157, Firefox 159 and Safari 26.5 at `/` and `/sub/app/`; no DWI protocol/channel/lifecycle acceptance yet | audit/evidence/dart2wasm-worker-probe-2026-11-10.txt |
 | Pause / resume / ping | yes | **no** | no browser equivalent | R003 §1 |
 | `onExit` / `onError` listeners | yes | envelope events | `error` events are coarse; promises rejections vanish | R003 §6 |
 | `RemoteError` + stack | yes | `DwiRemoteException` | stack captured by the worker, not the host | R001 §5 |
