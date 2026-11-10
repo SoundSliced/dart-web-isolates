@@ -268,11 +268,11 @@ correction to the earlier "no web build hook" conclusion.
   exists. See R013 §4.4–4.5 and ADR-002.
 - Runtime compilation in the browser: no browser-hosted Dart compiler; CSP and
   size make it non-viable for v0.x. See R013 §4.5.
-- Wasm worker generation: experimental under ADR-018
-  (`dwi build --target=wasm`, opt-in `DwiWorkerBackend.wasm`, content-addressed
-  generation directory plus one entry) with no promised release number and no
-  Flutter-hook target selection. See `docs/browser-matrix.md` §7 for the
-  measured contracts.
+- Wasm worker generation: supported as an opt-in backend from the next release
+  (not in 0.7.0) under ADR-018 (`dwi.yaml: target: wasm` or
+  `--target=wasm`, content-addressed generation directory plus one entry). JS
+  remains the default. See `docs/browser-matrix.md` §7–8 for the measured
+  contracts.
 - Flutter hot reload of an existing worker (page reload is required).
 
 ## Verification

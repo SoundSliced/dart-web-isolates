@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0
+
+- Add `DwiWorkerBackend` (`js`, `wasm`), `DwiConfig.workerBackend`,
+  `DwiConfig.defaultWasmWorkerScript` and `DwiCapabilities.workerBackend`
+  (ADR-018). The default remains `DwiWorkerBackend.js`; a Wasm worker is
+  explicit and never a fallback.
+
 ## 0.7.0
 
 - Add `DwiWorkerStop` and the `stopReason`/`stops` members to

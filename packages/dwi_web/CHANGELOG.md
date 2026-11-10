@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.0
+
+- Load a Wasm worker as a module worker, report the observed worker backend and
+  reject a requested/observed mismatch with `DwiStartupException` (ADR-018).
+- Treat an in-band bootstrap startup error as a typed startup failure.
+- Normalize integral doubles in channel meta (`gen`, `seq`) on the worker and
+  host sides, as a dart2wasm boundary yields.
+
 ## 0.7.0
 
 - Record and publish the terminal stop reason for a dedicated worker (ADR-017),

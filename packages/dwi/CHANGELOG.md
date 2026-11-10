@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.0
+
+- Re-export `DwiWorkerBackend` and support the opt-in Wasm worker backend
+  (ADR-018). The default remains the dart2js worker.
+
 ## 0.7.0
 
 - Add `DwiWorker.stopReason` and `DwiWorker.stops` (ADR-017): observe why a

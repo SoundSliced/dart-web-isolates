@@ -78,12 +78,12 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
 13. **Generated-registry tree shaking is verified for tested shapes.** The
     generated worker uses static references, and v0.3 compiles and runs in
     Chrome. A universal proof for every library shape is not claimed.
-14. **Wasm worker generation is experimental.** `dwi build --target=wasm`
+14. **Wasm worker generation is supported as an opt-in backend (not in 0.7.0).** `dwi build --target=wasm`
     publishes a content-addressed `gen-<generation>/` directory (module and
     loader) plus a small `worker.boot.mjs` entry that is switched atomically;
     the host must opt in with
-    `workerBackend: DwiWorkerBackend.wasm`. It is not part of any supported
-    release statement. A dart2wasm worker receives JS numbers as `double`
+    `workerBackend: DwiWorkerBackend.wasm` or `dwi.yaml: target: wasm`. It is
+    not the default; a missing or unsupported configuration never falls back. A dart2wasm worker receives JS numbers as `double`
     (generated `int` decoders and meta fields accept integral doubles), and
     uncaught Wasm failures are coarse, so failures stay in-band.
     Deployment constraints are measured on all four engines: `.wasm` must be
@@ -93,8 +93,9 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
     (cross-origin workers are rejected). Every unsupported configuration ends
     in a typed `DwiStartupException`, never a JS/main-thread fallback; message
     text is engine-specific. A dart2wasm host with a dart2wasm worker and
-    Flutter hook integration are not verified here (ADR-018,
-    `audit/evidence/dart2wasm-worker-deployment-2026-11-10.txt`).
+    Flutter hook integration are covered by the 2026-11-10 matrices (ADR-018,
+    `audit/evidence/dart2wasm-worker-deployment-2026-11-10.txt`,
+    `audit/evidence/flutter-wasm-worker-matrix-2026-11-10.txt`).
 15. **Runtime compilation is not implemented and is not planned for v0.x.** A
     browser-hosted Dart compiler, CSP `eval` restrictions, size and attack
     surface make it non-viable on current evidence (R013 §4.5).

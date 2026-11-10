@@ -5,6 +5,41 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - prepared, not published
+
+Prepared on 2026-11-10 from `main`; **not uploaded to pub.dev**. Do not publish
+without separate authorization. All seven packages move to `0.8.0` in lockstep.
+
+### Added
+
+- Opt-in dart2wasm worker backend (ADR-018), selected by
+  `DwiConfig.workerBackend` / `DwiConfig.defaultWasmWorkerScript` or by
+  `dwi.yaml: target: wasm`. The default remains the dart2js worker.
+- `DwiWorkerBackend` in `dwi_core`, re-exported by `dwi`; the worker reports its
+  compiler in the `ready` capabilities and the host rejects a mismatch.
+- `dwi build --target=wasm`: a content-addressed `gen-<hash>/` generation plus a
+  small atomically switched `worker.boot.mjs` entry, with per-file manifest
+  digests and generation-aware `check`/`clean`.
+- One target setting (`dwi.yaml`) shared by the Flutter build hook and the CLI.
+
+### Changed
+
+- The generated `int` decoder and the worker/host channel meta readers accept
+  integral doubles, which a dart2wasm boundary yields.
+- A Wasm build retains the current and previous generation and prunes older
+  ones; a failed publication leaves the previous entry usable.
+
+### Compatibility
+
+- Public task, proxy, handle, channel, transferable, cancellation, timeout,
+  stop-observation and error contracts are unchanged on the JS path.
+- The Wasm worker is opt-in and not the default. Deployment requires
+  `application/wasm`, a JavaScript MIME for `.mjs`, same-origin assets, and a
+  CSP with `worker-src` and `'wasm-unsafe-eval'`; unsupported configurations
+  fail with a typed `DwiStartupException`.
+- Measured in Chrome 157, Edge 157, Firefox 159 and Safari 26.5 for dart2js and
+  dart2wasm hosts at `/` and `/sub/app/`.
+
 ## [0.7.0] - 2026-11-09
 
 Published to pub.dev on 2026-11-09. All seven packages uploaded in dependency

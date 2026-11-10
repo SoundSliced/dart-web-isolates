@@ -1228,9 +1228,12 @@ No protocol message, no new error type, and no public backend type were added.
 
 ## ADR-018 — dart2wasm worker backend: explicit opt-in behind a build target
 
-**Status.** Accepted for an experimental vertical slice. No release claim and no
-version number. This ADR records the backend choice and the packaging contract;
-it does not declare the backend supported.
+**Status.** Accepted and implemented as an opt-in backend. Measured on
+2026-11-10 for dart2js and dart2wasm hosts with Wasm workers in Chrome, Edge,
+Firefox and Safari, at `/` and `/sub/app/`, with publication-safety,
+deployment, target-selection and benchmark evidence. It is supported as an
+opt-in backend from the next release; 0.7.0 has no Wasm worker. JS remains the
+default and there is no release-number claim in this ADR.
 
 **Context.** The measured baseline separates the two sides:
 

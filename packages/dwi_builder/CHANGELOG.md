@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.0
+
+- Add `--target=wasm` and `dwi.yaml` (`target: js|wasm`), shared by the CLI and
+  the Flutter build hook (ADR-018).
+- Publish a Wasm worker as a content-addressed `gen-<hash>/` generation plus a
+  small atomically switched `worker.boot.mjs` entry, and record the generation
+  and per-file digests in the manifest.
+- `check` rejects mixed, corrupt or target-mismatched sets; `clean` removes all
+  generations; builds retain the current and previous generation.
+- Accept integral doubles for generated `int` decoders.
+
 ## 0.7.0
 
 - Synchronised release with `dwi` 0.7.0; depends on `dwi_annotations ^0.7.0`.

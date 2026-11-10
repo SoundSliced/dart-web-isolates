@@ -132,7 +132,7 @@ worker runs in Chrome (`examples/automatic_worker`). Tree shaking of the
 generated registry is verified for the tested task shapes, not for every
 possible library.
 
-## Wasm path (experimental, no promised release)
+## Wasm path (supported opt-in, not in 0.7.0)
 
 Keep the two sides apart:
 
@@ -152,9 +152,9 @@ Keep the two sides apart:
   `/sub/app/`. A dart2wasm host with a dart2wasm worker is not measured, and
   the Flutter hook does not select the target.
 
-The backend stays experimental and has no release number. It is not marked
-supported until the remaining boundaries (Flutter hook target selection,
-dart2wasm host + worker, benchmarks, CORS/CSP) are measured.
+The measured boundaries are recorded: Flutter target selection, dart2wasm host +
+dart2wasm worker, deployment (MIME/CSP/same-origin) and benchmarks. The backend
+is supported as an opt-in in `main` and is not in 0.7.0; JS remains the default.
 
 ## Closure research (DWI-5, no design)
 
