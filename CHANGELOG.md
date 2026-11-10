@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.8.1] - 2026-11-10
 
+Published to pub.dev on 2026-11-10 from `main` at `406a750`, in dependency order
+(`dwi_annotations`, `dwi_protocol`, `dwi_core`, `dwi_native`, `dwi_web`,
+`dwi_builder`, `dwi`), each verified before the next. All seven packages move to
+`0.8.1` in lockstep.
+
 The web runtime now settles missing worker assets as typed startup failures,
 and the Flutter hook detects a `dwi.yaml` created after an earlier build.
 

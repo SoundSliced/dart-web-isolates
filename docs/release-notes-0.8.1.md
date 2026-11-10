@@ -1,7 +1,9 @@
-# DWI 0.8.1 — release review (prepared, not published)
+# DWI 0.8.1 — release review
 
-Status: **prepared for review, not published.** Patch release for two fixes on
-top of 0.8.0. No public API changed; the typed-error contract is the same, and a
+Status: **published to pub.dev on 2026-11-10** from `main` at `406a750`, in the
+upload order below, with each package verified before the next
+(`audit/evidence/pub-0.8.1-upload-2026-11-10.txt`). Patch release for three
+fixes on top of 0.8.0. No public API changed; the typed-error contract is the same, and a
 missing worker asset now reaches the caller as a `DwiStartupException` instead
 of an uncaught page error.
 
@@ -82,7 +84,22 @@ needs one `dart run dwi_builder:dwi build` before its first Flutter build
   next call`. `dwi_builder`: 88 tests pass, including every browser suite in all
   four engines. `dwi_web`: 24 tests pass.
 - `git diff --check` clean; the tree contains only the release bump.
-- Seven `dart pub publish --dry-run` runs must pass before the upload, which is
-  a separate, reviewed step. The published-consumer test
-  (`tooling/hosted_consumer`) runs after publication, against `0.8.1`, because
-  pub.dev must serve the new archives first.
+- Seven `dart pub publish --dry-run` runs passed before the upload (0 warnings).
+
+## Publication (2026-11-10)
+
+Uploaded in the order above with `dart pub publish --force`, using the
+credential staged in `.research/pubhome` because the host sandbox denies
+`~/Library/Application Support/dart`. Each package was verified on
+`https://pub.dev/api/packages/<name>` at 0.8.1 before the next.
+
+The pub client's version listing lagged the API by about four minutes; the
+client reported all seven at 0.8.1 at 17:58Z.
+
+Published-consumer test (`tooling/hosted_consumer`, `DWI_HOSTED_VERSION=0.8.1`):
+**PASS**, exit 0. All seven packages resolved `source=hosted url=https://pub.dev`
+at 0.8.1 with no path overrides; the generated-proxy app reproduced the
+documented first-build failure, the pre-build plus root and `/sub/app/` builds
+packaged the worker, the proxy-free app built on its first command, and all four
+engines (Chrome 157.0.8103.50, Safari 26.5, Firefox 159.0.1, Edge 157.0.4341.42)
+matched the fixture payloads at both mounts.

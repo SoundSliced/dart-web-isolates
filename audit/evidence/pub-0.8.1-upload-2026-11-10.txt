@@ -1,0 +1,65 @@
+DWI 0.8.1 publication to pub.dev (2026-11-10)
+
+Authorization
+  The user authorized the upload in this dependency order, one package at a
+  time, then a published-consumer run against 0.8.1.
+
+Environment
+  macOS 26.5.1 (25F80) arm64, Flutter 3.47.6 stable / Dart 3.13.5.
+  Working tree: `main` at 406a750, clean (two commits after the 0.8.1 release
+  preparation: the `Dwi.close()` configuration fix and the ADR-009 correction).
+  Publish command per package: `dart pub publish --force`.
+
+Credential staging (same method as the 0.8.0 upload)
+  The host sandbox denies `~/Library/Application Support/dart`, so `pub` failed
+  with `Cannot open file ... pub-credentials.json (Operation not permitted)`.
+  Publishing used the credential staged in the repository at
+  `.research/pubhome` (gitignored):
+    HOME=$REPO/.research/pubhome
+    XDG_CONFIG_HOME=$HOME/.config
+  No credential value is recorded here.
+
+Uploads (in order, each verified on pub.dev before the next)
+  1. dwi_annotations 0.8.1  17:54:29Z  exit 0  Successfully uploaded
+  2. dwi_protocol    0.8.1  17:54:33Z  exit 0  Successfully uploaded
+  3. dwi_core        0.8.1  17:54:37Z  exit 0  Successfully uploaded
+  4. dwi_native      0.8.1  17:54:40Z  exit 0  Successfully uploaded
+  5. dwi_web         0.8.1  17:54:44Z  exit 0  Successfully uploaded
+  6. dwi_builder     0.8.1  17:54:47Z  exit 0  Successfully uploaded
+  7. dwi             0.8.1  17:54:54Z  exit 0  Successfully uploaded
+
+Verification after each upload
+  `https://pub.dev/api/packages/<name>` reported `latest.version == 0.8.1` for
+  each package before the next was uploaded (first attempt, no retries needed).
+
+Indexing observation
+  The JSON API listed 0.8.1 immediately, but the pub *client* listing lagged:
+  at 17:55 `dart pub cache add dwi_builder --version 0.8.1` answered "no
+  versions that match 0.8.1". By 17:58 the client listed all seven; the wait
+  used `dart pub cache add <name> --version 0.8.1` as the client-visible probe,
+  matching the 0.8.0 procedure.
+
+Published-consumer test (tooling/hosted_consumer, DWI_HOSTED_VERSION=0.8.1)
+  Command: FLUTTER=.research/flutter-sdk/bin/flutter \
+           DART=.research/flutter-sdk/bin/dart \
+           WORK_DIR=<scratch> ENGINES=chrome,safari,firefox,edge \
+           tooling/hosted_consumer/run.sh
+  Exit: 0 (PASS)
+  Resolution: all seven resolved `source=hosted url=https://pub.dev` at 0.8.1
+  (`dwi`, `dwi_annotations`, `dwi_builder`, `dwi_core`, `dwi_native`,
+  `dwi_protocol`, `dwi_web`). No path overrides in the consumer app.
+  First ordinary `flutter build web --release` for the generated-proxy app:
+  exit 1 on the missing proxy, as documented.
+  Pre-build (`dart run dwi_builder:dwi build`) then root and `/sub/app/` builds:
+  both packaged `build/web/dwi/worker.dart.js` (335,797 B).
+  Proxy-free app: built on its first ordinary command.
+  Browsers: 4 engines × 2 mounts = 8 results, all `status: ok` — Chrome
+  157.0.8103.50, Safari 26.5, Firefox 159.0.1, Edge 157.0.4341.42.
+  Payload validation: "fixture payloads match on every available engine and
+  mount" (typed call, `Dwi.runFresh`, scoped worker, dedicated handle, stop
+  reasons).
+
+What this does not claim
+  The fresh-project ordering gap is unchanged: the first typed-proxy build still
+  needs the one-time `dart run dwi_builder:dwi build` (ADR-009,
+  docs/upstream/flutter-web-hook-ordering.md).
