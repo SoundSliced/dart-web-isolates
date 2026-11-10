@@ -1,0 +1,124 @@
+DWI — dart2wasm worker acceptance run (2026-11-10)
+
+Scope
+  The ADR-018 vertical slice: a builder-compiled Wasm worker, loaded by a
+  dart2js host as a module worker, exercising the existing task, typed-proxy,
+  handle, channel, transferable, cancellation, heartbeat/stop and startup
+  failure contracts. This is an experimental backend result, not a release
+  claim and not a parity claim.
+
+Environment
+  macOS 26.5.1 arm64
+  Dart SDK 3.13.5 (stable), the SDK bundled with Flutter 3.47.6
+  Google Chrome 157.0.8103.50
+  Microsoft Edge 157.0.4341.42
+  Mozilla Firefox 159.0.1
+  Safari 26.5
+  Engines were driven sequentially and independently; no result is copied
+  between engines.
+
+Fixture (scratch, not added to the repo)
+  A Dart web app with 13 @DwiTask functions and generated typed proxies.
+  Build: `dart run dwi_builder:dwi build --target=wasm`
+  Host: `dart compile js -O1 -o web/main.dart.js lib/main.dart`
+  Configuration: workerBackend wasm, workerScript dwi/worker.boot.mjs.
+  Published artefacts: worker.wasm 84,739 B, worker.mjs 13,312 B,
+  worker.boot.mjs 1,200 B (source maps not published). The manifest recorded
+  target=wasm and SHA-256 digests for all three files.
+  Note: the dependency build hook also produced a dart2js worker.dart.js in the
+  same web/dwi directory. The CLI later rewrote the manifest for target=wasm.
+  Hook-versus-CLI target selection is unresolved and must be specified before
+  a Flutter workflow can use this backend.
+
+Server requirements observed
+  .wasm served as application/wasm; .mjs/.js as a JavaScript type; same
+  artefacts under / and /sub/app/ with no rebuild. No COOP/COEP headers.
+
+Per-engine results (all at /; key pages also at /sub/app/)
+  Every cell below passed in Chrome, Edge, Firefox and Safari.
+
+  Page            Contract                                                Result
+  main            typed proxy result, async task, typed list; typed       pass
+                  remote error then valid work; task timeout then valid
+                  work; UI-thread timer ticks during CPU work (21-23
+                  ticks); capabilities workerBackend=dart2wasm; close
+  state           worker-local state retained across three calls          pass
+                  ([1,2,3]) on one handle
+  crash           idle crash observed (state failed, reason crashed,      pass
+                  one event); call after crash fails typed
+                  (DwiWorkerFailedException); restart ready with fresh
+                  state
+  channels        worker-side echo, worker-initiated send, duplicate      pass
+                  open rejected (DwiChannelStateException), bounded
+                  buffer (DwiChannelBufferException), reopen after close
+  bytes           DwiTransferableBytes round trip; sender detached;       pass
+                  length and contents preserved
+  close_running   close with running work and a paused stops listener:    pass
+                  close returned in 0-4 ms, pending call settled with
+                  DwiWorkerClosedException, reason callerClosed
+  queue           one worker slot; queued call failed with                 pass
+                  DwiTimeoutException, running call completed
+  restart_close   cancel running call (DwiCancelledException), restart,    pass
+                  fresh state, prompt close; events cancelled,callerClosed
+  startup_missing boot script missing: DwiStartupException after the       pass
+                  configured startup deadline ("did not send ready")
+  startup_missing_wasm  bootstrap present, module absent: in-band         pass
+                  startup-error, DwiStartupException immediately
+  startup_corrupt module truncated: in-band startup-error,               pass
+                  DwiStartupException immediately
+  startup_mismatch  Wasm requested but the JS artefact loaded:           pass
+                  DwiStartupException "worker reported backend
+                  \"dart2js\" but \"dart2wasm\" was requested"
+
+  The /sub/app/ runs repeated main, queue and startup_corrupt for all four
+  engines; all passed with the same values.
+
+Engine-specific startup-error text (same typed outcome)
+  Missing boot script:
+    every engine: "did not send ready within 8000 ms"
+  Missing module (bootstrap reports in-band):
+    Chrome/Edge: "wasm fetch failed: 404 Not Found" plus loader frame
+    Firefox:     loader frame only
+    Safari:      "module code@...worker.boot.mjs:37:20"
+  Corrupt module:
+    Chrome/Edge: WebAssembly.compileStreaming section-length error
+    Firefox:     "wasm validation error: at offset 100: expected heap type code"
+    Safari:      "WebAssembly.Module doesn't parse at byte 11 ..."
+  Mismatched backend:
+    identical text in all four engines.
+  Consequence: the host can classify the failure and raise a typed
+  DwiStartupException, but must not depend on message text being uniform.
+
+Findings that required code changes
+  1. dart2wasm emits no worker entrypoint; a generated generic bootstrap is
+     required (worker.boot.mjs).
+  2. A Wasm worker receives every JS number as `double`. Generated `int`
+     decoders now accept an integral double; the worker dispatcher now reads
+     meta `gen`, `seq`, `bufferSize` and `maxPayloadBytes` through an
+     integral-double helper. Without the meta fix, channel opens never
+     acknowledged and the caller hung.
+  3. Uncaught Wasm failures are coarse and browser-specific (Safari reports
+     "Script error."), so all caller-visible failures stay in-band.
+
+Not verified / not claimed
+  - dart2wasm host + dart2wasm worker (the host here is dart2js).
+  - Flutter build integration for target=wasm; the Flutter hook has no target
+    selection and produced a dart2js worker alongside the Wasm artefact.
+  - Flutter Wasm runtime inside a worker.
+  - Startup, warm dispatch, CPU-work, memory and build-size benchmarks; no
+    performance statement is made.
+  - Cross-origin asset hosting and CORS; CSP-restricted pages.
+  - A large-suite/soak run, parallel engines, and browser contention.
+
+
+JS worker regression (unchanged backend)
+  Command: dart test -j 1 test/browser_roundtrip_test.dart
+           test/browser_lifecycle_test.dart test/browser_handle_test.dart
+           test/browser_scoped_test.dart
+  Result: 10/10 passed in 3m25s.
+    typed collections round-trip (Chrome)
+    pool settles every caller after timeout, overflow, close and startup failure
+    handle lifecycle contract in Chrome, Safari, Firefox and Edge
+    scoped helper contract in Chrome, Safari, Firefox and Edge
+  The dart2js worker path, protocol v2 envelopes and public handle semantics
+  therefore remain green with the Wasm backend present but unused.

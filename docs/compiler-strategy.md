@@ -132,22 +132,26 @@ worker runs in Chrome (`examples/automatic_worker`). Tree shaking of the
 generated registry is verified for the tested task shapes, not for every
 possible library.
 
-## Wasm path (open milestone, no promised release)
+## Wasm path (experimental, no promised release)
 
 Keep the two sides apart:
 
 - **Host compiled with dart2wasm** (`flutter build web --wasm`): measured in
   Chrome 156 on Flutter 3.47.6, with a dart2js worker
   (`docs/browser-matrix.md` §4). This says nothing about the worker.
-- **Worker compiled with dart2wasm**: not implemented. The expected output is a
-  `.wasm` module plus a generated `.mjs` loader loaded from a module worker with
-  `application/wasm` serving and a browser with WasmGC + `js-string` builtins
-  (R005). No DWI worker has been generated, packaged or run this way.
+- **Worker compiled with dart2wasm**: implemented as an opt-in experimental
+  slice (ADR-018). `dwi build --target=wasm` publishes `worker.wasm`, the
+  compiler's `worker.mjs` loader and a generated `worker.boot.mjs` bootstrap;
+  the host loads them as a module worker with `workerBackend:
+  DwiWorkerBackend.wasm` and `workerScript: DwiConfig.defaultWasmWorkerScript`.
+  A dart2js host with this worker passed the contracts in
+  `docs/browser-matrix.md` §7 on Chrome, Edge, Firefox and Safari at `/` and
+  `/sub/app/`. A dart2wasm host with a dart2wasm worker is not measured, and
+  the Flutter hook does not select the target.
 
-The worker backend is an open milestone without a release number. It is not
-scheduled until a generated DWI worker passes the browser matrix on Chromium,
-WebKit and Gecko independently; a dart2wasm host or a standalone Wasm module is
-not evidence for it.
+The backend stays experimental and has no release number. It is not marked
+supported until the remaining boundaries (Flutter hook target selection,
+dart2wasm host + worker, benchmarks, CORS/CSP) are measured.
 
 ## Closure research (DWI-5, no design)
 

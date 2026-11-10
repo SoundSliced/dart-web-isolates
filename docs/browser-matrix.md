@@ -379,3 +379,39 @@ last engine can starve (this machine reached ~7.1 GiB of 7.7 GiB swap and a
 compiler/browser run stalled while a Safari instance held sixteen processes).
 That is a host limit, not an engine result, and it is why each engine's cell
 comes from its own invocation.
+
+## 7. dart2wasm worker backend (ADR-018, experimental)
+
+**Scope of this section: a dart2js host with a worker compiled by
+`dart compile wasm`, using the ADR-018 opt-in. It is not a support claim and
+not a Flutter result.** Environment: macOS 26.5.1, Dart 3.13.5, Chrome
+157.0.8103.50, Edge 157.0.4341.42, Firefox 159.0.1, Safari 26.5. Engines were
+run sequentially. Evidence: `audit/evidence/dart2wasm-worker-acceptance-2026-11-10.txt`.
+
+| Contract | Chrome 157 | Edge 157 | Firefox 159 | Safari 26.5 | At `/sub/app/` |
+| --- | --- | --- | --- | --- | --- |
+| typed proxy, async task, typed list | pass | pass | pass | pass | pass |
+| typed remote error, then valid work | pass | pass | pass | pass | — |
+| task timeout, then valid work | pass | pass | pass | pass | — |
+| main-thread timer ticks during CPU work | pass (21–23) | pass (23) | pass (23) | pass (21) | — |
+| state retained across repeated calls | pass | pass | pass | pass | — |
+| idle crash observed, restart, fresh state | pass | pass | pass | pass | — |
+| channels: echo, announce, duplicate, bounded, reopen | pass | pass | pass | pass | — |
+| transferable bytes, sender detached | pass | pass | pass | pass | — |
+| close with running work and paused stops listener | pass (0–4 ms) | pass | pass | pass | — |
+| queue timeout, then running call completes | pass | pass | pass | pass | pass |
+| cancel running call, restart, prompt close | pass | pass | pass | pass | — |
+| missing bootstrap → typed startup failure | pass | pass | pass | pass | — |
+| missing module → in-band typed startup failure | pass | pass | pass | pass | — |
+| corrupt module → typed startup failure | pass | pass | pass | pass | pass |
+| requested/observed backend mismatch → typed failure | pass | pass | pass | pass | — |
+
+Engine-specific startup-failure detail is recorded in the evidence file: the
+typed outcome is identical, but message text (and Safari's loader frame) differs
+per engine. A dart2wasm **host** with a dart2wasm worker is **not measured**;
+the host in every row is dart2js. Flutter integration, benchmarks, CORS and CSP
+are not measured.
+
+The dependency build hook currently emits a dart2js worker regardless of
+`--target`; a Flutter workflow that needs the Wasm backend requires a target
+selection that the hook does not yet have.

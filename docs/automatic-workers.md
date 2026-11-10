@@ -114,16 +114,26 @@ Diagnostics are build-time; they never turn into a silent main-thread fallback.
   "target": "js",
   "optimization": "O1",
   "compiled": true,
-  "artifactDigest": "<sha256 of the compiled worker>",
+  "artifactDigest": "<sha256 of the entry artifact>",
+  "artifactFiles": [
+    {"path": "dwi/worker.dart.js", "digest": "<sha256>"}
+  ],
   "workers": {
     "default": {
       "artifact": "dwi/worker.dart.js",
+      "files": ["dwi/worker.dart.js"],
       "entrypoint": ".dwi/generated_worker.dart",
       "tasks": ["calculatePrimes"]
     }
   }
 }
 ```
+
+For `--target=wasm` the same shape records `"target": "wasm"`, entry
+`dwi/worker.boot.mjs`, and three `artifactFiles`: `worker.boot.mjs`,
+`worker.mjs` and `worker.wasm`. `dwi check` verifies every listed file and
+digest, and fails when any file is missing, truncated or from the other target
+(ADR-018). The Wasm backend is experimental.
 
 The developer never edits this file. It is written only by `dwi build` when
 compilation is enabled; `dwi generate` and `dwi build --no-compile` write the
@@ -145,7 +155,7 @@ The content hash covers:
 - the identity of the **selected** compiler executable (`<dart> --version`), not
   the SDK running the build tool;
 - `dwi_builder` version, manifest protocol and worker id;
-- target (`js`) and optimisation level.
+- target (`js` or `wasm`) and optimisation level.
 
 If the hash and a compiled artefact **plus its recorded digest** are unchanged,
 compilation is skipped. A corrupted, truncated or deleted artefact fails
@@ -245,9 +255,10 @@ correction to the earlier "no web build hook" conclusion.
   exists. See R013 §4.4–4.5 and ADR-002.
 - Runtime compilation in the browser: no browser-hosted Dart compiler; CSP and
   size make it non-viable for v0.x. See R013 §4.5.
-- Wasm worker generation: an open milestone with no promised release number.
-  Only the dart2wasm **host** has been measured (Chrome, with a dart2js
-  worker); the worker itself is still a dart2js artefact.
+- Wasm worker generation: experimental under ADR-018
+  (`dwi build --target=wasm`, opt-in `DwiWorkerBackend.wasm`, three-file
+  artefact set) with no promised release number and no Flutter-hook target
+  selection. See `docs/browser-matrix.md` §7 for the measured contracts.
 - Flutter hot reload of an existing worker (page reload is required).
 
 ## Verification

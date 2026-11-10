@@ -78,8 +78,15 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
 13. **Generated-registry tree shaking is verified for tested shapes.** The
     generated worker uses static references, and v0.3 compiles and runs in
     Chrome. A universal proof for every library shape is not claimed.
-14. **Wasm worker generation is not implemented.** Wasm requires a `.wasm` +
-    `.mjs` loader pair and a module worker (R005). No Wasm support is claimed.
+14. **Wasm worker generation is experimental.** `dwi build --target=wasm`
+    publishes `worker.wasm`, the compiler's `worker.mjs` loader and a generated
+    `worker.boot.mjs`; the host must opt in with
+    `workerBackend: DwiWorkerBackend.wasm`. It is not part of any supported
+    release statement. A dart2wasm worker receives JS numbers as `double`
+    (generated `int` decoders and meta fields accept integral doubles), and
+    uncaught Wasm failures are coarse, so failures stay in-band. A dart2wasm
+    host with a dart2wasm worker, Flutter hook integration, CORS and CSP are
+    not verified (ADR-018, `audit/evidence/dart2wasm-worker-acceptance-2026-11-10.txt`).
 15. **Runtime compilation is not implemented and is not planned for v0.x.** A
     browser-hosted Dart compiler, CSP `eval` restrictions, size and attack
     surface make it non-viable on current evidence (R013 §4.5).
@@ -183,10 +190,14 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
     (`flutter build web --wasm`) can host DWI since the 2026-11-05 fix that
     lets the envelope accept integral doubles for `v`, `id` and
     `error.taskId`; before it, the first envelope failed with
-    `message.v must be an int`. The worker is still a dart2js artefact — there
-    is no wasm worker — and the combination is measured only in Chrome 156 on
-    Flutter 3.47.6 stable. Firefox, Safari and Edge are unverified for wasm as
-    for every other cell.
+    `message.v must be an int`. The combination is measured only in Chrome 156
+    on Flutter 3.47.6 stable. Firefox, Safari and Edge are unverified for a wasm
+    host as for every other cell.
+    A **dart2wasm worker** is a separate, experimental result (ADR-018): a
+    dart2js host with an opt-in Wasm worker passed the contracts in
+    `docs/browser-matrix.md` §7 on all four engines, at `/` and `/sub/app/`.
+    A dart2wasm **host with a dart2wasm worker** has not been measured, and the
+    Flutter hook does not select the target.
 
 ## DWI-3 limitations (channels, ADR-014)
 

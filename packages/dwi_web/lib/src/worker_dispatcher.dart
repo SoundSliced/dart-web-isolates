@@ -127,8 +127,8 @@ class DwiWorkerDispatcher {
     }
 
     try {
-      final limit = envelope.meta['maxPayloadBytes'];
-      final maxBytes = limit is int && limit > 0 ? limit : null;
+      final limit = _metaInt(envelope.meta['maxPayloadBytes']);
+      final maxBytes = limit != null && limit > 0 ? limit : null;
       Object? input = envelope.payload;
       if (envelope.meta['payloadKind'] == 'transferableBytes' &&
           input is ByteBuffer) {
@@ -199,10 +199,9 @@ class DwiWorkerDispatcher {
         'channelOpen without a channel name',
       );
     }
-    final rawBuffer = envelope.meta['bufferSize'];
-    final bufferSize = rawBuffer is int && rawBuffer > 0 ? rawBuffer : 64;
-    final rawGen = envelope.meta['gen'];
-    final gen = rawGen is int ? rawGen : 0;
+    final rawBuffer = _metaInt(envelope.meta['bufferSize']);
+    final bufferSize = rawBuffer != null && rawBuffer > 0 ? rawBuffer : 64;
+    final gen = _metaInt(envelope.meta['gen']) ?? 0;
     try {
       validateDwiChannelName(name);
       final endpoint = DwiChannelEndpoint(
@@ -273,7 +272,7 @@ class DwiWorkerDispatcher {
       return;
     }
     final channel = _channels[name];
-    if (channel == null || _channelGens[name] != envelope.meta['gen']) {
+    if (channel == null || _channelGens[name] != _metaInt(envelope.meta['gen'])) {
       return;
     }
     Object? payload = envelope.payload;
@@ -281,7 +280,7 @@ class DwiWorkerDispatcher {
         payload is ByteBuffer) {
       payload = DwiTransferableBytes.fromBuffer(payload);
     }
-    final limit = envelope.meta['maxPayloadBytes'];
+    final limit = _metaInt(envelope.meta['maxPayloadBytes']);
     try {
       validateDwiPayload(
         payload,
@@ -310,14 +309,14 @@ class DwiWorkerDispatcher {
     final channel = envelope.channel;
     final seq = envelope.seq;
     if (channel == null || seq == null) return;
-    if (_channelGens[channel] != envelope.meta['gen']) return;
+    if (_channelGens[channel] != _metaInt(envelope.meta['gen'])) return;
     _channels[channel]?.ack(seq);
   }
 
   void _handleChannelClose(DwiEnvelope envelope) {
     final channel = envelope.channel;
     if (channel == null) return;
-    if (_channelGens[channel] != envelope.meta['gen']) return;
+    if (_channelGens[channel] != _metaInt(envelope.meta['gen'])) return;
     _channels[channel]?.peerClosed();
   }
 
@@ -369,6 +368,19 @@ class DwiWorkerDispatcher {
     for (final channel in channels) {
       channel.fail(error);
     }
+  }
+
+  /// Reads a meta integer that may arrive as an integral `double`.
+  ///
+  /// A dart2wasm worker receives every JS number as `double`, including the
+  /// `gen`, `seq`, `bufferSize` and `maxPayloadBytes` fields. Rejecting them
+  /// made channel opens and acknowledgements silently never match (ADR-018).
+  static int? _metaInt(Object? value) {
+    if (value is int) return value;
+    if (value is double && value.isFinite && value == value.truncateToDouble()) {
+      return value.toInt();
+    }
+    return null;
   }
 
   Map<String, Object?> _meta() => workerId.isEmpty

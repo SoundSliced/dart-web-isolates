@@ -208,6 +208,51 @@ void main() {
       );
     }
 
+    test('accepts integral doubles for channel meta (dart2wasm)', () async {
+      final emitted = <DwiEnvelope>[];
+      final dispatcher = DwiWorkerDispatcher(
+        <String, DwiWorkerTask>{},
+        emit: emitted.add,
+      );
+
+      final opened = await dispatcher.handle(
+        DwiEnvelope(
+          type: DwiMessageType.channelOpen,
+          meta: <String, Object?>{
+            'channel': 'chat',
+            'bufferSize': 4.0,
+            'gen': 7.0,
+          },
+        ),
+      );
+      expect(opened!.type, DwiMessageType.channelOpened);
+      expect(opened.meta['gen'], 7);
+
+      // A double generation must still match the open generation.
+      final message = await dispatcher.handle(
+        DwiEnvelope(
+          type: DwiMessageType.channelMessage,
+          payload: 'hello',
+          meta: <String, Object?>{
+            'channel': 'chat',
+            'gen': 7.0,
+            'seq': 1.0,
+          },
+        ),
+      );
+      expect(message, isNull);
+
+      final endpoint = DwiWorkerChannels.find('chat');
+      expect(endpoint, isNotNull);
+      final received = <Object?>[];
+      endpoint!.messages.listen(
+        received.add,
+        onError: (Object error, StackTrace stack) {},
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(received, <Object?>['hello']);
+    });
+
     test('opens a channel, receives and acknowledges a message', () async {
       final emitted = <DwiEnvelope>[];
       final dispatcher = DwiWorkerDispatcher(
