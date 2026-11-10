@@ -1,0 +1,102 @@
+Flutter web build-hook ordering — second measurement round
+Date: 2026-11-10
+Recorded by: DWI milestone work (handoff "Flutter Web first-build hook ordering")
+Status: prototype measured in a disposable SDK; NOT merged, NOT released.
+
+Environment
+-----------
+OS:            macOS 26.5.1 (25F80), arm64
+Flutter:       3.47.6 stable (framework 5fc346839b, engine 692136cb65)
+Dart:          3.13.5
+Installed SDK: /Users/christophechanteur/Development/flutter — not modified
+               (its bin/cache is read-only in this environment)
+Disposable:    writable copy of that SDK outside the repository: wrapper
+               scripts, snapshot and the flutter_tools source copied; the
+               immutable dart-sdk/artifacts/flutter_web_sdk referenced in place.
+               The copy reports a synthetic version ("3.50.0-0.4.pre") because
+               it is not the original git checkout; builds used the 3.47.6
+               engine artifacts and Dart 3.13.5 above.
+Pub cache:     read-through symlink to the host cache for fixture resolution
+Browsers:      Chrome (automated), Safari/Firefox/Edge installed, not automated
+
+Current upstream state (source inspection only)
+-----------------------------------------------
+- Latest stable release: 3.47.9 (2026-10-29).
+- 3.47.9 targets/web.dart:143 and master targets/web.dart:200 both have
+  Dart2WebTarget.dependencies == [WebEntrypointTarget, GenerateLocalizationsTarget].
+- web_release_bundle still lists
+  LinkHooks(platform: HookPlatform.web, extraDependencies: compileTargets).
+- dart-lang/sdk#56512 (hook/generate.dart) is open, 30 comments, last update
+  2026-08-07; no decision on source-generation ordering was found.
+- 3.47.9 was NOT built here (no 3.47.9 artifacts offline; disk budget 4 GiB).
+
+Baseline on the unmodified 3.47.6 copy (fresh fixture per command)
+------------------------------------------------------------------
+- flutter build web --release : exit 1
+  "Error when reading 'lib/dwi_tasks.g.dart': No such file or directory"
+  "Undefined name 'DwiTasks'"
+  hook: "generated lib/dwi_tasks.g.dart during this build" at +8534 ms,
+  after "Target dart2js failed".
+- flutter build web --wasm    : exit 1, same missing import, hook at +6025 ms.
+- flutter build web --debug   : exit 1, same missing import, hook at +7708 ms.
+- flutter run -d chrome       : first command succeeds, reaches
+  "Flutter run key commands".
+- tooling/proxy_gate/run.sh   : exit 0 (reproduced; second build packages
+  build/web/dwi/worker.dart.js).
+
+Prototype (disposable copy, commit d939ba8351 in that copy)
+-----------------------------------------------------------
+One source change in flutter_tools/lib/src/build_system/targets/web.dart:
+Dart2WebTarget.dependencies gains BuildHooks(platform: HookPlatform.web).
+Test additions:
+- web_test.dart: two assertions that Dart2JSTarget and Dart2WasmTarget each
+  depend on exactly one BuildHooks with HookPlatform.web.
+- test/integration.shard/build_hooks_generate_dart_web_test.dart: a fresh app
+  whose hook writes lib/generated.g.dart (imported by main.dart) builds on the
+  first `flutter build web --release --no-pub`.
+
+Results on the patched copy
+---------------------------
+- flutter_tools web target suite: 623 tests pass.
+- Integration test: passes (0:26).
+- Verbose ordering: "build_hooks: Complete" precedes "dart2js: Starting due to {}".
+- First-build matrix (fresh fixture per row, ordinary command):
+    --release, dwi js    -> exit 0; main.dart.js, dwi/worker.dart.js
+    --release, dwi wasm  -> exit 0; main.dart.js, dwi/worker.boot.mjs,
+                            dwi/gen-<hash>/{worker.mjs,worker.wasm}
+    --wasm, dwi js       -> exit 0; main.dart.{js,wasm}, dwi/worker.dart.js
+    --wasm, dwi wasm     -> exit 0; main.dart.{js,wasm}, Wasm worker bundle
+    --debug, dwi js      -> exit 0; main.dart.js, dwi/worker.dart.js
+    --profile, dwi js    -> exit 0; main.dart.js, dwi/worker.dart.js
+    flutter run -d chrome -> first command reaches key commands
+- Chrome runtime:
+    release JS at "/"            -> result 168; 200 /dwi/worker.dart.js
+    wasm host + wasm worker "/"  -> result 168; 200 worker.boot.mjs,
+                                    worker.mjs, worker.wasm
+    same build at "/sub/app/"    -> result 168; all assets and worker 200
+  (Wasm worker requires the app itself to configure DwiWorkerBackend.wasm and
+  DwiConfig.defaultWasmWorkerScript; dwi.yaml alone selects what the builder
+  emits, not what the app loads.)
+
+Cost (release, same machine, indicative not a benchmark)
+--------------------------------------------------------
+No-hooks app, patched vs unpatched disposable copy:
+    cold      20.07 s vs 21.00 s
+    unchanged 17.16/18.16 s vs 17.39/18.18 s
+DWI app, patched: cold 31.7 s; unchanged without dwi.yaml 26.7 s (hook reruns);
+unchanged with dwi.yaml 19.2 s once stable.
+
+Regression cases
+----------------
+- Throwing hook: exit 1, "Target build_hooks failed", "Bad state: hook boom",
+  no dart2js start, no build/web.
+- dwi.yaml lifecycle: absent -> JS worker; created target: wasm -> Wasm worker
+  bundle; deleted -> JS worker recompiled. Old Wasm artefacts are retained.
+- Link hooks/final packaging: worker asset present in every matrix row.
+
+Not measured
+------------
+- A dependency hook producing assets but no Dart source.
+- Multiple dependencies with web hooks.
+- Safari, Firefox, Edge runtime.
+- Any build on 3.47.9 (source inspection only).

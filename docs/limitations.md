@@ -46,10 +46,13 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
    `--release`, `--wasm` and `--debug`, while `flutter run -d chrome` (debug)
    **succeeds** because the resident web runner awaits the hooks before its DDC
    compile. `tooling/proxy_gate` reproduces the gap and exits non-zero if the
-   first build ever starts succeeding. A disposable-SDK prototype that makes the
-   web compiler depend on `BuildHooks(platform: web)` passes on the first
-   command for js and wasm; the fix is upstream-only — no package-level
-   mechanism exists (see `docs/upstream/flutter-web-hook-ordering.md`).
+   first build ever starts succeeding. The current stable release is 3.47.9
+   (2026-10-29); its source and `master` still omit the hooks target from
+   `Dart2WebTarget.dependencies`, so no released SDK fixes this. A
+   disposable-SDK prototype that makes the web compiler depend on
+   `BuildHooks(platform: web)` passes on the first command for js and wasm; the
+   fix is upstream-only and unmerged — no package-level mechanism exists (see
+   `docs/upstream/flutter-web-hook-ordering.md`).
    Older Flutter
    versions, plain Dart web apps and CI checks use
    `dart run dwi_builder:dwi build`; `--flutter-build` wraps the Flutter build
