@@ -208,11 +208,20 @@ artefacts retained, hook reruns only while the optional file is absent).
 Browser evidence from those production builds, driven by the repository
 harness: dart2js host with a JS worker returns the typed result **168** on
 Chrome 157.0.8103.50, Safari 26.5, Firefox 159.0.1 and Edge 157.0.4341.42, at
-both `/` and `/sub/app/`, with `dwi/worker.dart.js` served 200. The
-dart2wasm host with a Wasm worker boots on all four engines and serves
-`worker.boot.mjs` and the `gen-<hash>` trio 200, but reports
-`minified:hp: worker error` — an unexplained Wasm-worker startup failure recorded as an open
-issue, not a packaging or ordering result.
+both `/` and `/sub/app/`, with `dwi/worker.dart.js` served 200. The dart2wasm
+host with a Wasm worker also returns **168** on all four engines at both
+mounts, with `worker.boot.mjs` and the `gen-<hash>` trio served 200 as
+`text/javascript` / `application/wasm`.
+
+An earlier run of those Wasm rows failed on every engine with
+`minified:hp: worker error`. The cause was the measurement server, not DWI and
+not this patch: it served `.mjs` as `application/octet-stream`, and browsers
+refuse a module worker with a non-JavaScript MIME type. Changing only that
+content type made the same build pass on all four engines, and the same
+combination on the **unmodified** 3.47.9 SDK (proxy pre-generated with
+`dart run dwi_builder:dwi build`) also passes — so the startup failure is
+excluded from the patch's column. The harness now maps `.mjs`, with
+`packages/dwi_builder/test/browser_serve_test.dart` as its regression test.
 
 Evidence: `../../audit/evidence/flutter-web-hook-ordering-3.47.9-2026-11-10.txt`.
 

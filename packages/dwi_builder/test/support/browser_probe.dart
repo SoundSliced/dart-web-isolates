@@ -64,6 +64,10 @@ Future<Map<String, dynamic>> probeChrome(String url) async {
 }
 
 ContentType _contentType(String path) {
+  // Module workers are `.mjs`. Serving them as application/octet-stream makes
+  // every browser refuse the module script, so a Wasm worker never starts.
+  // Regression: test/browser_serve_test.dart.
+  if (path.endsWith('.mjs')) return ContentType('text', 'javascript');
   if (path.endsWith('.js')) return ContentType('text', 'javascript');
   if (path.endsWith('.html')) return ContentType.html;
   if (path.endsWith('.json')) return ContentType.json;
