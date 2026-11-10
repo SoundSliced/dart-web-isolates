@@ -1,0 +1,163 @@
+Running build hooks...Running build hooks...measuring js worker...
+measuring wasm worker...
+wrote ../../audit/evidence/wasm-worker-benchmark-2026-11-10.json
+{
+  "js": {
+    "coldStartMs": {
+      "count": 10,
+      "min": 7.3,
+      "median": 8.3,
+      "p95": 15.6,
+      "max": 15.6
+    },
+    "warmDispatchMs": {
+      "count": 50,
+      "min": 0.0,
+      "median": 0.1,
+      "p95": 0.2,
+      "max": 1.9
+    },
+    "cpuMs": {
+      "count": 5,
+      "min": 29.3,
+      "median": 29.4,
+      "p95": 41.7,
+      "max": 41.7
+    },
+    "cpuUiTicks": {
+      "count": 5,
+      "min": 1.0,
+      "median": 1.0,
+      "p95": 2.0,
+      "max": 2.0
+    },
+    "uiWorkerCpuMs": {
+      "count": 3,
+      "min": 151.3,
+      "median": 151.8,
+      "p95": 158.4,
+      "max": 158.4
+    },
+    "uiWorkerTicks": {
+      "count": 3,
+      "min": 9.0,
+      "median": 9.0,
+      "p95": 9.0,
+      "max": 9.0
+    },
+    "uiMainCpuMs": {
+      "count": 3,
+      "min": 147.9,
+      "median": 161.0,
+      "p95": 162.3,
+      "max": 162.3
+    },
+    "uiMainTicks": {
+      "count": 3,
+      "min": 0.0,
+      "median": 0.0,
+      "p95": 0.0,
+      "max": 0.0
+    },
+    "payloadSmallMs": {
+      "count": 10,
+      "min": 0.1,
+      "median": 0.2,
+      "p95": 72.9,
+      "max": 72.9
+    },
+    "payloadLargeMs": {
+      "count": 5,
+      "min": 1.1,
+      "median": 1.3,
+      "p95": 1.8,
+      "max": 1.8
+    },
+    "transferLargeMs": {
+      "count": 5,
+      "min": 0.2,
+      "median": 0.3,
+      "p95": 5.6,
+      "max": 5.6
+    }
+  },
+  "wasm": {
+    "coldStartMs": {
+      "count": 10,
+      "min": 7.7,
+      "median": 10.6,
+      "p95": 104.6,
+      "max": 104.6
+    },
+    "warmDispatchMs": {
+      "count": 50,
+      "min": 0.0,
+      "median": 0.1,
+      "p95": 0.2,
+      "max": 0.4
+    },
+    "cpuMs": {
+      "count": 5,
+      "min": 7.4,
+      "median": 7.5,
+      "p95": 19.5,
+      "max": 19.5
+    },
+    "cpuUiTicks": {
+      "count": 5,
+      "min": 0.0,
+      "median": 0.0,
+      "p95": 1.0,
+      "max": 1.0
+    },
+    "uiWorkerCpuMs": {
+      "count": 3,
+      "min": 65.301,
+      "median": 68.799,
+      "p95": 69.3,
+      "max": 69.3
+    },
+    "uiWorkerTicks": {
+      "count": 3,
+      "min": 3.0,
+      "median": 4.0,
+      "p95": 4.0,
+      "max": 4.0
+    },
+    "uiMainCpuMs": {
+      "count": 3,
+      "min": 184.599,
+      "median": 185.3,
+      "p95": 211.4,
+      "max": 211.4
+    },
+    "uiMainTicks": {
+      "count": 3,
+      "min": 0.0,
+      "median": 0.0,
+      "p95": 0.0,
+      "max": 0.0
+    },
+    "payloadSmallMs": {
+      "count": 10,
+      "min": 0.1,
+      "median": 0.199,
+      "p95": 101.299,
+      "max": 101.299
+    },
+    "payloadLargeMs": {
+      "count": 5,
+      "min": 0.7,
+      "median": 0.799,
+      "p95": 1.1,
+      "max": 1.1
+    },
+    "transferLargeMs": {
+      "count": 5,
+      "min": 0.1,
+      "median": 0.4,
+      "p95": 6.099,
+      "max": 6.099
+    }
+  }
+}

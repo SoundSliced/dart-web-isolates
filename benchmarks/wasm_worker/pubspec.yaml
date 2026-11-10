@@ -1,0 +1,31 @@
+name: dwi_wasm_worker_benchmark
+description: Reproducible JS vs dart2wasm worker benchmark harness for DWI.
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  dwi:
+    path: ../../packages/dwi
+  dwi_annotations:
+    path: ../../packages/dwi_annotations
+  dwi_builder:
+    path: ../../packages/dwi_builder
+  path: ^1.9.1
+
+dependency_overrides:
+  dwi:
+    path: ../../packages/dwi
+  dwi_annotations:
+    path: ../../packages/dwi_annotations
+  dwi_builder:
+    path: ../../packages/dwi_builder
+  dwi_core:
+    path: ../../packages/dwi_core
+  dwi_protocol:
+    path: ../../packages/dwi_protocol
+  dwi_web:
+    path: ../../packages/dwi_web
+  dwi_native:
+    path: ../../packages/dwi_native

@@ -11,7 +11,7 @@ machine, browser versions and commit that produced them; methodology lives in
 | `native_isolate/` | Baseline: `Isolate.run` and long-lived isolate on the VM. |
 | `web_main_thread/` | Baseline: the same work on the browser main thread. |
 | `web_worker/` | Dart compiled with dart2js, executed in a Web Worker. |
-| `wasm_worker/` | Dart compiled with dart2wasm, executed in a Web Worker (when supported). |
+| `wasm_worker/` | JS vs dart2wasm worker comparison (build, startup, dispatch, CPU, payloads, transfer, UI, memory); committed harness and results. |
 
 ## Workloads
 

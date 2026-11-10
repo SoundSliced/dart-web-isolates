@@ -147,3 +147,50 @@ Full harness: `../benchmarks/native_handle/`.
 - Add a worker pool mode to separate startup cost from dispatch cost.
 - Record memory where the browser exposes it.
 - Run the same workload on Firefox/Safari/Edge once those environments exist.
+
+### JS vs Wasm worker — Chrome 157 headless (2026-11-10)
+
+Harness: `../benchmarks/wasm_worker/` (committed, reproducible). Environment:
+macOS arm64 26.5.1, Apple M2 (8 cores), Dart 3.13.5, Chrome 157.0.8103.50
+headless. Same task code, one dart2js host bundle, one page load per backend;
+distributions are inside the page. Full data:
+`../audit/evidence/wasm-worker-benchmark-2026-11-10.json`.
+
+| Measurement (median, p95) | dart2js worker | dart2wasm worker |
+| --- | --- | --- |
+| Build (in-process) | 2,377 ms | 2,206 ms |
+| Worker artefact bytes | 312,509 | 99,859 |
+| Cold start | 8.3 ms, 15.6 | 10.6 ms, 104.6 |
+| Warm dispatch | 0.1 ms, 0.2 | 0.1 ms, 0.2 |
+| Sieve 2,000,000 | 29.4 ms, 41.7 | 7.5 ms, 19.5 |
+| Sieve 10,000,000 in worker | 151.8 ms, 158.4 | 68.8 ms, 69.3 |
+| Main thread, same 10,000,000 sieve | 161.0 ms, 162.3 | 185.3 ms, 211.4 |
+| UI ticks during worker sieve | 9 | 4 |
+| UI ticks during main-thread sieve | 0 | 0 |
+| 1 KiB copy | 0.2 ms, 72.9 | 0.2 ms, 101.3 |
+| 1 MiB copy | 1.3 ms, 1.8 | 0.8 ms, 1.1 |
+| 1 MiB transfer | 0.3 ms, 5.6 | 0.4 ms, 6.1 |
+| Heap used at end | ~53.9 MB | ~53.8 MB |
+
+Interpretation:
+
+- The Wasm worker artefact is ~68% smaller (99,859 vs 312,509 bytes) for this
+  task set; the host bundle was identical (145,428 bytes).
+- Cold start and warm dispatch are indistinguishable at this precision. One
+  cold-start outlier (104.6 ms) was measured for Wasm; it is reported, not
+  smoothed away.
+- The Wasm worker was faster on this CPU workload (2,000,000 sieve: 7.5 vs
+  29.4 ms median; 10,000,000: 68.8 vs 151.8 ms). This is one workload on one
+  engine and is not a general superiority claim.
+- Both backends keep the UI thread responsive: the worker run left the 16 ms
+  timer ticking (4–9 ticks), while the same sieve on the main thread produced
+  zero ticks. The worker number is only meaningful next to that control.
+- Copied 1 MiB payloads were comparable (0.8 ms Wasm vs 1.3 ms JS median);
+  transferable 1 MiB stayed sub-millisecond at the median with occasional
+  multi-millisecond outliers in both backends. Sender detachment was true in
+  every run.
+- Heap use is a single coarse figure from `performance.memory`, identical within
+  noise; it is not a per-worker memory measurement.
+
+Not measured: Firefox, Safari and Edge benchmarks; startup percentiles above
+p95; long soak; Wasm host + Wasm worker separately (the host here is dart2js).
