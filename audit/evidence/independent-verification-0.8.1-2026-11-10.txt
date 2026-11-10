@@ -1,0 +1,117 @@
+DWI — independent verification of the 0.8.1 fixes (2026-11-10)
+
+Scope
+  Verify the fixes in commit c07f61f ("fix: settle missing workers and detect
+  late DWI config") from a clean checkout, independently of the agent that wrote
+  them. Starting state: main at c07f61f, clean and level with origin/main;
+  pub.dev still serves 0.8.0, so every check uses the checkout, not a hosted
+  package.
+
+Environment
+  Flutter 3.47.6 stable (framework 5fc346839b, engine 692136cb65), Dart 3.13.5,
+  macOS 26.5.1 (25F80) arm64. The machine-wide SDK is read-only in this session,
+  so a byte-identical copy was used at a writable temp path. PUB_CACHE: a
+  writable copy of the hosted cache (dry-runs) or a writable directory whose
+  hosted entry symlinks it (tests). Browsers: Chrome 157.0.8103.50, Safari 26.5,
+  Firefox 159.0.1, Edge 157.0.4341.42.
+  Flutter production fixtures were built with the documented workflow
+  (`dart run dwi_builder:dwi build`, then `flutter build web --release`, plus a
+  `--base-href=/sub/app/` build). The probe page records, per API, the outcome
+  string, elapsed ms and any `window.onerror` entries, and publishes them as
+  base64 JSON in `document.title`; a logging static server records every
+  request and status.
+
+A. Missing worker assets
+  A1. `packages/dwi_builder/test/browser_missing_worker_test.dart`: PASS
+      (exit 0, 1 test). Missing JS and Wasm entries settle pooled `Dwi.run` and
+      `DwiWorker.spawn` with `DwiStartupException` in Chrome.
+  A2. Flutter production build, release, 30 s startup deadline, Chrome:
+      control (assets present): run 70–111 ms → `value:42`, spawn 5–9 ms →
+      `value:42`, no uncaught errors.
+      JS script removed (`dwi/worker.dart.js`, 404): run 66–163 ms and
+      spawn 2–4 ms → `DwiStartupException: worker error` /
+      `dedicated worker reported an error`; no uncaught error; no fallback.
+      Wasm bootstrap removed (`dwi/worker.boot.mjs`, 404): run 65–73 ms,
+      spawn 2–3 ms → `DwiStartupException`; no uncaught error.
+      Wasm loader removed (`dwi/gen-<hash>/worker.mjs`, 404): run 71 ms,
+      spawn 4 ms → `DwiStartupException: worker startup failed: TypeError:
+      Failed to fetch dynamically imported module ...`; no uncaught error.
+      Wasm module removed (`dwi/gen-<hash>/worker.wasm`, 404): run 66–117 ms,
+      spawn 3 ms → `DwiStartupException: worker startup failed: ... 404`; no
+      uncaught error.
+      Every settlement is far below the 30 s deadline, so the error callback
+      settled the call; none is a startup timeout. No case fell back to another
+      generation or the main thread.
+  A3. Same cases at `/` and `/sub/app/` (base-href build): both paths pass in
+      Chrome. Requests are `/sub/app/dwi/...` and return 404 as expected.
+  A4. Four engines, production build:
+      JS script missing — Chrome 66/2 ms, Safari 83/113 ms, Firefox 96/4 ms,
+      Edge 93/3 ms, all `DwiStartupException`, all `uncaught: []`.
+      Wasm bootstrap missing — Chrome 73/2, Safari 67/72, Firefox 54/58,
+      Edge 147/3 ms, all typed, no uncaught error.
+      Wasm module missing — Chrome 117/3, Safari 164/7, Firefox 131/4,
+      Edge 174/4 ms, all typed (Safari and Firefox messages are coarser:
+      `module code@...` / `@...`), no uncaught error.
+      Control, four engines: all `value:42` for both APIs.
+  A5. Control, present but incompatible worker (script throws on load), four
+      engines: both APIs settle with `DwiStartupException: ... incompatible
+      worker` in 74–131 ms. The only `window.onerror` entry is the worker
+      script's own `Error: incompatible worker`, which is the injected fault,
+      not a DWI runtime `TypeError`.
+
+B. Late dwi.yaml creation (release app, no source edits, no clean)
+  B1. Build with no dwi.yaml: hook reruns —
+      `build_hooks: Starting due to {InvalidatedReasonKind.inputMissing: ...
+      dwi.yaml}`, and `Skipping target: dart2js`; the worker artefact is
+      byte-identical and not rewritten (same sha256, same mtime). 24 s wall.
+  B2. Create `dwi.yaml` with `target: wasm`: next ordinary build exits 0 (21 s),
+      manifest `"target": "wasm"`, `build/web/dwi/worker.boot.mjs` and
+      `build/web/dwi/gen-<hash>/worker.wasm` packaged.
+  B3. Change to `target: js`: manifest `"target": "js"` and
+      `dwi/worker.dart.js` again.
+  B4. Delete dwi.yaml: default JS target returns; hook reruns on the missing
+      input; dart2js skipped (23 s).
+  B5. Wasm-host builds (`flutter build web --wasm`): without dwi.yaml, exit 0
+      (19 s), target js, `main.dart.wasm` produced; with `target: wasm`, exit 0
+      (10 s), target wasm.
+  B6. Cost while the file is absent: the hook reruns on every build (a missing
+      declared input is dirty) while `Skipping target: build_hooks` appears when
+      the file exists and nothing changed. The builder's content hash still
+      avoids recompiling an unchanged worker (B1: identical sha256 and mtime).
+  B7. The first-build ordering race is unchanged: `tooling/proxy_gate/run.sh`
+      still exits 0 with "first build failed (exit 1), second build packaged the
+      worker". The hook change does not address that gap.
+
+C. Safari test isolation
+  `dart test test/browser_scoped_test.dart test/browser_handle_test.dart` in one
+  invocation under `packages/dwi_builder/dart_test.yaml` (`concurrency: 1`):
+  PASS, 8/8 tests. The log shows `browser_scoped_test.dart` finishing
+  `(tearDownAll)` at 00:34 and `loading test/browser_handle_test.dart` at 00:34 —
+  files run sequentially. Both Safari cells pass (scoped 00:10, handle 01:12)
+  with no WebDriver session refusal. The broader builder suite passes 88/88.
+
+D. Closeout checks
+  `dart analyze packages/dwi_builder` and `packages/dwi_web`: no issues.
+  `dwi_web` suite: 24/24. `dwi_builder` suite: 88/88 (all four browser engines).
+  `git diff --check` clean. No package source, test or config other than the
+  fix commit was modified by this verification.
+
+Observations outside the verified fixes
+  1. `Dwi.close()` does not keep the applied configuration: it sets the cached
+     backend to null, and the next call builds a fresh backend without
+     `configure`, so it uses the default worker script. Measured: a Wasm-configured
+     app that calls `Dwi.run`, then `Dwi.close()`, then `DwiWorker.spawn` requests
+     `/dwi/worker.dart.js` (404) instead of `dwi/worker.boot.mjs`. Pre-existing,
+     unrelated to these fixes; the probe was restructured to avoid it.
+  2. `docs/architecture.md:173` still states that an app-root `hook/build.dart`
+     did not run. Measured on 3.47.6: it does run when the app depends on
+     `hooks`; it is still not ordered before the compiler. Pre-existing stale
+     claim.
+
+Release preparation
+  Commit 4866e0b bumps all seven packages and inter-package constraints to
+  0.8.1 in lockstep, adds package changelog entries, and records
+  `docs/release-notes-0.8.1.md`. Seven `dart pub publish --dry-run` runs pass
+  with exit 0 and 0 warnings (hints only). Nothing was uploaded; pub.dev still
+  serves 0.8.0. The published-consumer test (`tooling/hosted_consumer`) must run
+  after publication, as a separate reviewed step.
