@@ -21,6 +21,7 @@ abstract final class DwiGenerator {
   static DwiGeneratedSources generate(
     List<DwiTaskDescriptor> tasks, {
     required String workerId,
+    String target = 'js',
   }) {
     final sorted = List<DwiTaskDescriptor>.of(tasks)
       ..sort((a, b) {
@@ -29,7 +30,7 @@ abstract final class DwiGenerator {
         return a.sourcePath.compareTo(b.sourcePath);
       });
     return DwiGeneratedSources(
-      worker: _workerSource(sorted, workerId: workerId),
+      worker: _workerSource(sorted, workerId: workerId, target: target),
       proxies: _proxySource(sorted, workerId: workerId),
     );
   }
@@ -37,6 +38,7 @@ abstract final class DwiGenerator {
   static String _workerSource(
     List<DwiTaskDescriptor> tasks, {
     required String workerId,
+    String target = 'js',
   }) {
     final taskPrefixes = _taskPrefixes(tasks);
     final typePrefixes = _typePrefixes(tasks);
@@ -84,6 +86,9 @@ abstract final class DwiGenerator {
       ..writeln('  DwiWorkerRuntime.start(')
       ..writeln('    _tasks,')
       ..writeln("    workerId: '${_dartString(workerId)}',")
+      ..writeln(
+        "    backend: '${target == 'wasm' ? 'dart2wasm' : 'dart2js'}',",
+      )
       ..writeln('  );')
       ..writeln('}')
       ..writeln();
@@ -352,6 +357,12 @@ abstract final class DwiGenerator {
       case 'int':
         return <String>[
           '  if (value is int) return value;',
+          // A dart2wasm worker receives JS numbers as `double`; an integral
+          // value is still an int and must be accepted (ADR-018).
+          '  if (value is double && value.isFinite && '
+              'value == value.truncateToDouble()) {',
+          '    return value.toInt();',
+          '  }',
           "  throw DwiSerializationException("
           "'\$path: expected int, got \${value.runtimeType}');",
         ];

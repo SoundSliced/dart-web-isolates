@@ -58,7 +58,12 @@ ArgParser _parser() {
         ..addOption('worker-source', defaultsTo: '.dwi/generated_worker.dart')
         ..addOption('proxies', defaultsTo: 'lib/dwi_tasks.g.dart')
         ..addOption('artifact', defaultsTo: 'web/dwi/worker.dart.js')
-        ..addOption('manifest', defaultsTo: '.dwi/worker_manifest.json'),
+        ..addOption('manifest', defaultsTo: '.dwi/worker_manifest.json')
+        ..addOption(
+          'target',
+          defaultsTo: 'js',
+          allowed: <String>['js', 'wasm'],
+        ),
     );
   return parser;
 }
@@ -93,12 +98,20 @@ ArgParser _commonOptions({required bool build}) {
     ..addOption(
       'artifact',
       defaultsTo: 'web/dwi/worker.dart.js',
-      help: 'Compiled worker artefact.',
+      help:
+          'Compiled worker artefact. For target=wasm the parent directory '
+          'receives worker.wasm, worker.mjs and worker.boot.mjs.',
     )
     ..addOption(
       'manifest',
       defaultsTo: '.dwi/worker_manifest.json',
       help: 'Generated worker manifest.',
+    )
+    ..addOption(
+      'target',
+      defaultsTo: 'js',
+      allowed: <String>['js', 'wasm'],
+      help: 'Worker compiler output (ADR-018; wasm is experimental).',
     )
     ..addOption(
       'optimization',
@@ -155,6 +168,9 @@ DwiBuildConfig _config(ArgResults command, {required bool compile}) {
     proxiesPath: command['proxies'] as String,
     artifactPath: command['artifact'] as String,
     manifestPath: command['manifest'] as String,
+    target: command.options.contains('target')
+        ? command['target'] as String
+        : 'js',
     optimization: command['optimization'] as String,
     compile: compile && configuredCompile,
     force: command.options.contains('force') ? command['force'] as bool : false,
@@ -268,6 +284,7 @@ Future<int> _clean(ArgResults command) async {
     proxiesPath: command['proxies'] as String,
     artifactPath: command['artifact'] as String,
     manifestPath: command['manifest'] as String,
+    target: command['target'] as String,
     compile: false,
   );
   await DwiBuilder(config).clean();

@@ -1,5 +1,17 @@
 import 'exceptions.dart';
 
+/// Which compiler produced the web worker the host loads.
+///
+/// The value is explicit and never inferred from a file extension: a Wasm
+/// worker needs a module worker and a three-file artefact set (ADR-018).
+enum DwiWorkerBackend {
+  /// `dart compile js` output (`dwi/worker.dart.js`).
+  js,
+
+  /// `dart compile wasm` output (`dwi/worker.boot.mjs`).
+  wasm,
+}
+
 /// Configuration shared by every DWI backend.
 ///
 /// Timeouts are mandatory: a worker that never becomes ready, or a task that
@@ -7,6 +19,7 @@ import 'exceptions.dart';
 class DwiConfig {
   const DwiConfig({
     this.workerScript = defaultWorkerScript,
+    this.workerBackend = DwiWorkerBackend.js,
     this.maxWorkers = 4,
     this.taskTimeout = const Duration(seconds: 30),
     this.startupTimeout = const Duration(seconds: 10),
@@ -24,11 +37,23 @@ class DwiConfig {
   /// generated artefact is served from a different path.
   static const String defaultWorkerScript = 'dwi/worker.dart.js';
 
+  /// Conventional served path for a Wasm worker bootstrap (ADR-018).
+  ///
+  /// Used with [workerBackend] set to [DwiWorkerBackend.wasm].
+  static const String defaultWasmWorkerScript = 'dwi/worker.boot.mjs';
+
   /// Path to the compiled worker entrypoint. Ignored on native.
   ///
   /// Defaults to [defaultWorkerScript] so generated workers need no manual
   /// path configuration. Set an empty string to force a startup error.
   final String? workerScript;
+
+  /// Which compiler produced the worker at [workerScript].
+  ///
+  /// Defaults to [DwiWorkerBackend.js]. A Wasm worker is loaded as a module
+  /// worker and requires [workerScript] to name the generated bootstrap. DWI
+  /// never falls back to the other backend or to the main thread.
+  final DwiWorkerBackend workerBackend;
 
   /// Upper bound on concurrently live workers.
   final int maxWorkers;

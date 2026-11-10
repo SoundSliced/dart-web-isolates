@@ -182,6 +182,29 @@ void main() {
     expect(sources.worker, contains('if (value == null) return null;'));
   });
 
+  test('accepts an integral double for an int (wasm boundary)', () {
+    final sources = DwiGenerator.generate(<DwiTaskDescriptor>[
+      descriptor('one', input: type('int')),
+    ], workerId: 'default');
+    expect(sources.worker, contains('value == value.truncateToDouble()'));
+    expect(sources.worker, contains('return value.toInt();'));
+  });
+
+  test('declares the worker compiler in the ready backend field', () {
+    final js = DwiGenerator.generate(
+      <DwiTaskDescriptor>[descriptor('one', input: type('int'))],
+      workerId: 'default',
+    );
+    expect(js.worker, contains("backend: 'dart2js',"));
+
+    final wasm = DwiGenerator.generate(
+      <DwiTaskDescriptor>[descriptor('one', input: type('int'))],
+      workerId: 'default',
+      target: 'wasm',
+    );
+    expect(wasm.worker, contains("backend: 'dart2wasm',"));
+  });
+
   test('groups tasks from the same library behind one import prefix', () {
     final sources = DwiGenerator.generate(<DwiTaskDescriptor>[
       descriptor('one', input: type('int')),

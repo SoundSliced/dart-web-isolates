@@ -63,6 +63,65 @@ void main() {
   });
 
   test(
+    'builds, checks and cleans the wasm artefact set',
+    () async {
+      project.write('lib/tasks.dart', simpleTasks);
+      final wasmConfig = project.config(compile: true).copyWith(
+        target: 'wasm',
+      );
+
+      final first = await DwiBuilder(wasmConfig).build();
+      expect(first.compiled, isTrue);
+      expect(first.cacheHit, isFalse);
+      expect(first.artifactPath, endsWith('worker.boot.mjs'));
+      expect(project.exists('web/dwi/worker.wasm'), isTrue);
+      expect(project.exists('web/dwi/worker.mjs'), isTrue);
+      expect(project.exists('web/dwi/worker.boot.mjs'), isTrue);
+      expect(project.exists('web/dwi/worker.wasm.map'), isFalse);
+
+      final manifest =
+          jsonDecode(project.read('.dwi/worker_manifest.json'))
+              as Map<String, dynamic>;
+      expect(manifest['target'], 'wasm');
+      expect(manifest['artifactDigest'], isA<String>());
+      final files = manifest['artifactFiles'] as List<dynamic>;
+      expect(files.length, 3);
+      expect(
+        files.map((entry) => (entry as Map)['path']),
+        containsAll(<String>[
+          'dwi/worker.boot.mjs',
+          'dwi/worker.mjs',
+          'dwi/worker.wasm',
+        ]),
+      );
+
+      final check = await DwiBuilder(project.config().copyWith(
+        target: 'wasm',
+      )).check();
+      expect(check.ok, isTrue, reason: check.issues.join('\n'));
+
+      final second = await DwiBuilder(wasmConfig).build();
+      expect(second.compiled, isFalse);
+      expect(second.cacheHit, isTrue);
+
+      // A missing companion must fail the check instead of being ignored.
+      File(p.join(project.root.path, 'web/dwi/worker.mjs')).deleteSync();
+      final broken = await DwiBuilder(project.config().copyWith(
+        target: 'wasm',
+      )).check();
+      expect(broken.ok, isFalse);
+      expect(broken.issues.join('\n'), contains('artefact'));
+
+      await DwiBuilder(project.config().copyWith(target: 'wasm')).clean();
+      expect(project.exists('web/dwi/worker.wasm'), isFalse);
+      expect(project.exists('web/dwi/worker.mjs'), isFalse);
+      expect(project.exists('web/dwi/worker.boot.mjs'), isFalse);
+      expect(project.exists('.dwi/worker_manifest.json'), isFalse);
+    },
+    timeout: const Timeout(Duration(minutes: 5)),
+  );
+
+  test(
     'compiles, reuses the cache, recompiles on change, checks and cleans',
     () async {
       project.write('lib/tasks.dart', simpleTasks);
@@ -163,7 +222,7 @@ void main() {
     expect(corrupt.ok, isFalse);
     expect(
       corrupt.issues.join('\n'),
-      contains('artefact digest does not match'),
+      contains('artefact set does not match the manifest'),
     );
 
     final rebuilt = await DwiBuilder(project.config(compile: true)).build();

@@ -12,6 +12,7 @@ class DwiBuildConfig {
     this.proxiesPath = 'lib/dwi_tasks.g.dart',
     this.artifactPath = 'web/dwi/worker.dart.js',
     this.manifestPath = '.dwi/worker_manifest.json',
+    this.target = 'js',
     this.optimization = 'O1',
     this.compile = true,
     this.force = false,
@@ -36,10 +37,18 @@ class DwiBuildConfig {
   final String proxiesPath;
 
   /// Compiled worker artefact path, relative to [projectRoot] by default.
+  ///
+  /// For `target: 'js'` this is the single compiled file. For
+  /// `target: 'wasm'` the worker directory is its parent directory and the
+  /// published names are fixed: `worker.wasm`, `worker.mjs` and
+  /// `worker.boot.mjs` (ADR-018). The entry URL is [absoluteEntry].
   final String artifactPath;
 
   /// Generated manifest path, relative to [projectRoot] by default.
   final String manifestPath;
+
+  /// Worker compiler output: `js` (default) or `wasm` (ADR-018, experimental).
+  final String target;
 
   /// `dart compile js` optimisation level (`O0`–`O4`).
   final String optimization;
@@ -75,6 +84,28 @@ class DwiBuildConfig {
 
   /// Absolute compiled worker artefact.
   String get absoluteArtifact => resolve(artifactPath);
+
+  /// Whether this build targets dart2wasm.
+  bool get isWasm => target == 'wasm';
+
+  /// Absolute directory holding the published worker artefacts.
+  String get absoluteArtifactDir => p.dirname(absoluteArtifact);
+
+  /// Absolute entry artefact: the `.js` worker, or the wasm bootstrap.
+  String get absoluteEntry => isWasm
+      ? p.join(absoluteArtifactDir, 'worker.boot.mjs')
+      : absoluteArtifact;
+
+  /// Absolute `.wasm` module path (wasm target only).
+  String get absoluteWasmModule => p.join(absoluteArtifactDir, 'worker.wasm');
+
+  /// Absolute compiler loader path (wasm target only).
+  String get absoluteWasmLoader => p.join(absoluteArtifactDir, 'worker.mjs');
+
+  /// Every file this build publishes.
+  List<String> get absoluteArtifacts => isWasm
+      ? <String>[absoluteEntry, absoluteWasmLoader, absoluteWasmModule]
+      : <String>[absoluteArtifact];
 
   /// Absolute manifest file.
   String get absoluteManifest => resolve(manifestPath);
@@ -112,6 +143,13 @@ class DwiBuildConfig {
     if (workerId.trim().isEmpty) {
       throw ArgumentError.value(workerId, 'workerId', 'must not be empty');
     }
+    if (target != 'js' && target != 'wasm') {
+      throw ArgumentError.value(
+        target,
+        'target',
+        'must be "js" or "wasm"',
+      );
+    }
     return this;
   }
 
@@ -124,6 +162,7 @@ class DwiBuildConfig {
     String? proxiesPath,
     String? artifactPath,
     String? manifestPath,
+    String? target,
     String? optimization,
     bool? compile,
     bool? force,
@@ -139,6 +178,7 @@ class DwiBuildConfig {
       proxiesPath: proxiesPath ?? this.proxiesPath,
       artifactPath: artifactPath ?? this.artifactPath,
       manifestPath: manifestPath ?? this.manifestPath,
+      target: target ?? this.target,
       optimization: optimization ?? this.optimization,
       compile: compile ?? this.compile,
       force: force ?? this.force,

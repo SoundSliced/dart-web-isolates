@@ -126,6 +126,7 @@ class DwiBuilder {
     final sources = DwiGenerator.generate(
       discovery.sortedTasks,
       workerId: cfg.workerId,
+      target: cfg.target,
     );
     final dependencies = <String>{
       ...discovery.dependencyFiles,
@@ -145,23 +146,22 @@ class DwiBuilder {
     var cacheHit = false;
     if (cfg.compile) {
       final existing = await _readManifest(cfg.absoluteManifest);
-      final existingDigest = existing?['artifactDigest'];
+      final currentDigests = await _artifactDigests(cfg);
       cacheHit =
           !cfg.force &&
           existing != null &&
           existing['hash'] == hash &&
           existing['compiled'] == true &&
-          existingDigest is String &&
-          existingDigest.isNotEmpty &&
-          existingDigest == await fileDigest(cfg.absoluteArtifact);
+          _manifestFilesMatch(existing, currentDigests);
       if (!cacheHit) {
         await compileWorker(cfg);
         compiled = true;
       }
-      final artifactDigest = await fileDigest(cfg.absoluteArtifact);
-      if (artifactDigest.isEmpty) {
+      final artifactDigests = await _artifactDigests(cfg);
+      final entryDigest = artifactDigests[_servedUrl(cfg, cfg.absoluteEntry)];
+      if (entryDigest == null || entryDigest.isEmpty) {
         throw DwiBuildException(
-          'Compilation produced no artefact at ${cfg.absoluteArtifact}.',
+          'Compilation produced no artefact at ${cfg.absoluteEntry}.',
         );
       }
       await _writeIfChanged(
@@ -171,7 +171,8 @@ class DwiBuilder {
           hash: hash,
           tasks: discovery.sortedTasks,
           compiled: true,
-          artifactDigest: artifactDigest,
+          artifactDigest: entryDigest,
+          artifactFiles: artifactDigests,
         ),
       );
     }
@@ -182,7 +183,7 @@ class DwiBuilder {
       hash: hash,
       workerSourcePath: cfg.absoluteWorkerSource,
       proxiesPath: cfg.absoluteProxies,
-      artifactPath: cfg.absoluteArtifact,
+      artifactPath: cfg.absoluteEntry,
       manifestPath: cfg.absoluteManifest,
       compiled: compiled,
       cacheHit: cacheHit,
@@ -217,6 +218,7 @@ class DwiBuilder {
     final sources = DwiGenerator.generate(
       discovery.sortedTasks,
       workerId: cfg.workerId,
+      target: cfg.target,
     );
     final dependencies = <String>{
       ...discovery.dependencyFiles,
@@ -243,8 +245,10 @@ class DwiBuilder {
     );
 
     final manifest = await _readManifest(cfg.absoluteManifest);
-    final artifact = File(cfg.absoluteArtifact);
-    final artifactExists = await artifact.exists();
+    final artifactDigests = await _artifactDigests(cfg);
+    final artifactExists = artifactDigests.values.every(
+      (digest) => digest.isNotEmpty,
+    );
     if (manifest == null) {
       issues.add('Manifest is missing: ${cfg.absoluteManifest}');
     } else {
@@ -257,16 +261,20 @@ class DwiBuilder {
       final digest = manifest['artifactDigest'];
       if (digest is! String || digest.isEmpty) {
         issues.add('Manifest does not record the compiled artefact digest.');
-      } else if (artifactExists &&
-          digest != await fileDigest(cfg.absoluteArtifact)) {
+      }
+      if (!_manifestFilesMatch(manifest, artifactDigests)) {
         issues.add(
-          'Worker artefact digest does not match the manifest; the artefact is '
-          'missing, truncated or corrupt.',
+          'Worker artefact set does not match the manifest; a file is missing, '
+          'truncated, corrupt or from another target.',
         );
       }
     }
     if (!artifactExists) {
-      issues.add('Worker artefact is missing: ${cfg.absoluteArtifact}');
+      final missing = artifactDigests.entries
+          .where((entry) => entry.value.isEmpty)
+          .map((entry) => entry.key)
+          .join(', ');
+      issues.add('Worker artefact is missing: $missing');
     }
 
     return DwiCheckResult(
@@ -280,12 +288,13 @@ class DwiBuilder {
   /// Removes generated sources, manifest and artefact.
   Future<void> clean() async {
     final cfg = config.validated();
-    for (final path in <String>[
+    for (final path in <String>{
       cfg.absoluteWorkerSource,
       cfg.absoluteProxies,
       cfg.absoluteArtifact,
+      ...cfg.absoluteArtifacts,
       cfg.absoluteManifest,
-    ]) {
+    }) {
       final file = File(path);
       if (await file.exists()) await file.delete();
     }
@@ -330,19 +339,27 @@ class DwiBuilder {
     required List<DwiTaskDescriptor> tasks,
     required bool compiled,
     required String artifactDigest,
+    required Map<String, String> artifactFiles,
   }) {
+    final files = artifactFiles.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
     final data = <String, Object?>{
       'protocol': dwiWorkerManifestProtocol,
       'generator': 'dwi_builder',
       'generatorVersion': dwiBuilderVersion,
       'hash': hash,
-      'target': 'js',
+      'target': config.target,
       'optimization': config.optimization,
       'compiled': compiled,
       'artifactDigest': artifactDigest,
+      'artifactFiles': <Object?>[
+        for (final entry in files)
+          <String, Object?>{'path': entry.key, 'digest': entry.value},
+      ],
       'workers': <String, Object?>{
         config.workerId: <String, Object?>{
-          'artifact': _artifactUrl(config),
+          'artifact': _servedUrl(config, config.absoluteEntry),
+          'files': files.map((entry) => entry.key).toList(growable: false),
           'entrypoint': _relative(
             config.absoluteWorkerSource,
             config.absoluteProjectRoot,
@@ -354,12 +371,45 @@ class DwiBuilder {
     return '${const JsonEncoder.withIndent('  ').convert(data)}\n';
   }
 
-  String _artifactUrl(DwiBuildConfig config) {
-    final webRoot = p.join(config.absoluteProjectRoot, 'web');
-    if (p.isWithin(webRoot, config.absoluteArtifact)) {
-      return _relative(config.absoluteArtifact, webRoot);
+  /// Served URL and digest for every file this target publishes.
+  Future<Map<String, String>> _artifactDigests(DwiBuildConfig config) async {
+    final result = <String, String>{};
+    for (final path in config.absoluteArtifacts) {
+      result[_servedUrl(config, path)] = await fileDigest(path);
     }
-    return _relative(config.absoluteArtifact, config.absoluteProjectRoot);
+    return result;
+  }
+
+  /// Whether the manifest's recorded file set matches [current] exactly.
+  bool _manifestFilesMatch(
+    Map<String, Object?> manifest,
+    Map<String, String> current,
+  ) {
+    final raw = manifest['artifactFiles'];
+    if (raw is! List) return false;
+    final recorded = <String, String>{};
+    for (final entry in raw) {
+      if (entry is Map &&
+          entry['path'] is String &&
+          entry['digest'] is String) {
+        recorded[entry['path'] as String] = entry['digest'] as String;
+      }
+    }
+    if (recorded.length != current.length) return false;
+    for (final entry in current.entries) {
+      if (entry.value.isEmpty || recorded[entry.key] != entry.value) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  String _servedUrl(DwiBuildConfig config, String path) {
+    final webRoot = p.join(config.absoluteProjectRoot, 'web');
+    if (p.isWithin(webRoot, path)) {
+      return _relative(path, webRoot);
+    }
+    return _relative(path, config.absoluteProjectRoot);
   }
 }
 

@@ -27,7 +27,11 @@ abstract final class DwiWorkerRuntime {
   /// [tasks] must contain real references to the task implementations, never
   /// task names alone: a string cannot keep a function alive through tree
   /// shaking.
-  static void start(Map<String, DwiWorkerTask> tasks, {String workerId = ''}) {
+  static void start(
+    Map<String, DwiWorkerTask> tasks, {
+    String workerId = '',
+    String backend = 'dart2js',
+  }) {
     final dispatcher = DwiWorkerDispatcher(
       tasks,
       workerId: workerId,
@@ -46,6 +50,7 @@ abstract final class DwiWorkerRuntime {
           'capabilities': <String, Object?>{
             'protocolVersion': dwiProtocolVersion,
             'channels': true,
+            'backend': backend,
           },
           if (workerId.isNotEmpty) 'workerId': workerId,
         },

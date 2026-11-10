@@ -90,6 +90,39 @@ void main() {
     });
   });
 
+  group('worker backend selection (ADR-018)', () {
+    test('defaults to js and keeps the js worker script', () {
+      const config = DwiConfig();
+      expect(config.workerBackend, DwiWorkerBackend.js);
+      expect(config.workerScript, 'dwi/worker.dart.js');
+      expect(DwiConfig.defaultWasmWorkerScript, 'dwi/worker.boot.mjs');
+    });
+
+    test('can select wasm explicitly', () {
+      const config = DwiConfig(
+        workerBackend: DwiWorkerBackend.wasm,
+        workerScript: DwiConfig.defaultWasmWorkerScript,
+      );
+      expect(config.workerBackend, DwiWorkerBackend.wasm);
+      expect(config.workerScript, 'dwi/worker.boot.mjs');
+    });
+
+    test('capabilities report an observed worker backend only when present', () {
+      const js = DwiCapabilities(
+        backend: DwiBackendKind.worker,
+        protocolVersion: 2,
+      );
+      expect(js.toMap().containsKey('workerBackend'), isFalse);
+
+      const wasm = DwiCapabilities(
+        backend: DwiBackendKind.worker,
+        protocolVersion: 2,
+        workerBackend: 'dart2wasm',
+      );
+      expect(wasm.toMap()['workerBackend'], 'dart2wasm');
+    });
+  });
+
   group('exceptions', () {
     test('remote exception keeps its context out of toString', () {
       const error = DwiRemoteException(

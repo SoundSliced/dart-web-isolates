@@ -51,7 +51,7 @@ Future<String> computeWorkerHash({
   // The selected compiler may differ from the tool running the build, so its
   // own identity is hashed rather than Platform.version.
   addString('compiler', await compilerIdentity(config.executable));
-  addString('target', 'js');
+  addString('target', config.target);
   addString('optimization', config.optimization);
   addString('workerId', config.workerId);
   addString('workerSource', workerSource);

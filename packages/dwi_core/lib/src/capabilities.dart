@@ -26,6 +26,7 @@ class DwiCapabilities {
     this.transferables = false,
     this.workerCount = 0,
     this.cancellation = DwiCancellation.none,
+    this.workerBackend,
   });
 
   final DwiBackendKind backend;
@@ -36,11 +37,17 @@ class DwiCapabilities {
   /// The cancellation contract this backend honours.
   final DwiCancellation cancellation;
 
+  /// Observed worker compiler (`dart2js` or `dart2wasm`), when a worker
+  /// reported it. This is the worker's `ready` value, not the requested
+  /// configuration (ADR-018).
+  final String? workerBackend;
+
   Map<String, Object?> toMap() => <String, Object?>{
         'backend': backend.name,
         'protocolVersion': protocolVersion,
         'transferables': transferables,
         'workerCount': workerCount,
         'cancellation': cancellation.name,
+        if (workerBackend != null) 'workerBackend': workerBackend,
       };
 }

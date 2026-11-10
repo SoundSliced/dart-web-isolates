@@ -71,6 +71,9 @@ class WebBackend implements DwiBackend {
   int _nextTaskId = 1;
   int _consecutiveSpawnFailures = 0;
   bool _closed = false;
+
+  /// Backend reported by a worker's `ready` envelope (ADR-018).
+  String? _observedWorkerBackend;
   bool _draining = false;
 
   @override
@@ -263,6 +266,7 @@ class WebBackend implements DwiBackend {
       // Queued and running cancellation are implemented here; the value is
       // reported even when closed so the contract stays readable.
       cancellation: DwiCancellation.running,
+      workerBackend: _observedWorkerBackend,
     );
   }
 
@@ -355,7 +359,14 @@ class WebBackend implements DwiBackend {
     final script = _config.workerScript!;
     web.Worker worker;
     try {
-      worker = web.Worker(script.toJS);
+      // A dart2wasm worker is a module worker: its loader and bootstrap use
+      // ES module syntax. The JS worker keeps the classic constructor.
+      worker = _config.workerBackend == DwiWorkerBackend.wasm
+          ? web.Worker(
+              script.toJS,
+              web.WorkerOptions(type: 'module'),
+            )
+          : web.Worker(script.toJS);
     } catch (error) {
       throw DwiStartupException(
         'could not create a worker for "$script": $error',
@@ -380,7 +391,36 @@ class WebBackend implements DwiBackend {
         _fail(slot, error.message);
         return;
       }
+      if (envelope.type == DwiMessageType.error &&
+          envelope.meta['phase'] == 'startup') {
+        // A wasm bootstrap reports load failures in-band; it never sends
+        // `ready`. Fail the startup instead of waiting for the timeout.
+        _fail(
+          slot,
+          'worker startup failed: '
+          '${envelope.error?.message ?? 'unknown error'}',
+        );
+        return;
+      }
       if (envelope.type == DwiMessageType.ready) {
+        final capabilities = envelope.meta['capabilities'];
+        if (capabilities is Map) {
+          final backend = capabilities['backend'];
+          if (backend is String && backend.isNotEmpty) {
+            _observedWorkerBackend = backend;
+            final expected = _config.workerBackend == DwiWorkerBackend.wasm
+                ? 'dart2wasm'
+                : 'dart2js';
+            if (backend != expected) {
+              _fail(
+                slot,
+                'worker reported backend "$backend" but "$expected" was '
+                'requested for "$script"',
+              );
+              return;
+            }
+          }
+        }
         if (!slot.ready.isCompleted) slot.ready.complete();
         return;
       }

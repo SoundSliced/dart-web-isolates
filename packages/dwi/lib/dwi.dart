@@ -39,6 +39,7 @@ export 'package:dwi_core/dwi_core.dart'
         DwiWorkerClosedException,
         DwiWorkerFailedException,
         DwiWorkerHandle,
+        DwiWorkerBackend,
         DwiWorkerState,
         DwiWorkerStateException,
         DwiWorkerStop,

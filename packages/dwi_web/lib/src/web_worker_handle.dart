@@ -498,7 +498,9 @@ class WebWorkerHandle implements DwiWorkerHandle {
 
     web.Worker worker;
     try {
-      worker = web.Worker(_script.toJS);
+      worker = _config.workerBackend == DwiWorkerBackend.wasm
+          ? web.Worker(_script.toJS, web.WorkerOptions(type: 'module'))
+          : web.Worker(_script.toJS);
     } catch (error) {
       if (_state == DwiWorkerState.starting) {
         _state = DwiWorkerState.failed;
@@ -596,10 +598,41 @@ class WebWorkerHandle implements DwiWorkerHandle {
     }
 
     switch (envelope.type) {
+      case DwiMessageType.error when envelope.meta['phase'] == 'startup':
+        // A wasm bootstrap reports load failures in-band; it never sends
+        // `ready`. Fail startup instead of waiting for the timeout.
+        final ready = _ready;
+        if (ready != null && !ready.isCompleted) {
+          ready.completeError(
+            DwiStartupException(
+              'worker startup failed: '
+              '${envelope.error?.message ?? 'unknown error'}',
+            ),
+          );
+        }
+        return;
       case DwiMessageType.ready:
         final capabilities = envelope.meta['capabilities'];
         if (capabilities is Map) {
           _capabilities = Map<Object?, Object?>.from(capabilities);
+          final backend = _capabilities!['backend'];
+          if (backend is String && backend.isNotEmpty) {
+            final expected = _config.workerBackend == DwiWorkerBackend.wasm
+                ? 'dart2wasm'
+                : 'dart2js';
+            if (backend != expected) {
+              final ready = _ready;
+              if (ready != null && !ready.isCompleted) {
+                ready.completeError(
+                  DwiStartupException(
+                    'worker reported backend "$backend" but "$expected" was '
+                    'requested for "$_script"',
+                  ),
+                );
+              }
+              return;
+            }
+          }
         }
         final ready = _ready;
         if (ready != null && !ready.isCompleted) ready.complete();
