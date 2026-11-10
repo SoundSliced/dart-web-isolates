@@ -644,7 +644,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
         final channel = envelope.channel;
         if (channel != null) {
           final entry = _channels[channel];
-          if (entry != null && entry.gen == envelope.meta['gen']) {
+          if (entry != null && entry.gen == _metaInt(envelope.meta['gen'])) {
             final seq = envelope.seq;
             final message =
                 envelope.error?.message ?? 'worker could not send a message';
@@ -681,9 +681,22 @@ class WebWorkerHandle implements DwiWorkerHandle {
 
   _WebChannel? _entryFor(DwiEnvelope envelope) {
     final name = envelope.channel;
-    final gen = envelope.meta['gen'];
+    final gen = _metaInt(envelope.meta['gen']);
     final entry = name == null ? null : _channels[name];
     return entry != null && entry.gen == gen ? entry : null;
+  }
+
+  /// Reads a meta integer that may arrive as an integral `double`.
+  ///
+  /// A dart2wasm host receives every JS number as `double`, including a
+  /// worker's channel `gen`. Without this normalization no channel message or
+  /// acknowledgement matches its open generation (ADR-018).
+  static int? _metaInt(Object? value) {
+    if (value is int) return value;
+    if (value is double && value.isFinite && value == value.truncateToDouble()) {
+      return value.toInt();
+    }
+    return null;
   }
 
   void _onChannelOpened(DwiEnvelope envelope) {
@@ -698,7 +711,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
       return;
     }
     final entry = _channels[name];
-    if (entry == null || entry.gen != envelope.meta['gen']) return;
+    if (entry == null || entry.gen != _metaInt(envelope.meta['gen'])) return;
     final channel = entry.endpoint;
     if (envelope.meta['opened'] == true) {
       channel.markOpened();
@@ -725,7 +738,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
       return;
     }
     final entry = _channels[name];
-    if (entry == null || entry.gen != envelope.meta['gen']) return;
+    if (entry == null || entry.gen != _metaInt(envelope.meta['gen'])) return;
     final channel = entry.endpoint;
     Object? payload = envelope.payload;
     if (envelope.meta['payloadKind'] == 'transferableBytes' &&

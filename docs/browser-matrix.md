@@ -434,3 +434,41 @@ Missing, wrong-MIME or blocked assets never fall back to JS or the main thread.
 The dependency build hook and the CLI now read the same `dwi.yaml` target, so a
 Flutter workflow can request the Wasm backend without the hook replacing it with
 JS. The Flutter dart2wasm-host combination and benchmarks remain unmeasured.
+
+## 8. Flutter host × worker compiler matrix (2026-11-10)
+
+**Scope: a clean Flutter 3.47.6 Web consumer with the ADR-018 opt-in Wasm
+worker, built by the Flutter hook from `dwi.yaml`.** Environment: macOS 26.5.1,
+Dart 3.13.5, Chrome 157.0.8103.50, Edge 157.0.4341.42, Firefox 159.0.1,
+Safari 26.5. The installed Flutter cache is read-only here, so a writable shadow
+SDK root was used and builds ran with `--no-pub`; no SDK source was modified.
+Flutter's fresh-project typed-proxy ordering limitation still applies: proxies
+were generated once before the first Flutter build, so these are not
+first-build passes. Evidence:
+`audit/evidence/flutter-wasm-worker-matrix-2026-11-10.txt`.
+
+| Host compiler | Worker compiler | Base | Chrome | Edge | Firefox | Safari |
+| --- | --- | --- | --- | --- | --- | --- |
+| dart2wasm | dart2wasm | `/` | pass | pass | pass | pass |
+| dart2wasm | dart2wasm | `/sub/app/` | pass | pass | pass | pass |
+| dart2js | dart2wasm | `/` | pass | pass | pass | pass |
+| dart2js | dart2wasm | `/sub/app/` | pass | pass | pass | pass |
+| dart2wasm | dart2js (control) | `/` | pass | pass | pass | pass |
+
+The contract in every cell: typed proxy task, unknown task, state across calls,
+cancellation and stop reason, restart, crash detection, channel echo and
+worker-initiated send, transferable bytes with sender detachment, timeout then
+recovery, and prompt close with a paused stops listener. Capability reporting
+matched the requested backend (`dart2wasm` for the Wasm-worker rows, `dart2js`
+for the control).
+
+Hook behaviour in the same fixture: `target: wasm` made the hook build the Wasm
+worker; a task edit changed the generation and the next Flutter build rebuilt
+it; switching `dwi.yaml` between js and wasm switched the manifest and artefact
+set, and `dwi check` passed after each. A target is never silently replaced.
+
+A dart2wasm host receives a worker's channel `gen` as `double`; the host now
+normalizes integral doubles, which is why channels pass in this matrix.
+
+Not measured: `flutter run -d chrome`, hot restart, debug/profile wasm builds,
+service-worker/PWA caching, and performance (benchmarks are separate).

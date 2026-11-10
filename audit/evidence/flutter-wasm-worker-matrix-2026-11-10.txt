@@ -1,0 +1,88 @@
+DWI — Flutter host × Wasm worker matrix (2026-11-10)
+
+Scope
+  A clean Flutter Web consumer with the opt-in dart2wasm worker, built by the
+  Flutter build hook from `dwi.yaml`, measured in Chrome, Edge, Firefox and
+  Safari at `/` and `/sub/app/`. Three combinations are kept separate:
+  dart2wasm host + dart2wasm worker, dart2js host + dart2wasm worker, and the
+  dart2wasm host + dart2js worker control.
+
+Environment
+  macOS 26.5.1 arm64, Dart 3.13.5
+  Flutter 3.47.6 stable (framework 5fc346839b, engine
+  692136cb6582dbfc5af3fb33c2515a069f2f66d0)
+  Chrome 157.0.8103.50, Edge 157.0.4341.42, Firefox 159.0.1, Safari 26.5
+  The installed Flutter cache is read-only in this session, so a writable shadow
+  SDK root was used (launcher scripts copied, cache stamps copied, heavy cache
+  entries symlinked). No SDK source was modified. `flutter build web --no-pub`
+  was required because Flutter's implicit `pub get` cannot write the shared pub
+  cache's `active_roots` entry here.
+
+Fixture (clean room)
+  `flutter pub get` from path dependencies on dwi, dwi_annotations, dwi_builder,
+  dwi_core, dwi_protocol, dwi_web, dwi_native and web.
+  `dwi.yaml`: `target: wasm` (js for the control build).
+  One-time pre-build before the first Flutter build:
+    dart run dwi_builder:dwi generate
+  This preserves the documented fresh-project typed-proxy ordering limitation;
+  the following Flutter builds are not first-build passes.
+
+Commands
+  flutter build web --no-pub --wasm --release --base-href /              (host wasm)
+  flutter build web --no-pub --wasm --release --base-href /sub/app/      (host wasm, sub)
+  flutter build web --no-pub --release --base-href /                     (host js)
+  flutter build web --no-pub --release --base-href /sub/app/             (host js, sub)
+  flutter build web --no-pub --wasm --release --base-href /              (control, target js)
+  All commands exited 0. The hook produced `web/dwi/worker.boot.mjs` plus a
+  `gen-<hash>/` directory for the Wasm target, and `web/dwi/worker.dart.js`
+  for the JS target. `dwi check` passed after each build.
+
+Hook and target behaviour
+  - `target: wasm` in dwi.yaml: the Flutter hook built a Wasm worker during
+    `flutter build web`; the manifest recorded target wasm and the same
+    generation the hook published.
+  - Editing the task body changed the generation (`92b85cd18d75`); the next
+    Flutter build rebuilt the worker and `dwi check` passed.
+  - Switching dwi.yaml to `target: js` built `worker.dart.js`; the manifest
+    recorded target js and `dwi check` passed. Switching back restored a Wasm
+    generation and the check passed. The hook never silently used the other
+    target.
+  - The control build used `target: js` with `--wasm` (dart2wasm host) and the
+    page selected the dart2js worker explicitly.
+
+Contract exercised in every combination
+  Typed proxy task, unknown task, worker-local state across calls, cancellation
+  with stop reason, restart with fresh state, crash detection, channel echo and
+  worker-initiated channel send, transferable bytes with sender detachment,
+  task timeout then recovery, and prompt close with a paused stops listener.
+
+Results (all 20 runs pass)
+  Each cell is the same contract sequence; every value matched.
+
+  Combination                             Chrome  Edge  Firefox  Safari
+  dart2wasm host + dart2wasm worker `/`   pass    pass  pass     pass
+  dart2wasm host + dart2wasm worker sub   pass    pass  pass     pass
+  dart2js host + dart2wasm worker `/`     pass    pass  pass     pass
+  dart2js host + dart2wasm worker sub     pass    pass  pass     pass
+  dart2wasm host + dart2js worker `/`     pass    pass  pass     pass
+  (control)
+
+  Observed worker backend: `dart2wasm` for the four Wasm-worker rows and
+  `dart2js` for the control, in all engines. The requested backend/script and
+  the observed backend agreed in every run.
+  Representative values: double=42, unknownTask, state=[1,2],
+  cancel=cancelled/failed/cancelled, restart=1, crash=failed/crashed,
+  channel echo=echo:ping and worker announcement received, bytes detached=true
+  length=4, timeout then afterTimeout=14, close 0-1 ms with
+  DwiWorkerClosedException/callerClosed.
+
+Code fix required by this matrix
+  A dart2wasm host receives a worker's channel `gen` as `double`. The host-side
+  `_WebChannel` generation comparisons now normalize integral doubles, the same
+  way the worker dispatcher and protocol already do. Without it, channel opens
+  and messages never matched the open generation under a dart2wasm host.
+
+Not measured
+  `flutter run -d chrome`, hot restart, profile/debug wasm builds, service
+  worker caching, PWA offline behaviour, and performance (separate benchmark
+  milestone). The control is measured at `/` only.

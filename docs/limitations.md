@@ -194,18 +194,19 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
 36. **No port-like messaging or streams.** The handle exposes `run`,
     `runCancellable`, `restart` and `close` only. `SendPort`/`ReceivePort`
     emulation remains a separate, later ADR.
-29. **dart2wasm host support is new and Chrome-only.** A dart2wasm application
-    (`flutter build web --wasm`) can host DWI since the 2026-11-05 fix that
-    lets the envelope accept integral doubles for `v`, `id` and
-    `error.taskId`; before it, the first envelope failed with
-    `message.v must be an int`. The combination is measured only in Chrome 156
-    on Flutter 3.47.6 stable. Firefox, Safari and Edge are unverified for a wasm
-    host as for every other cell.
-    A **dart2wasm worker** is a separate, experimental result (ADR-018): a
-    dart2js host with an opt-in Wasm worker passed the contracts in
-    `docs/browser-matrix.md` §7 on all four engines, at `/` and `/sub/app/`.
-    A dart2wasm **host with a dart2wasm worker** has not been measured, and the
-    Flutter hook does not select the target.
+29. **dart2wasm host support is measured in all four engines.** A dart2wasm
+    application (`flutter build web --wasm`) can host DWI since the 2026-11-05
+    integral-double fix. A 2026-11-10 Flutter 3.47.6 matrix measured, at `/`:
+    dart2wasm host + dart2js worker (control), dart2wasm host + dart2wasm
+    worker, and dart2js host + dart2wasm worker in Chrome 157, Edge 157,
+    Firefox 159 and Safari 26.5. The two Wasm-worker combinations also passed
+    at `/sub/app/`; the control was measured at `/` only. The Flutter build hook
+    reads `dwi.yaml` for the target (ADR-018,
+    `audit/evidence/flutter-wasm-worker-matrix-2026-11-10.txt`).
+    A dart2wasm **host** additionally receives channel `gen` values as
+    `double`; the host normalizes them, and a channel exchange is part of the
+    measured contract. No debug/profile wasm-host run, hot restart or PWA
+    offline behaviour is claimed.
 
 ## DWI-3 limitations (channels, ADR-014)
 

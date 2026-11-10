@@ -21,8 +21,9 @@ v0.3 unless marked proposed.** No cell claims parity.
 | Cancel a running task | `Isolate.kill` on a retained handle | `Worker.terminate()` | non-cooperative; no partial result | ADR-010 §10.1 |
 | Detect a dead idle worker | port error / explicit state | heartbeat envelope | heartbeat pings idle workers only | ADR-010 §10.3 |
 | Observe why a handle stopped (`stopReason`, `stops`) | yes | yes | observation only, one broadcast event per generation; no `onExit`/`onError` parity, no replay | ADR-017 |
-| dart2wasm host application | n/a | **supported** since the 2026-11-05 integral-double fix | worker is dart2js; measured in Chrome 156 only | audit/evidence/flutter-run-modes-and-wasm-fix-2026-11-05.txt |
-| dart2wasm worker backend | n/a | **experimental slice** (ADR-018); dart2js host + Wasm worker passed the contracts below | content-addressed generation directory plus one atomic entry, module worker, `application/wasm`, opt-in only, no fallback; Flutter hook target selection and a dart2wasm host + Wasm worker are unverified | `audit/evidence/dart2wasm-worker-acceptance-2026-11-10.txt` |
+| dart2wasm host + dart2js worker | n/a | **supported** | no Wasm worker; measured at `/` in Chrome 157, Edge 157, Firefox 159 and Safari 26.5 (control build) | `audit/evidence/flutter-wasm-worker-matrix-2026-11-10.txt` |
+| dart2wasm host + dart2wasm worker | n/a | **experimental** (ADR-018) | full contract passed at `/` and `/sub/app/` in all four engines; opt-in `dwi.yaml`, content-addressed generation, no fallback | `audit/evidence/flutter-wasm-worker-matrix-2026-11-10.txt` |
+| dart2js host + dart2wasm worker | n/a | **experimental** (ADR-018) | same contract at `/` and `/sub/app/` in all four engines | `audit/evidence/dart2wasm-worker-acceptance-2026-11-10.txt` |
 | Pause / resume / ping | yes | **no** | no browser equivalent | R003 §1 |
 | `onExit` / `onError` listeners | yes | envelope events | `error` events are coarse; promises rejections vanish | R003 §6 |
 | `RemoteError` + stack | yes | `DwiRemoteException` | stack captured by the worker, not the host | R001 §5 |
