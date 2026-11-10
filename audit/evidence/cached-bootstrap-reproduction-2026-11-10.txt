@@ -1,0 +1,84 @@
+Cached-bootstrap reproduction — synthetic fixture (2026-11-10)
+
+Scope
+  Reproduces the case the existing live-rebuild test does not cover: a browser
+  keeps the `worker.boot.mjs` response it cached during deployment A, while the
+  server already serves a later deployment. The existing live-rebuild test
+  (`packages/dwi_builder/test/browser_wasm_publication_test.dart`) serves every
+  response with `Cache-Control: no-store`, so it can never observe this case.
+
+Environment
+  macOS 26.5.1 arm64
+  Dart 3.13.5 (stable, 2026-09-29)
+  Google Chrome 157.0.8103.50 (headless, CDP), found at
+  /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+  Fixture harness: packages/dwi_builder/test/cached_bootstrap_test.dart
+  (test: "a client holding generation A keeps loading it across B, C and D
+  builds")
+
+Fixture
+  1. `dwi build --target wasm` builds generation A from a fixture project.
+  2. The exact bytes of `web/dwi/worker.boot.mjs` are saved as the client's
+     cached response.
+  3. Task bodies change, and builds B, C and D run. With the 0.8.0 policy the
+     builder retains only the current and immediately previous generation.
+  4. The deployment tree is a copy of the latest `web/` output; the entry file
+     is replaced with the bytes from step 2, which models a browser that reuses
+     its cached bootstrap while every other URL is fetched from the live
+     deployment. This is deterministic and does not depend on HTTP cache
+     heuristics; it is not a measurement of any browser's HTTP cache.
+  5. The same tree is also served under `/sub/app/`.
+  6. The server records every request with its status code.
+
+Observed HTTP headers in the fixture server: `Cache-Control: no-store` (the
+fixture must observe each request, not cache responses).
+
+Generation ids (hex, from the fixture's content hash)
+  A = 27ca2ad725d70d7fca57e9cdf97a07258f16e62da85bf8d49bfb80958ffb9e98
+  (builds B, C and D each produced a distinct generation; only D and its
+  immediate predecessor remained on disk)
+
+Result at "/" (Chrome 157.0.8103.50, headless)
+  values = []
+  errors = [DwiStartupException]
+  requests:
+    GET /index.html -> 200
+    GET /main.dart.js -> 200
+    GET /dwi/worker.boot.mjs -> 200
+    GET /favicon.ico -> 404
+    GET /dwi/gen-27ca2ad7...b9e98/worker.mjs -> 404
+
+Result at "/sub/app/" (Chrome 157.0.8103.50, headless)
+  values = []
+  errors = [DwiStartupException]
+  requests:
+    GET /sub/app/index.html -> 200
+    GET /sub/app/main.dart.js -> 200
+    GET /sub/app/dwi/worker.boot.mjs -> 200
+    GET /favicon.ico -> 404
+    GET /sub/app/dwi/gen-27ca2ad7...b9e98/worker.mjs -> 404
+
+Reading
+  - The cached client does not start: the bootstrap fails to import
+    `gen-<A>/worker.mjs` and reports the in-band `startup` envelope, which the
+    host raises as `DwiStartupException`.
+  - The failure is typed and comes from the missing generation. No file from
+    another generation is executed alongside generation A: the request sequence
+    never fetches a later `gen-*` asset, so no mixed-generation load was
+    observed.
+  - Cause: `DwiBuilder._pruneGenerations` keeps `{current, immediately
+    previous}`. Three builds after A remove A while a deployed client may still
+    reference it. The pruning rule, not the atomic publication order, is what
+    breaks the cache.
+
+Conclusion
+  A "current plus previous" retention policy is unsafe for any deployment that
+  allows a client to retain a bootstrap across two or more releases. The
+  0.8.0 claim that a reader with a valid cached bootstrap always works is not
+  supported by this evidence.
+
+Not established here
+  - Real HTTP cache or service-worker caching in any engine; see the separate
+    Flutter production build evidence.
+  - Safari, Firefox and Edge for this synthetic fixture (Chrome only; the
+    decisive four-engine run is recorded separately).

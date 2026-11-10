@@ -1,0 +1,130 @@
+Flutter production build — cache and service-worker behaviour across deployments
+(2026-11-10)
+
+Scope
+  A real Flutter Web release build (`flutter build web --release`) of an app that
+  uses the opt-in dart2wasm worker, served with realistic HTTP cache headers,
+  observed in a real browser across three successive deployments. This is kept
+  separate from the synthetic fixture in
+  `cached-bootstrap-reproduction-2026-11-10.txt`: it measures the browser and
+  the deployment, not a substituted file.
+
+Environment
+  macOS 26.5.1 arm64
+  Flutter 3.47.6 stable (framework 5fc346839b, engine 692136cb65), Dart 3.13.5
+  Google Chrome 157.0.8103.50 (headless, CDP), one persistent profile per run
+  The installed Flutter cache is read-only in this session, so a shadow SDK root
+  was used (launcher and `bin/internal` copied, `bin/cache` entries symlinked,
+  `engine.stamp`, `engine.realm`, `lockfile` and `flutter_version_check.stamp`
+  writable). No SDK source was modified.
+
+Fixture
+  A Flutter app (`pubspec.yaml` with path dependencies on the DWI workspace,
+  `web/index.html` using `flutter_bootstrap.js`, `dwi.yaml` with `target: wasm`).
+  Its `main()` configures `DwiWorkerBackend.wasm`, spawns a worker, reads the
+  `version` task, and publishes the result into `document.title` as base64 JSON.
+  A timer spawns a second worker after 8 seconds so an open page can be probed
+  after a deployment switch.
+
+Build commands
+  dart pub get
+  dart run dwi_builder:dwi build --target=wasm          (one-time pre-build)
+  <shadow>/bin/flutter build web --no-pub --release --base-href /
+  Rebuilt for each task-body change (A, B, C). Each deployable tree is the
+  content of `build/web` immediately after a clean build.
+
+Generations
+  A = ec12b4af1d17c960baa8bab6e3bfd5674e173a3c706ab90bb55eb895677db346
+  B = d75aa4c84f45a35ef580839868136e14ded1565dc8f667dc50dabf371e8e573e
+  C = ed98ff0adbb489ee411e27d24f4af83766ecebd30679c55d10d4c23a94f90a1e
+
+Service worker
+  `flutter build web --release` emitted `build/web/flutter_service_worker.js`
+  of 784 bytes. Its whole body is an `install` handler that calls
+  `self.skipWaiting()` and an `activate` handler that calls
+  `self.registration.unregister()` and reloads its window clients. It contains
+  no `RESOURCES` map and no cache: `grep -c assets flutter_service_worker.js`
+  returned 0. `flutter_bootstrap.js` still registers it
+  (`serviceWorkerVersion: "2309355509"`, with the comment "Flutter's service
+  worker is deprecated and will be removed in a future Flutter release"), and
+  the page reported `navigator.serviceWorker.controller == null` in every run
+  ("controlled": false), so no service worker ever served a request.
+  Consequence: in this Flutter version the service worker does not cache
+  `dwi/worker.boot.mjs` or any `gen-*` file. Caching behaviour is decided by the
+  HTTP headers of the deployment, not by Flutter's service worker.
+
+Server headers used in the runs
+  immutable:      index.html / main.dart.js / assets: no-cache
+                  dwi/worker.boot.mjs: public, max-age=3600
+                  dwi/gen-*/*: public, max-age=31536000, immutable
+  bootstrap-only: as above, but dwi/gen-*/*: no-store
+  `.wasm` served as application/wasm; `.mjs` as text/javascript.
+
+Run 1 — immutable generations, page reloaded per deployment
+  Deployment A: values ["A"], no errors.
+    requests: /index.html 200, /flutter_bootstrap.js 200, /manifest.json 200,
+    /main.dart.js 200, /assets/FontManifest.json 200, /assets/fonts/
+    MaterialIcons-Regular.otf 200, /dwi/worker.boot.mjs 200,
+    /dwi/gen-<A>/worker.mjs 200, /dwi/gen-<A>/worker.wasm 200
+  Deployment B (reload): values ["A"], no errors, and the server logged no
+    `/dwi/` request at all: the bootstrap and generation A were served from the
+    browser's HTTP cache.
+  Deployment C (reload, where C's directory no longer contains generation A):
+    values ["A"], no errors, again no `/dwi/` request on the server.
+  Reading: with an immutable, long-lived generation and a cached bootstrap the
+  client keeps working, because it never asks the network for A again. It does
+  not prove that the new deployment is reachable: the page is still running
+  generation A.
+
+Run 2 — cached bootstrap, uncached generations, page reloaded per deployment
+  Deployment A: values ["A"], no errors (same request set as run 1).
+  Deployment B (reload): values [], errors ["minified:hK"].
+    requests: page assets, then /dwi/gen-<A>/worker.mjs -> 404
+    The bootstrap request did not reach the server (served from the HTTP cache);
+    the generation fetch did and failed.
+  Deployment C (reload): values [], errors ["minified:hK"],
+    /dwi/gen-<A>/worker.mjs -> 404.
+  Reading: a cached bootstrap plus a pruned generation is a typed startup
+  failure. It never loaded a later generation: no request for a `gen-B` or
+  `gen-C` asset appears. (In this release build the `runtimeType` is minified,
+  so the page reports `minified:hK`; the same failure is `DwiStartupException`
+  in the unminified fixture. The host still receives the in-band startup error,
+  not a hang and not a mixed load.)
+
+Run 3 — page held open across a deployment, uncached generations
+  Page loaded at deployment A: values ["A"], no errors.
+  Server moved to deployment C (no generation A) while the page stayed open.
+  The page's 8-second timer spawned a new worker:
+    boot values ["A"], later values [], later errors ["minified:hK"],
+    requests: /dwi/gen-<A>/worker.mjs -> 404
+  Reading: an open page that spawns a new worker after the deployment switched
+  is resolved against the new deployment. The cached bootstrap still names
+  generation A; once A is gone the new spawn fails with a typed error, while the
+  worker that was already running is unaffected. There is no mixed generation.
+
+Run 4 — page held open across a deployment, immutable generations
+  Page loaded at deployment A: values ["A"].
+  Server moved to deployment C; the timer spawned again:
+    boot values ["A"], later values ["A"], no errors, no `/dwi/` server request.
+  Reading: with immutable generation caching, the open page's later spawn is
+  served entirely from the browser cache.
+
+Conclusions
+  1. The Flutter 3.47.6 service worker is not a cache and does not change this
+     analysis. Earlier statements that assume a service worker caches worker
+     assets are unsupported for this SDK.
+  2. A client is safe only while every generation its cached bootstrap can name
+     is still reachable: either retained by the deployment or still in the HTTP
+     cache. The builder's "current plus previous" pruning removes generation A
+     two releases later and makes a cached bootstrap fail.
+  3. The failure mode is a typed startup failure. No run showed a mixed
+     generation: the bootstrap only ever requests its own generation's
+     `worker.mjs` and `worker.wasm`.
+  4. The open-page case is bounded by the same rule. A running worker keeps
+     working; a spawn after the switch needs its generation to exist.
+
+Not established
+  - Safari, Firefox and Edge for the Flutter production build (Chrome only).
+  - Cache eviction and revalidation timing beyond Chrome's behaviour in these
+    runs; no claim is made about how long any browser keeps an entry.
+  - Any Flutter SDK other than 3.47.6.

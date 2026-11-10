@@ -1,0 +1,96 @@
+Cached-client deployment retention and browser regression (2026-11-10)
+
+Scope
+  Verification of the ADR-018 retention amendment: a client that keeps an older
+  `worker.boot.mjs` across several deployments either keeps loading its own
+  generation or receives a typed startup failure; no client loads a mixed
+  generation. Plus the committed browser regression and Wasm-worker contract
+  suites, run sequentially per engine.
+
+Environment
+  macOS 26.5.1 arm64, Dart 3.13.5 (stable)
+  Chrome 157.0.8103.50, Edge 157.0.4341.42, Firefox 159.0.1, Safari 26.5
+  Engines driven sequentially and independently.
+
+1. Cached bootstrap across four builds (fixture, committed)
+
+  Test: `packages/dwi_builder/test/cached_bootstrap_test.dart`
+  "a client holding generation A keeps loading it across B, C and D builds"
+
+  Fixture: build A, save its exact `worker.boot.mjs` bytes, then build B, C, D.
+  The deployment publishes the latest tree with every generation retained and
+  serves the saved A bootstrap. Requested at `/` and `/sub/app/`.
+
+  Results (all pass):
+    Chrome   `/` values [A]; gen-A worker.mjs 200, worker.wasm 200
+             `/sub/app/` values [A]; gen-A both 200
+    Safari   `/` values [A]; gen-A both 200; `/sub/app/` values [A]
+    Firefox  `/` values [A]; gen-A both 200; `/sub/app/` values [A]
+    Edge     `/` values [A]; gen-A both 200; `/sub/app/` values [A]
+
+  Before the amendment the same test failed at both prefixes in every engine
+  with `DwiStartupException` and a 404 for `gen-<A>/worker.mjs`
+  (`cached-bootstrap-reproduction-2026-11-10.txt`).
+
+2. Cached bootstrap whose generation was removed (fixture, committed)
+
+  Test: "a cached bootstrap whose generation was removed fails with a typed
+  error" — the deployment keeps every generation except A.
+
+  Results (all pass, at `/` and `/sub/app/`):
+    Chrome, Safari, Firefox, Edge: values [], errors [DwiStartupException],
+    and every `/dwi/gen-` request names generation A only. No later generation
+    is requested, so no mixed generation is executed.
+
+3. Live rebuild with realistic cache headers (committed)
+
+  Test: `packages/dwi_builder/test/browser_wasm_publication_test.dart`
+  "loads workers across three deployments in <engine>"
+
+  The page keeps spawning workers while two rebuilds happen. Headers:
+  `worker.boot.mjs` -> `no-cache`; `gen-*` files ->
+  `public, max-age=31536000, immutable`; page assets -> `no-cache`. Deployments
+  are triggered by the first observed bootstrap request, so a slower engine
+  still observes all three.
+
+  Results (all pass): values contain A, B and C, no errors, and every generation
+  used is still on disk after the run.
+    Chrome, Safari, Firefox, Edge.
+
+4. Committed JS regression and contract suites (sequential, -j 1)
+
+  Command:
+    dart test -j 1 test/browser_roundtrip_test.dart
+      test/browser_lifecycle_test.dart test/browser_handle_test.dart
+      test/browser_scoped_test.dart
+
+  Results: 10/10 pass.
+    browser_roundtrip (typed collections, dart2js worker): Chrome pass.
+    browser_lifecycle (pool timeout/overflow/close/startup failure): Chrome pass.
+    browser_handle (handle lifecycle contract): Chrome, Safari, Firefox, Edge
+      pass, three page loads each.
+    browser_scoped (scoped helper contract): Chrome, Safari, Firefox, Edge pass.
+  The roundtrip and lifecycle suites are Chrome-only in the committed code; the
+  other two iterate every engine.
+
+5. Wasm-worker contract coverage
+
+  The committed Wasm-worker contract coverage in this release is the pair above
+  (cached bootstrap + live rebuild), run in all four engines. The larger
+  acceptance matrix in
+  `audit/evidence/dart2wasm-worker-acceptance-2026-11-10.txt` used a scratch
+  fixture that is not committed, so it is not re-run by the suite; its results
+  stand as recorded, with the host/worker combinations kept distinct:
+    dart2js host + dart2js worker (control)
+    dart2js host + dart2wasm worker
+    dart2wasm host + dart2js worker (control, Flutter matrix)
+    dart2wasm host + dart2wasm worker (Flutter matrix)
+  The typed-proxy first-build ordering limitation still applies: a fresh
+  Flutter project needs one `dwi generate`/`dwi build` before the first
+  `flutter build web`. A pre-generated proxy fixture is not a first-build pass.
+
+Not established
+  - Browser cache eviction and revalidation timing; only the runs above.
+  - A dart2wasm host with a dart2wasm worker in the cached-bootstrap fixture
+    (the fixture host is dart2js; the Flutter matrix covers the dart2wasm host
+    for the normal contract, not for cache retention).

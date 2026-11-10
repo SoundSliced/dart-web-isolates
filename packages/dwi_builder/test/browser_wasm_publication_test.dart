@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dwi_builder/dwi_builder.dart';
@@ -34,7 +35,8 @@ Future<void> main() async {
     workerScript: DwiConfig.defaultWasmWorkerScript,
     startupTimeout: Duration(seconds: 15),
   ));
-  for (var index = 0; index < 40; index++) {
+  // Long enough to cover three successive deployments while spawning.
+  for (var index = 0; index < 100; index++) {
     try {
       final worker = await DwiWorker.spawn();
       values.add(await worker.run<String>('version'));
@@ -63,8 +65,14 @@ const String publicationIndex = '''
 </html>
 ''';
 
-/// Serves [root] with `Cache-Control: no-store` so a rebuilt entry is observed.
-Future<HttpServer> _serveNoStore(String root) async {
+/// Serves [root] with the deployment headers ADR-018 requires.
+///
+/// The entry must be revalidated so a reload observes a deployment, and
+/// generation files are immutable and content-addressed.
+Future<HttpServer> _serveRealistic(
+  String root,
+  Completer<void> firstWorkerRequest,
+) async {
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
   unawaited(
     server.forEach((request) async {
@@ -79,7 +87,14 @@ Future<HttpServer> _serveNoStore(String root) async {
           await request.response.close();
           return;
         }
-        request.response.headers.set('cache-control', 'no-store');
+        request.response.headers.set(
+          'cache-control',
+          p.basename(path) == 'worker.boot.mjs'
+              ? 'no-cache'
+              : path.contains('/gen-')
+                  ? 'public, max-age=31536000, immutable'
+                  : 'no-cache',
+        );
         final name = p.basename(path);
         if (name.endsWith('.html')) {
           request.response.headers.contentType = ContentType.html;
@@ -90,6 +105,9 @@ Future<HttpServer> _serveNoStore(String root) async {
             'content-type',
             'text/javascript; charset=utf-8',
           );
+        }
+        if (p.basename(path) == 'worker.boot.mjs') {
+          if (!firstWorkerRequest.isCompleted) firstWorkerRequest.complete();
         }
         request.response.add(await file.readAsBytes());
         await request.response.close();
@@ -105,74 +123,115 @@ Future<HttpServer> _serveNoStore(String root) async {
   return server;
 }
 
+String _generationOf(FixtureProject project) =>
+    (jsonDecode(project.read('.dwi/worker_manifest.json'))
+        as Map<String, dynamic>)['generation'] as String;
+
 void main() {
   late FixtureProject project;
 
   setUp(() => project = FixtureProject.create());
   tearDown(() => project.dispose());
 
-  test(
-    'loads workers while a wasm generation is rebuilt',
-    () async {
-      project.write('lib/tasks.dart', publicationTasks);
-      project.write('web/main.dart', publicationMain);
-      project.write('web/index.html', publicationIndex);
+  for (final engine in BrowserEngine.values) {
+    test(
+      'loads workers across three deployments in ${engine.name}',
+      () async {
+        final availability = browserAvailability(engine);
+        if (!availability.available) {
+          markTestSkipped(availability.reason!);
+          return;
+        }
 
-      final config = project.config(compile: true).copyWith(target: 'wasm');
-      await DwiBuilder(config).build();
+        project.write('lib/tasks.dart', publicationTasks);
+        project.write('web/main.dart', publicationMain);
+        project.write('web/index.html', publicationIndex);
 
-      final compiled = await Process.run(
-        Platform.resolvedExecutable,
-        <String>[
-          'compile',
-          'js',
-          '-O1',
-          '-o',
-          'web/main.dart.js',
-          'web/main.dart',
-        ],
-        workingDirectory: project.root.path,
-      );
-      expect(
-        compiled.exitCode,
-        0,
-        reason: '${compiled.stdout}\n${compiled.stderr}',
-      );
-
-      final server = await _serveNoStore(p.join(project.root.path, 'web'));
-      try {
-        final page = probeChrome(
-          'http://127.0.0.1:${server.port}/index.html',
-        );
-
-        // Rebuild while the page keeps spawning workers.
-        await Future<void>.delayed(const Duration(milliseconds: 4000));
-        project.write(
-          'lib/tasks.dart',
-          publicationTasks.replaceFirst("=> 'A'", "=> 'B'"),
-        );
+        final config = project.config(compile: true).copyWith(target: 'wasm');
         await DwiBuilder(config).build();
-        final manifest =
-            (await File(
-                      p.join(
-                        project.root.path,
-                        '.dwi/worker_manifest.json',
-                      ),
-                    ).readAsString());
-        expect(manifest, contains('"generation"'));
+        final generations = <String>[_generationOf(project)];
 
-        final decoded = await page;
-        final errors = (decoded['errors'] as List<dynamic>).cast<String>();
-        final values = (decoded['values'] as List<dynamic>).cast<String>();
-        expect(errors, isEmpty, reason: 'a worker failed during the switch');
-        expect(values, contains('A'));
-        expect(values, contains('B'));
-        expect(values.every((value) => value == 'A' || value == 'B'), isTrue);
-      } finally {
-        await server.close(force: true);
-      }
-    },
-    timeout: const Timeout(Duration(minutes: 5)),
-    skip: chromeExecutable() == null ? 'Google Chrome is not installed.' : false,
-  );
+        final compiled = await Process.run(
+          Platform.resolvedExecutable,
+          <String>[
+            'compile',
+            'js',
+            '-O1',
+            '-o',
+            'web/main.dart.js',
+            'web/main.dart',
+          ],
+          workingDirectory: project.root.path,
+        );
+        expect(
+          compiled.exitCode,
+          0,
+          reason: '${compiled.stdout}\n${compiled.stderr}',
+        );
+
+        // The page signals readiness by requesting the bootstrap. Deployments
+        // are triggered by that observation, not by a fixed startup delay, so
+        // a slower engine still observes every deployment.
+        final firstWorkerRequest = Completer<void>();
+        final server = await _serveRealistic(
+          p.join(project.root.path, 'web'),
+          firstWorkerRequest,
+        );
+        try {
+          final page = probeBrowser(
+            engine,
+            'http://127.0.0.1:${server.port}/index.html',
+          );
+
+          // Deploy A, then B and C while the page keeps spawning workers.
+          await firstWorkerRequest.future.timeout(
+            const Duration(seconds: 90),
+          );
+          await Future<void>.delayed(const Duration(seconds: 1));
+          project.write(
+            'lib/tasks.dart',
+            publicationTasks.replaceFirst("=> 'A'", "=> 'B'"),
+          );
+          await DwiBuilder(config).build();
+          generations.add(_generationOf(project));
+
+          await Future<void>.delayed(const Duration(seconds: 3));
+          project.write(
+            'lib/tasks.dart',
+            publicationTasks.replaceFirst("=> 'A'", "=> 'C'"),
+          );
+          await DwiBuilder(config).build();
+          generations.add(_generationOf(project));
+
+          final decoded = (await page).data;
+          final errors = (decoded['errors'] as List<dynamic>).cast<String>();
+          final values = (decoded['values'] as List<dynamic>).cast<String>();
+          expect(errors, isEmpty, reason: 'a worker failed during the switch');
+          expect(
+            values,
+            containsAll(<String>['A', 'B', 'C']),
+            reason: 'every deployment must be observed',
+          );
+          expect(
+            values.every((value) => <String>{'A', 'B', 'C'}.contains(value)),
+            isTrue,
+            reason: 'a worker returned a mixed or unknown value: $values',
+          );
+          // Every generation the page used is still on disk: a build does not
+          // delete what a cached bootstrap can name.
+          for (final generation in generations) {
+            expect(
+              project.exists('web/dwi/gen-$generation/worker.wasm'),
+              isTrue,
+              reason: 'generation $generation was removed during the run',
+            );
+          }
+        } finally {
+          await server.close(force: true);
+        }
+      },
+      // Four engines each build three generations and compile a host.
+      timeout: const Timeout(Duration(minutes: 15)),
+    );
+  }
 }
