@@ -170,9 +170,13 @@ is wrong for Flutter 3.47. Re-probing the installed SDK (3.47.6, engine
 - A hook may call `Process.run` (observed: `dart --version`), read the package
   root, and write files (observed: a marker and a compiled worker).
 - Only **regular dependencies** are scanned for `hook/build.dart`; a
-  `dev_dependencies` hook did not run, and an app-root `hook/build.dart` did not
-  run. A dependency hook can be given the app's package config path through
-  `Platform.packageConfig` (confirmed in the log and at runtime).
+  `dev_dependencies` hook did not run. An app-root `hook/build.dart` **does**
+  run when the app depends on `hooks` (re-measured 2026-11-10 on 3.47.6; the
+  earlier "did not run" observation does not reproduce), but it is scheduled
+  with the compiler rather than before it, so it cannot order generated sources
+  before application compilation. A dependency hook can be given the app's
+  package config path through `Platform.packageConfig` (confirmed in the log and
+  at runtime).
 - Flutter caches the hook against declared `output.dependencies`. Editing a
   task re-ran it and changed the worker hash. An unchanged build with existing
   dependencies can print `Skipping target: build_hooks`; a missing optional

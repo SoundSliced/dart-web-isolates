@@ -42,6 +42,11 @@ and the Flutter hook detects a `dwi.yaml` created after an earlier build.
 - Track optional `dwi.yaml` as a Flutter hook input even when absent; creating
   it on an already-built app switches targets on the next build. While absent,
   Flutter reruns the hook to detect creation.
+- `Dwi.close()` keeps the applied `DwiConfig`; the replacement backend is
+  configured before the next call, so a closed pool cannot fall back to the
+  default worker script.
+- Correct the ADR-009 note about an app-root `hook/build.dart`: it does run when
+  the app depends on `hooks`, but it is not ordered before the compiler.
 
 ## [0.8.0] - 2026-11-10
 

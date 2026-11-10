@@ -52,6 +52,17 @@ the file, wasm → js by editing it, and back to the default js by deleting it,
 all through `flutter build web --release`. A `--wasm` host build follows the
 same switch.
 
+### 3. `Dwi.close()` keeps the applied configuration
+
+`Dwi.close()` used to forget the configuration along with the backend object:
+the next `Dwi.run`, `DwiWorker.spawn` or `Dwi.capabilities` call created a
+backend with the compiled-in defaults. A Wasm-configured app that closed the
+pool then spawned a handle therefore requested `dwi/worker.dart.js` (404)
+instead of `dwi/worker.boot.mjs`. The replacement backend is now configured with
+the settings that were in effect, so a teardown cannot change the worker script,
+task timeout or worker count. No API change: the behaviour now matches the
+documented contract.
+
 This does **not** change the fresh-project ordering gap: a typed-proxy app still
 needs one `dart run dwi_builder:dwi build` before its first Flutter build
 (ADR-009, `docs/upstream/flutter-web-hook-ordering.md`).
@@ -66,9 +77,10 @@ needs one `dart run dwi_builder:dwi build` before its first Flutter build
 
 ## Verification before upload
 
-- `dart analyze` clean for `dwi_builder` and `dwi_web`.
-- `dwi_builder`: 88 tests pass, including every browser suite in all four
-  engines. `dwi_web`: 24 tests pass.
+- `dart analyze` clean for `dwi`, `dwi_builder` and `dwi_web`.
+- `dwi`: tests pass, including `close keeps the applied configuration for the
+  next call`. `dwi_builder`: 88 tests pass, including every browser suite in all
+  four engines. `dwi_web`: 24 tests pass.
 - `git diff --check` clean; the tree contains only the release bump.
 - Seven `dart pub publish --dry-run` runs must pass before the upload, which is
   a separate, reviewed step. The published-consumer test
