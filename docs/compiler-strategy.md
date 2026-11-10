@@ -27,11 +27,29 @@ build/web/dwi/worker.dart.js
 
 Flutter 3.47+ exposes web build hooks. `dwi_builder` ships `hook/build.dart`;
 when the app lists `dwi_builder` as a normal dependency, Flutter runs the hook
-before `dart2js` for `flutter build web` and `flutter run -d chrome`, and the
-hook invokes the same `DwiBuilder` as the CLI. Web build hooks do not expose the
-target OS, so a multi-platform app that has `web/index.html` runs the (cached)
-worker build during native builds too. Older Flutter versions, plain Dart web
-apps and CI retain the CLI (`dwi build`, `dwi check`, `dwi watch`); see ADR-009.
+for `flutter build web` and `flutter run -d chrome`, and the hook invokes the
+same `DwiBuilder` as the CLI. Web build hooks do not expose the target OS, so a
+multi-platform app that has `web/index.html` runs the (cached) worker build
+during native builds too. Older Flutter versions, plain Dart web apps and CI
+retain the CLI (`dwi build`, `dwi check`, `dwi watch`); see ADR-009.
+
+**Measured ordering limit (Flutter 3.47.6 stable, Dart 3.13.5).** The hook is a
+separate web build target (`BuildHooks` under `LinkHooks`), not a prerequisite
+of `dart2js`. The hook *can* generate the worker and compile it, but it cannot
+reliably create `lib/dwi_tasks.g.dart` before the first application compilation.
+On a project with no generated proxy yet, the compiler may start first and fail
+with `Error when reading 'lib/dwi_tasks.g.dart': No such file or directory`; the
+hook output is valid and the next build succeeds. The supported workflow for a
+fresh project is the one-time pre-build step:
+
+```bash
+dart run dwi_builder:dwi build      # or: dwi build --flutter-build
+flutter build web --release
+```
+
+After that, ordinary Flutter commands keep the worker current. This is a build
+graph ordering gap, not a discovery or compilation failure (ADR-009, limitations
+§7, `audit/evidence/flutter-fresh-build-gate-2026-11-05.txt`).
 
 Each `dart compile js` output is self-contained; there is no shared runtime to
 link against (R004 §5). Any future hook must be supported by the Flutter tool,
@@ -83,14 +101,16 @@ dispatch is in the pure-Dart `DwiWorkerDispatcher`, so it is tested on the VM.
 
 ### Build integration reality
 
-There is no supported web build hook in this SDK:
+Web build hooks are a Flutter feature (ADR-009). Outside Flutter there is no
+supported hook for a Dart web build:
 
 - `dart build --help` lists only `cli`;
 - `dart compile` has no extra-entrypoint mode;
-- `hook/build.dart` is for native/code assets (R013 §4.3).
+- the hooks protocol is not invoked by a plain Dart web build.
 
-Therefore DWI ships a single wrapper command rather than pretending that plain
-`flutter build web` invokes it:
+Therefore, for plain Dart web apps, older Flutter versions and CI, DWI ships a
+wrapper command rather than pretending that `dart build` invokes the worker
+compiler:
 
 ```bash
 dart run dwi_builder:dwi build --flutter-build -- --release
@@ -112,16 +132,22 @@ worker runs in Chrome (`examples/automatic_worker`). Tree shaking of the
 generated registry is verified for the tested task shapes, not for every
 possible library.
 
-## Wasm path (later)
+## Wasm path (open milestone, no promised release)
 
-```text
-dart compile wasm -o web/dwi/worker.wasm lib/worker_main.dart
-new Worker('dwi/worker.mjs', type: 'module')
-```
+Keep the two sides apart:
 
-- Requires a module worker, `application/wasm` serving, and a browser with
-  WasmGC + `js-string` builtins (R005).
-- Not shipped until the browser matrix proves it.
+- **Host compiled with dart2wasm** (`flutter build web --wasm`): measured in
+  Chrome 156 on Flutter 3.47.6, with a dart2js worker
+  (`docs/browser-matrix.md` §4). This says nothing about the worker.
+- **Worker compiled with dart2wasm**: not implemented. The expected output is a
+  `.wasm` module plus a generated `.mjs` loader loaded from a module worker with
+  `application/wasm` serving and a browser with WasmGC + `js-string` builtins
+  (R005). No DWI worker has been generated, packaged or run this way.
+
+The worker backend is an open milestone without a release number. It is not
+scheduled until a generated DWI worker passes the browser matrix on Chromium,
+WebKit and Gecko independently; a dart2wasm host or a standalone Wasm module is
+not evidence for it.
 
 ## Closure research (DWI-5, no design)
 

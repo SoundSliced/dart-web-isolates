@@ -245,7 +245,9 @@ correction to the earlier "no web build hook" conclusion.
   exists. See R013 §4.4–4.5 and ADR-002.
 - Runtime compilation in the browser: no browser-hosted Dart compiler; CSP and
   size make it non-viable for v0.x. See R013 §4.5.
-- Wasm worker generation (v0.6).
+- Wasm worker generation: an open milestone with no promised release number.
+  Only the dart2wasm **host** has been measured (Chrome, with a dart2js
+  worker); the worker itself is still a dart2js artefact.
 - Flutter hot reload of an existing worker (page reload is required).
 
 ## Verification
