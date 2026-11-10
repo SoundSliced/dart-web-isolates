@@ -176,13 +176,24 @@ Engine-specific notes (setup facts, not results):
 - Edge is located through `DWI_EDGE_BINARY` when it is not in `/Applications`.
   On this machine it was unpacked from the official 415 MiB `.pkg` with
   `xar -xf` plus `cpio` (only `Microsoft Edge.app`), which needs ~1.2 GiB free.
-  Three environment workarounds live in the harness, not in DWI: Edge gets a
+  Four environment workarounds live in the harness, not in DWI: Edge gets a
   private home through `CFFIXED_USER_HOME`/`HOME` (its path service aborts on
   this session's read-only `~/Library/Application Support`), its Keychain
-  request is replaced by `--use-mock-keychain` (the real Keychain cannot store
-  the safe-storage key here), and the standard automation flags suppress its
-  first-run updater, which otherwise outlived the page-target wait. With those,
-  Edge runs the same contract unmodified.
+  request is replaced by `--use-mock-keychain`, Edge 157's async keychain
+  provider is disabled with
+  `--disable-features=UseKeychainKeyProvider,msEdgeUpdater,EdgeUpdater` so it
+  cannot bypass that mock and trigger the “Microsoft Edge Safe Storage” prompt,
+  and the standard automation flags suppress its first-run updater, which
+  otherwise outlived the page-target wait. With those, Edge runs the same
+  contract unmodified.
+
+  The harness builds these flags in `chromiumLaunchArguments()` and
+  `browser_launch_args_test.dart` guards them. Any other Edge automation on
+  this machine (Playwright `channel: "msedge"`, Selenium, Puppeteer) needs the
+  same mock-keychain pair; without `--use-mock-keychain` and the
+  `UseKeychainKeyProvider` disable, macOS may ask to unlock “Microsoft Edge
+  Safe Storage”. Click **Cancel** in that dialog — “Reset To Defaults” replaces
+  the login keychain.
 
 ## 4. Compiler matrix (Flutter application host)
 

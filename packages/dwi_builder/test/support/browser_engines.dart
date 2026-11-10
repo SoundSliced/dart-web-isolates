@@ -164,6 +164,43 @@ String? _firstExisting(List<String> candidates) {
 // Chromium engines (Chrome, Edge) over CDP.
 // ---------------------------------------------------------------------------
 
+/// Headless Chromium switches shared by the Chrome and Edge harnesses.
+///
+/// Edge needs two keychain workarounds on macOS: `--use-mock-keychain` makes
+/// the sync OS crypt layer use a mock, and disabling `UseKeychainKeyProvider`
+/// keeps Edge 157's async keychain provider from reaching the real login
+/// keychain, which otherwise triggers a "Microsoft Edge Safe Storage" prompt in
+/// automated launches. Both are automation-only; they do not change DWI.
+List<String> chromiumLaunchArguments({
+  required BrowserEngine engine,
+  required String userDataDir,
+  required int debugPort,
+}) {
+  final isEdge = engine == BrowserEngine.edge;
+  return <String>[
+    if (isEdge) '--headless=new' else '--headless',
+    '--no-sandbox',
+    '--disable-gpu',
+    '--disable-dev-shm-usage',
+    '--no-first-run',
+    '--no-default-browser-check',
+    if (isEdge) '--use-mock-keychain',
+    '--user-data-dir=$userDataDir',
+    '--remote-debugging-address=127.0.0.1',
+    '--remote-debugging-port=$debugPort',
+    // Edge installs an updater on first run, which can outlive the page-target
+    // wait; these automation flags keep it out of the measurement.
+    if (isEdge) ...<String>[
+      '--disable-component-update',
+      '--disable-background-networking',
+      '--disable-features=UseKeychainKeyProvider,msEdgeUpdater,EdgeUpdater',
+      '--no-service-autorun',
+      '--disable-sync',
+      '--disable-default-apps',
+    ],
+  ];
+}
+
 Future<BrowserRunResult> _probeChromium(
   BrowserEngine engine,
   String executable,
@@ -190,30 +227,11 @@ Future<BrowserRunResult> _probeChromium(
   final process = await Process.start(
     executable,
     <String>[
-      if (engine == BrowserEngine.chrome) '--headless' else '--headless=new',
-      '--no-sandbox',
-      '--disable-gpu',
-      '--disable-dev-shm-usage',
-      '--no-first-run',
-      '--no-default-browser-check',
-      // Edge asks the macOS Keychain for its safe-storage key; that access
-      // fails (and blocks the browser) in a restricted session. A mock keychain
-      // is Chromium's supported CI workaround.
-      if (engine == BrowserEngine.edge) '--use-mock-keychain',
-      '--user-data-dir=${profile.path}',
-      '--remote-debugging-address=127.0.0.1',
-      '--remote-debugging-port=$port',
-      // Edge installs an updater on first run, which can outlive the page
-      // target wait; these are the standard automation flags that keep it out
-      // of the measurement.
-      if (engine == BrowserEngine.edge) ...<String>[
-        '--disable-component-update',
-        '--disable-background-networking',
-        '--disable-features=msEdgeUpdater,EdgeUpdater',
-        '--no-service-autorun',
-        '--disable-sync',
-        '--disable-default-apps',
-      ],
+      ...chromiumLaunchArguments(
+        engine: engine,
+        userDataDir: profile.path,
+        debugPort: port,
+      ),
       url,
     ],
     environment: <String, String>{
