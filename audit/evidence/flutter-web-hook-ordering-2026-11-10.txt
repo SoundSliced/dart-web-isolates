@@ -100,3 +100,15 @@ Not measured
 - Multiple dependencies with web hooks.
 - Safari, Firefox, Edge runtime.
 - Any build on 3.47.9 (source inspection only).
+
+Publication and preserved prototype
+-----------------------------------
+- Posted for guidance on 2026-11-10:
+  https://github.com/dart-lang/sdk/issues/56512#issuecomment-6777658158
+  (no maintainer guidance received at the time of writing; this is not design
+  acceptance).
+- The rebasable prototype patch is docs/upstream/flutter-web-hook-ordering.patch.
+  Base: Flutter 3.47.6 (5fc346839b). Validated with `patch -p1 --dry-run`
+  against the upstream 3.47.6 sources before being recorded here.
+- DWI commits: evidence first recorded in 956657c; wording correction in
+  cec5b95; both pushed to https://github.com/SoundSliced/dart-web-isolates.

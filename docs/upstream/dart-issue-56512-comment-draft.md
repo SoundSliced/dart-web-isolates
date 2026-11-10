@@ -1,7 +1,8 @@
 # Draft comment for dart-lang/sdk#56512
 
-Status: **draft, not posted.** Review before use. It asks for guidance rather
-than proposing that the Flutter patch below is the final answer. Evidence:
+Status: **posted 2026-11-10** as
+[issuecomment-6777658158](https://github.com/dart-lang/sdk/issues/56512#issuecomment-6777658158).
+No maintainer guidance has been received yet. Evidence:
 `../../audit/evidence/flutter-web-hook-ordering-2026-11-10.txt` and
 [`flutter-web-hook-ordering.md`](flutter-web-hook-ordering.md).
 

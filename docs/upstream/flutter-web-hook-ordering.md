@@ -1,10 +1,12 @@
 # Upstream proposal — order web build hooks before Dart compilation
 
-Status: **prepared for review, not posted.** Revised 2026-11-10 after a second
-measurement round on a disposable SDK copy. Nothing here is accepted Flutter
-behaviour. Evidence: `../../audit/evidence/flutter-web-hook-ordering-2026-11-10.txt`.
-The reviewable comment for the existing Dart discussion is
-[`dart-issue-56512-comment-draft.md`](dart-issue-56512-comment-draft.md).
+Status: **posted for guidance (2026-11-10); no design accepted.** Revised after
+a second measurement round on a disposable SDK copy. Nothing here is accepted
+Flutter behaviour. Posted comment:
+[issuecomment-6777658158](https://github.com/dart-lang/sdk/issues/56512#issuecomment-6777658158).
+The rebasable prototype patch is
+[`flutter-web-hook-ordering.patch`](flutter-web-hook-ordering.patch). Evidence:
+`../../audit/evidence/flutter-web-hook-ordering-2026-11-10.txt`.
 
 Measured on Flutter 3.47.6 stable (framework `5fc346839b`, engine
 `692136cb65`, Dart 3.13.5), macOS arm64. The source check covers 3.47.9 stable
