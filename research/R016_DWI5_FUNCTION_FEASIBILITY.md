@@ -9,7 +9,8 @@ Evidence:
 [`dwi5-compiler-contracts`](../audit/evidence/dwi5-compiler-contracts-2026-11-10.txt),
 [`dwi5-transport-and-tree-shaking`](../audit/evidence/dwi5-transport-and-tree-shaking-2026-11-10.txt).
 Proposal: [`ADR-019`](../docs/adr-019-dwi5-function-execution.md) (Proposed, not
-accepted).
+accepted). Follow-up static-identity evidence:
+[`dwi5-static-identity`](../audit/evidence/dwi5-static-identity-2026-11-10.txt).
 
 ## Plain answer
 
@@ -214,14 +215,15 @@ transform re-homes the body into a worker-safe library.
 
 1. **Static top-level reference.** The analyzer names the target and there are no
    captures, so the required worker code is exactly the existing generated
-   registry. The blocker is the call-site rewrite: a package cannot rewrite
-   `Dwi.run(addOne, 1)` without a source-transform step. A `build_runner`
-   builder could do it, but that adds a manual build phase, duplicates DWI's
-   generation, and is not implemented or tested; it is not claimed as a
-   package-only win. **Blocked by tooling.**
+   registry. An **automatic** `Dwi.run(addOne, 1)` call-site rewrite still lacks
+   a supported source-transform step. An explicit generated caller registry
+   could map the tear-off by identity without a rewrite, but that is a narrower
+   API and has not been implemented end-to-end. **Blocked for the requested
+   automatic API; registered-static subset is a prototype candidate.**
 2. **Static method reference.** Same as 1, plus the worker must import the
    declaring library. Static methods have no receiver; instance methods capture
-   one and are rejected. **Blocked by tooling.**
+   one and are rejected. The registered-static subset is a prototype candidate;
+   the automatic API remains **blocked by tooling**.
 3. **Closure with serializable captures.** The analyzer can list captures and
    reject unsupported types. Lifting the body is a source transformation with
    semantic obligations (lexical scope, `this`, type parameters, nested
@@ -232,14 +234,26 @@ transform re-homes the body into a worker-safe library.
    offending capture. **Rejected by design.**
 5. **Dynamically chosen function.** The analyzer sees a function-typed local, not
    one target. Candidates in the initializer are not proof of the value at
-   runtime. Supporting it needs whole-program data-flow or runtime metadata.
-   **Blocked by tooling.**
+   runtime. A follow-up probe shows that a generated caller registry can map a
+   runtime choice **among registered static tear-offs** to task IDs by function
+   identity on the VM and dart2js. This needs neither whole-program data flow
+   nor function transport, but it does need generated caller code and has not
+   been tested end-to-end with DWI workers. An unregistered or freshly created
+   function value still has no portable task ID. **Blocked for the unrestricted
+   form; registered-static subset is a viable prototype candidate.**
 6. **Arbitrary expression body.** Same lifting problem as 3, plus statement
    semantics. **Blocked by tooling.**
 
 ## 6. Decision
 
 **Outcome 2 — compiler or SDK cooperation is required.**
+
+The follow-up identity probe narrows this decision: forms 1, 2 and the
+registered-static subset of form 5 may be implementable with the existing
+generator and an explicit generated caller import. It does not establish the
+normal function-call API requested by DWI-5, automatic first-build generation,
+closure lifting, or Wasm behaviour. Forms 3 and 6 still require a supported
+pre-compilation transformation; form 4 remains a deterministic rejection.
 
 - No public function or closure API is added. The named-task API and generated
   proxies remain the only supported shape.

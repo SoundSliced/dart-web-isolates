@@ -1,0 +1,28 @@
+DWI-5 registered function identity probe (2026-11-10)
+
+Source: tooling/dwi5_probe/bin/static_identity_probe.dart.
+Toolchain: Flutter 3.47.9 bundled Dart 3.13.7.
+Reproduction: bash tooling/dwi5_probe/run_static_identity.sh
+Result: VM and dart2js registered static identity: pass
+
+The probe registers two static function values as keys in a Dart map:
+  {addOne: 'addOne', Ops.twice: 'twice'}
+It chooses each value at runtime from a list, looks up its key, and invokes it.
+
+VM command: .research/flutter-sdk/bin/cache/dart-sdk/bin/dart run tooling/dwi5_probe/bin/static_identity_probe.dart
+VM output: addOne:3 / twice:4
+
+JS command: .research/flutter-sdk/bin/cache/dart-sdk/bin/dart compile js -O1 -o /private/tmp/dwi5_identity_probe.js tooling/dwi5_probe/bin/static_identity_probe.dart
+JS runner: node /private/tmp/dwi5_identity_probe.js
+JS output: addOne:3 / twice:4
+
+Interpretation: a generated caller registry can map known static function values
+to task IDs without sending the function to a worker. This is not yet an
+end-to-end DWI worker test and says nothing about captured closures or arbitrary
+function values. The experiment weakens R016's claim that dynamically choosing
+among statically registered functions necessarily requires whole-program data
+flow. Unknown dynamic functions still cannot be mapped this way.
+
+The wasm compile succeeded, but execution was not established: the local Node
+21.5 runtime rejected the generated module's Wasm features. No wasm result is
+claimed.
