@@ -52,6 +52,10 @@ v0.3 unless marked proposed.** No cell claims parity.
 - That plain `flutter build web` never triggers worker generation; on Flutter
   3.47+ with `dwi_builder` as a dependency it does (ADR-009), and the CLI is the
   fallback elsewhere.
+- That a fresh typed-proxy app builds on its first ordinary `flutter build web`.
+  It does not (js, wasm and debug all fail on the missing generated proxy as of
+  3.47.6); `flutter run -d chrome` (debug) does, and the one-time
+  `dart run dwi_builder:dwi build` is the supported workflow.
 - Any browser support cell that was not measured.
 - That a handle preserves state across a restart, a close, a crash or a timeout.
 - That channels are `SendPort`/`ReceivePort` parity, broadcast, shared memory,

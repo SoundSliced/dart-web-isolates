@@ -233,8 +233,28 @@ flutter build web --release --base-href /sub/app/
 ```
 
 After that, ordinary Flutter commands keep the worker current. This ordering
-gap is a Flutter build-graph limitation, measured on Flutter 3.47.6; it is not
-covered by a hook-only promise.
+gap is a Flutter build-graph limitation. Re-measured 2026-11-10 on Flutter
+3.47.6 / Dart 3.13.5, per first command:
+
+| First command | Fresh typed-proxy app |
+| --- | --- |
+| `flutter build web --release` | fails on the missing proxy |
+| `flutter build web --wasm` | fails on the missing proxy |
+| `flutter build web --debug` | fails on the missing proxy |
+| `flutter run -d chrome` (debug) | **builds and runs**; the resident web runner awaits the hooks before its DDC compile |
+
+`flutter run -d chrome` passing is one mode, not the gate: the page is served
+from the debug dev server, not from `build/web`. No package-level mechanism
+orders hooks before the compiler (`BuildTargets` is a closed interface and a web
+hook's only target output is `build_hooks_result.json`); a build-graph change in
+Flutter is required. Details, the proposed contract and the disposable-SDK
+prototype that closes the gap: `docs/upstream/flutter-web-hook-ordering.md`.
+Evidence: `audit/evidence/flutter-fresh-build-ordering-2026-11-10.txt`.
+
+Related, measured the same day: creating `dwi.yaml` **after** a first build does
+not re-run the hook, because the hook declares `dwi.yaml` as a dependency only
+when the file already exists. Touch a task source or delete `.dart_tool/` after
+adding the file.
 
 The separate `dwi build` command remains supported for older Flutter versions,
 plain Dart web apps, CI `check`, and diagnostics.

@@ -47,9 +47,15 @@ dart run dwi_builder:dwi build      # or: dwi build --flutter-build
 flutter build web --release
 ```
 
-After that, ordinary Flutter commands keep the worker current. This is a build
-graph ordering gap, not a discovery or compilation failure (ADR-009, limitations
-§7, `audit/evidence/flutter-fresh-build-gate-2026-11-05.txt`).
+After that, ordinary Flutter commands keep the worker current. Re-measured
+2026-11-10: first builds fail for `--release`, `--wasm` and `--debug`, while
+`flutter run -d chrome` (debug) succeeds because the resident web runner awaits
+`runHooks()` before its DDC compile. This is a build graph ordering gap, not a
+discovery or compilation failure (ADR-009, limitations §7,
+`audit/evidence/flutter-fresh-build-ordering-2026-11-10.txt`). A disposable-SDK
+prototype that adds `BuildHooks(platform: HookPlatform.web)` to
+`Dart2WebTarget.dependencies` makes the first js and wasm builds pass; the
+proposal is `docs/upstream/flutter-web-hook-ordering.md`.
 
 Each `dart compile js` output is self-contained; there is no shared runtime to
 link against (R004 §5). Any future hook must be supported by the Flutter tool,

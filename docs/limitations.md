@@ -33,17 +33,23 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
 7. **Worker compilation is automatic for Flutter web on Flutter 3.47+, with one
    ordering caveat.** A `dwi_builder/hook/build.dart` build hook runs during
    `flutter run -d chrome` and `flutter build web` when `dwi_builder` is a
-   normal dependency (ADR-009). Flutter compiles the application before, or
-   concurrently with, the hook: `dart2js` does not depend on the web
-   `build_hooks` target, and hook outputs feed linking only. On a project with
-   no generated proxies yet, `dart2js` can therefore start before the hook
-   writes `lib/dwi_tasks.g.dart`; run `dart run dwi_builder:dwi build` once (or
-   `dwi build --flutter-build`) before the first Flutter build. A fresh project
-   that calls `Dwi.run` and imports no generated proxy compiles on the first
-   ordinary Flutter command (measured 2026-11-04, root and `/sub/app/`), but
-   typed `DwiTasks` proxies need that one pre-build step. The ordering gap was
-   re-measured on 2026-11-05 with a writable SDK; `tooling/proxy_gate`
-   reproduces it and exits non-zero if the first build ever starts succeeding.
+   normal dependency (ADR-009). In the build-system path Flutter compiles the
+   application before, or concurrently with, the hook: `dart2js` does not depend
+   on the web `build_hooks` target, and hook outputs feed linking only. On a
+   project with no generated proxies yet, `dart2js` can therefore start before
+   the hook writes `lib/dwi_tasks.g.dart`; run `dart run dwi_builder:dwi build`
+   once (or `dwi build --flutter-build`) before the first Flutter build. A fresh
+   project that calls `Dwi.run` and imports no generated proxy compiles on the
+   first ordinary Flutter command (measured 2026-11-04, root and `/sub/app/`),
+   but typed `DwiTasks` proxies need that one pre-build step. Re-measured
+   2026-11-10 on Flutter 3.47.6 / Dart 3.13.5: first builds fail for
+   `--release`, `--wasm` and `--debug`, while `flutter run -d chrome` (debug)
+   **succeeds** because the resident web runner awaits the hooks before its DDC
+   compile. `tooling/proxy_gate` reproduces the gap and exits non-zero if the
+   first build ever starts succeeding. A disposable-SDK prototype that makes the
+   web compiler depend on `BuildHooks(platform: web)` passes on the first
+   command for js and wasm; the fix is upstream-only — no package-level
+   mechanism exists (see `docs/upstream/flutter-web-hook-ordering.md`).
    Older Flutter
    versions, plain Dart web apps and CI checks use
    `dart run dwi_builder:dwi build`; `--flutter-build` wraps the Flutter build
@@ -282,6 +288,18 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
     loads of the ADR-017 contract. Firefox requires disabling every per-process
     sandbox its build exposes under this host; the engine result is independent
     and recorded in `docs/browser-matrix.md`.
+51. **A missing worker asset is not reported as a typed failure (measured
+    2026-11-10).** If `build/web/dwi/worker.dart.js` (or the Wasm entry) is
+    absent, the page requests it, gets a 404, and throws an uncaught
+    `TypeError: Cannot read properties of undefined (reading 'gq')` from the
+    worker error callback in `main.dart.js`; the caller's future never settles
+    and no `DwiStartupException` reaches the app. This is independent of build
+    ordering and is unresolved. A present-but-incompatible worker is rejected
+    normally (protocol/compiler mismatch in `ready`).
+52. **Creating `dwi.yaml` after a first build does not re-run the hook.** The
+    hook declares `dwi.yaml` as a build dependency only when the file exists, so
+    switching `target: wasm` on an already-built project needs a source touch or
+    a clean build before the next ordinary command picks it up.
 
 ## Research debt (unresolved, tracked)
 

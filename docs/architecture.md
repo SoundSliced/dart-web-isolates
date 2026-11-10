@@ -245,6 +245,38 @@ apps, CI checks and diagnostics. Generated files remain gitignored.
 `hook-build-real.log` (scratch, reproduced by the commands in the audit report).
 Unit tests for the resolver: `packages/dwi_builder/test/hook_support_test.dart`.
 
+**Amendment — fresh-build ordering re-measured (2026-11-10, v0.8).** The gap
+was re-measured on Flutter 3.47.6 / Dart 3.13.5 with a writable SDK copy, on
+fresh apps, per mode:
+
+| First command | Result |
+| --- | --- |
+| `flutter build web --release` (dart2js) | exit 1, missing generated proxy |
+| `flutter build web --wasm` (dart2wasm host) | exit 1, missing generated proxy |
+| `flutter build web --debug` | exit 1, missing generated proxy |
+| `flutter run -d chrome` (debug, DDC) | **succeeds**; worker used |
+
+The debug result is structural, not a race: the resident web runner awaits
+`runHooks()` inside `assetBundle.build(...)` before `devFS.update(...)`
+(`isolated/resident_web_runner.dart`). It is one mode, not the gate. In every
+build-system mode the hook is scheduled in the same wave as the compiler and
+finished ~14.7 s later, after `dart2js` had already reported the missing import.
+
+Two earlier observations are corrected. An app-root `hook/build.dart` **does**
+run on 3.47.6 when the app depends on `hooks` (measured); it is still unordered
+relative to the compiler, so it is a race, not a fix. And a disposable-SDK
+prototype that adds `BuildHooks(platform: HookPlatform.web)` to
+`Dart2WebTarget.dependencies` makes the first `flutter build web --release` and
+`--wasm` succeed (twice each, clean apps, 623 `flutter_tools` web tests still
+pass). No package-level mechanism exists: `BuildTargets` is a closed interface,
+Flutter's generated-source targets are hardwired, and a build hook's only
+target output is `build_hooks_result.json`.
+
+Decision unchanged: the one-time `dart run dwi_builder:dwi build` before the
+first Flutter build stays the supported workflow; the fix belongs upstream.
+Details and the proposed contract: `docs/upstream/flutter-web-hook-ordering.md`.
+Evidence: `audit/evidence/flutter-fresh-build-ordering-2026-11-10.txt`.
+
 **Amendment — worker replacement during development (2026-11-05, v0.5).**
 Re-measured on Flutter 3.47.6 / Dart 3.13.5 with `flutter run -d chrome`
 (debug), driving the real keys through a pty, with a task returning `v1` then
