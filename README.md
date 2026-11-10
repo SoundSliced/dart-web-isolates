@@ -98,6 +98,8 @@ fallback. Function values and closures are still unsupported: the annotation or
 generated proxy selects a precompiled task (see
 [`docs/compiler-strategy.md`](docs/compiler-strategy.md) and
 [`research/R013_RUNTIME_WORKER_COMPILATION.md`](research/R013_RUNTIME_WORKER_COMPILATION.md)).
+The measured DWI-5 feasibility decision is in
+[`research/R016_DWI5_FUNCTION_FEASIBILITY.md`](research/R016_DWI5_FUNCTION_FEASIBILITY.md).
 
 ## Long-lived worker handles (v0.5)
 

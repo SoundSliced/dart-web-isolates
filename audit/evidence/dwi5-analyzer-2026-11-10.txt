@@ -1,0 +1,120 @@
+DWI-5 analyzer feasibility probe
+Date: 2026-11-10
+Status: experimental feasibility evidence. Not a public API, not a code generator.
+
+Environment
+-----------
+OS:       macOS 26.5.1 (25F80), arm64
+Dart:     3.13.7 (stable, Thu Oct 22 14:28:57 2026) from the repo's unmodified
+          .research/flutter-sdk (Flutter 3.47.9, framework c197ca5199e)
+Analyzer: 14.7.0 (the version dwi_builder 0.8.1 depends on)
+Probe:    tooling/dwi5_probe (committed)
+Command:  tooling/dwi5_probe/run.sh
+
+Question
+--------
+For each DWI-5 function form, what can the analyzer resolve at the `Dwi.run`
+call site? It answers discovery only. It does NOT show that a function value
+can cross to a worker, that generated code is produced, or that execution
+occurs in a worker.
+
+Fixture
+-------
+tooling/dwi5_probe/lib/forms.dart, with a stub `Dwi.run(Object?, Object?)`:
+  1. Dwi.run(addOne, 1)                     top-level tear-off
+  2. Dwi.run(MathOps.twice, 2)              static method tear-off
+  3. Dwi.run((x) => x + offset, 3)          closure, int capture
+  4. Dwi.run((x) => x + connection.hashCode, 4)
+                                            closure, object capture
+  5. Dwi.run(chosen, 5)                     local function value
+  6. Dwi.run(() { ... }, 6)                 inline block body, int capture
+  control: Dwi.run(ops.triple, 7)           instance method tear-off
+
+Raw output
+----------
+probe: /Users/christophechanteur/Development/Projects/dart_web_isolates/tooling/dwi5_probe/lib/forms.dart
+diagnostics: 0
+---
+line: 22
+argument-node: SimpleIdentifierImpl
+classification: static-top-level-function
+element: TopLevelFunctionElement addOne in package:dwi5_probe/forms.dart
+static-target: true
+captures: (none)
+---
+line: 25
+argument-node: PrefixedIdentifierImpl
+classification: static-method
+element: MethodElement twice (static: true) in package:dwi5_probe/forms.dart
+static-target: true
+captures: (none)
+---
+line: 28
+argument-node: FunctionExpressionImpl
+classification: inline-closure
+element: inline expression body
+static-target: true
+captures: offset: int (serializable)
+note: signature: int (int x)
+---
+line: 31
+argument-node: FunctionExpressionImpl
+classification: inline-closure
+element: inline expression body
+static-target: true
+captures: connection: Connection (UNSUPPORTED)
+note: signature: int (int x)
+note: non-serializable captures present: 1
+---
+line: 34
+argument-node: SimpleIdentifierImpl
+classification: dynamic-function-value
+element: LocalVariableElement chosen (int Function(int))
+static-target: false
+captures: (none)
+note: candidates in initializer only: TopLevelFunctionElement addOne in package:dwi5_probe/forms.dart | MethodElement twice (static: true) in package:dwi5_probe/forms.dart
+---
+line: 37
+argument-node: FunctionExpressionImpl
+classification: inline-block-body
+element: inline block body
+static-target: true
+captures: offset: int (serializable)
+note: signature: int ()
+---
+line: 43
+argument-node: PrefixedIdentifierImpl
+classification: instance-method-tearoff
+element: MethodElement triple (static: false) in package:dwi5_probe/forms.dart
+static-target: false
+captures: (none)
+note: receiver: FormalParameterElement ops (MathOps)
+---
+total-run-calls: 7
+
+Reading
+-------
+- Cases 1 and 2 resolve to a single top-level function / static method element.
+  A generator can name a static target; the function has no captured
+  environment.
+- Case 5 does not resolve to one target. The initializer shows two candidates,
+  but the analyzer does not track which branch executes. A generator would have
+  to reject it unless it also proved the value set, which is whole-program
+  data-flow analysis that a package does not have.
+- Cases 3, 4 and 6 expose the closure AST and its captures. For case 4 the
+  probe reports `connection: Connection (UNSUPPORTED)`; a generator can reject
+  it deterministically. Case 3 and 6 have a serializable capture, but the
+  analyzer does not lift the body or prove that the body is compilable outside
+  its lexical scope.
+- The instance tear-off control resolves the method but not a static target:
+  the receiver is a runtime value.
+
+Limits
+------
+- Resolution only; no generated worker, no compilation, no execution.
+- The `_serializable` map in the probe is the DWI v0.3 wire-type whitelist, not
+  a general Dart type judgement.
+- A resolved element does not guarantee that the function survives dart2js
+  tree shaking; that requires a generated static reference (probe 3).
+- The stub's `Object?` parameter accepts any argument. A real API signature
+  would constrain some of these forms before the body is analyzed.

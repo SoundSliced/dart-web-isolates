@@ -63,7 +63,10 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
    function tear-offs, closures and arbitrary expression bodies are not
    supported; generated typed proxies (`DwiTasks.foo(input)`) are the supported
    call shape. The annotation cannot be inferred from a call site without
-   compiler cooperation (R013 §4.4).
+   compiler cooperation (R013 §4.4). Measured feasibility, transport and
+   tree-shaking evidence are in
+   [`R016`](../research/R016_DWI5_FUNCTION_FEASIBILITY.md); the proposed
+   decision is [`ADR-019`](adr-019-dwi5-function-execution.md).
 9. **Generated proxies require one generated import.** Application code imports
    `lib/dwi_tasks.g.dart`; task libraries import
    `package:dwi_annotations/dwi_annotations.dart` rather than the host facade,

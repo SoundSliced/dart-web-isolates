@@ -1,0 +1,11 @@
+name: dwi5_probe
+description: Experimental analyzer probe for DWI-5 function feasibility.
+publish_to: none
+version: 0.0.1
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  analyzer: ^14.0.0
+  path: ^1.9.1

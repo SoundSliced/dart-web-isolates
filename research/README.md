@@ -21,6 +21,7 @@ repository. Research agents do not modify the Dart or Flutter SDKs.
 | R013 | `R013_RUNTIME_WORKER_COMPILATION.md` | Automatic worker compilation strategies and the v0.3 decision |
 | R014 | `R014_DWI4_SCOPE.md` | DWI-4 scope: `dart:isolate` API comparison and the selected increment |
 | R015 | `R015_DWI4_NEXT_INCREMENT.md` | DWI-4 next increment: termination observation, native transfer, error stream; selects lifecycle observation |
+| R016 | `R016_DWI5_FUNCTION_FEASIBILITY.md` | DWI-5: analyzer discovery, transport, tree shaking and compiler contracts; decides that compiler/build cooperation is required and no function API is added |
 
 ## Notes directories
 

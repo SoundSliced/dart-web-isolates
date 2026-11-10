@@ -169,7 +169,11 @@ is supported as an opt-in in `main` and is not in 0.7.0; JS remains the default.
 The only way to support `Dwi.run(() { ... })` is compiler cooperation:
 identifying the closure, generating an entrypoint for it, and mapping captured
 variables to a serialized environment. Nothing in the current Dart toolchain
-exposes that. DWI does not promise it.
+exposes that. DWI does not promise it. Measured feasibility — analyzer
+discovery, Chrome function transport, dart2js closure representation, tree
+shaking, and the missing build/compiler contracts — is in
+[`R016`](../research/R016_DWI5_FUNCTION_FEASIBILITY.md); the proposed decision is
+[`ADR-019`](adr-019-dwi5-function-execution.md).
 
 ## Rejected approaches
 

@@ -1,0 +1,100 @@
+DWI-5 transport and tree-shaking probes
+Date: 2026-11-10
+Status: runtime/compiler probes on released toolchains. Not a DWI feature.
+
+Environment
+-----------
+Dart      3.13.7 (stable) from .research/flutter-sdk (Flutter 3.47.9)
+Chrome    157.0.8103.50 (headless=new), macOS 26.5.1 arm64
+DWI       0.8.1 named-task control, unchanged
+
+Probe A — a function value does not cross a realm boundary (Chrome)
+--------------------------------------------------------------------
+A local HTML page calls structuredClone and a real Worker.postMessage with
+function values, then prints the outcome.
+
+  structuredClone(function)          DataCloneError: ... () => 1 could not be cloned.
+  structuredClone(tearoff-like)      DataCloneError: ... function log() { [native code] } could not be cloned.
+  structuredClone({f:function})      DataCloneError: ... () => 1 could not be cloned.
+  structuredClone({x:1})             ok
+  Worker.postMessage({fn:function})  DataCloneError: ... () => 1 could not be cloned.
+
+Consequence: cases 1-6 all fail at the same boundary if the API tries to send
+the function value itself. This is the same structured-clone limitation already
+recorded in R003 §3 and R004 §2; re-measured here on the current Chrome.
+
+Only Chrome was measured for this probe. Safari, Firefox and Edge were not run
+in this increment.
+
+Probe B — what dart2js emits for a closure and a tear-off
+----------------------------------------------------------
+closure.dart:
+
+  int addOne(int x) => x + 1;
+  void main() {
+    final int captured = 7;
+    final int Function(int) closure = (int x) => x + captured;
+    print([addOne, closure].length);
+  }
+
+  dart compile js -O0 -o closure_o0.js closure.dart
+  exit 0, 321,005 bytes
+
+Emitted JavaScript:
+
+  :2815      this.captured = t0;
+  :3209      t1 = this.captured;
+  :2812      A.print([A.closure__addOne$closure(), new A.main_closure(7)].length);
+  :2814      main_closure: function main_closure(t0) {
+  :716       closureFromTearOff(parameters) {
+  :3231      _inheritMany(A.Closure, [A.TearOffClosure, A.main_closure]);
+
+A captured closure is a JS object with named fields; a tear-off is a cached
+closure object tied to the current program instance. There is no serialisable
+name+environment format, and `Function.toString()` is emitted JavaScript, not
+re-compilable Dart.
+
+Probe C — tree shaking keeps a static reference, not a name
+-----------------------------------------------------------
+Two programs compiled with `dart compile js -O1`. The task body contains the
+distinctive constant 987654321, so its presence in the output proves the
+function survived.
+
+  A. name-only registry:
+     int dropped(int x) => x * 987654321 + 12345;
+     final Map<String, int Function(int)> tasks = {};
+     main() => print('dropped ${tasks.length}');
+
+  B. static-reference registry:
+     int kept(int x) => x * 987654321 + 12345;
+     final Map<String, int Function(int)> tasks = {'kept': kept};
+     main() => print(tasks['kept']!(2));
+
+  A: exit 0,  99,701 bytes, grep 987654321 -> 0 hits
+  B: exit 0, 107,385 bytes, grep 987654321 -> 1 hit
+
+The string 'dropped' still appears as data, but the function body does not.
+A generated worker must therefore hold a static Dart reference to the target
+(the existing dwi_builder behavior at generator.dart:53, :73).
+
+Probe D — analyzer discovery (cross-reference)
+----------------------------------------------
+audit/evidence/dwi5-analyzer-2026-11-10.txt records what the analyzer resolves
+for each of the six forms. It is discovery evidence, not transport or execution.
+
+What this establishes
+---------------------
+- No function value can be sent to a web worker by the browser's messaging
+  primitive; the API cannot forward the user's function object.
+- dart2js compiles a closure to an object with fields and a tear-off to a cached
+  function object, with no portable identity.
+- A generated worker must reference the target statically or it is tree-shaken.
+- Therefore any function API must be a build-time transformation into named,
+  statically referenced worker code, not a runtime hand-off.
+
+Not established
+---------------
+- dart2wasm closure representation (not probed in this increment).
+- Safari, Firefox and Edge for the structured-clone probe.
+- Deferred loading / minification interaction beyond the -O1 probe.
+- Any lifted-execution semantics for closures; no such generator exists.

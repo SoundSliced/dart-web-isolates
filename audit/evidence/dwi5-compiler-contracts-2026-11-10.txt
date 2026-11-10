@@ -1,0 +1,161 @@
+DWI-5 compiler and tooling contracts
+Date: 2026-11-10
+Status: source inspection + CLI probes on the installed toolchain. No SDK fork,
+no compiler patch.
+
+Environment
+-----------
+Dart      3.13.7 (stable, Thu Oct 22 14:28:57 2026)
+Flutter   3.47.9, framework c197ca5199e (from .research/flutter-sdk)
+SDK clone .research/dart-sdk (the sources shipped with that SDK)
+Analyzer  14.7.0 (dwi_builder 0.8.1 dependency)
+OS        macOS 26.5.1 (25F80), arm64
+
+Q1. Can a package generator identify the target function at a Dwi.run call site?
+-------------------------------------------------------------------------------
+Yes for the statically written forms. The analyzer resolves the argument
+element, and inline closures expose their body and captures. Probe and raw
+output: audit/evidence/dwi5-analyzer-2026-11-10.txt, tooling/dwi5_probe.
+
+  case 1  top-level tear-off      TopLevelFunctionElement addOne
+  case 2  static method tear-off  MethodElement twice (static: true)
+  case 3  closure, int capture    captures offset: int (serializable)
+  case 4  closure, object capture captures connection: Connection (UNSUPPORTED)
+  case 5  local function value    LocalVariableElement chosen;
+                                  target not statically identifiable
+  case 6  inline block body       captures offset: int (serializable)
+  control instance tear-off       receiver: FormalParameterElement ops (MathOps)
+
+This is discovery evidence only. It does not lift a closure, generate code, or
+execute anything.
+
+Q2. Can it resolve a top-level or static tear-off across libraries and packages?
+-------------------------------------------------------------------------------
+Yes. The element carries the library URI (the probe prints
+`package:dwi5_probe/forms.dart`), and `dwi_builder` already follows
+`fragment.importedLibraries` across packages and files for task discovery
+(packages/dwi_builder/lib/src/discovery.dart, dependency walk around
+:888-940). The worker entrypoint can emit a static reference to the element.
+
+Q3. Can it identify captured variables and their types for an inline closure?
+-----------------------------------------------------------------------------
+Yes. The probe visits identifiers inside the closure and compares their
+enclosing element with the enclosing function; captures and static types are
+printed. It also sees `this`, fields and nested function-value invocations
+(tooling/dwi5_probe/bin/analyze_forms.dart, _CaptureVisitor). It does NOT
+prove that the body can be lifted out of its lexical scope.
+
+Q4. Is there a supported compiler interface that emits a separate worker
+    entrypoint from that call site?
+-------------------------------------------------------------------------------
+No.
+
+  $ dart compile --help
+    js, jit-snapshot, kernel, exe, aot-snapshot, wasm
+    (one subcommand per compile, no extra-entrypoint mode)
+
+  $ dart compile js --help
+    Usage: dart compile js [arguments] <dart entry point>
+    -o, --output    Write the output to <file name>.
+
+  pkg/dartdev/lib/src/commands/compile.dart:109  class CompileJSCommand
+  pkg/dartdev/lib/src/commands/compile.dart:309  final String sourcePath = args.rest[0];
+  pkg/dartdev/lib/src/commands/compile.dart:315  String? outputFile = args.option(outputFileOption.flag);
+
+One source path in, one output path out. There is no API to say "also compile
+this function body into a worker entrypoint" and no function-value metadata
+channel.
+
+  $ dart build --help
+    Available subcommands:
+      cli   Build a Dart application with a command line interface (CLI).
+
+  pkg/dartdev/lib/src/commands/build.dart:35  BuildCommand adds only
+  BuildCliSubcommand. `dart build` has no web subcommand and no source-
+  transformation phase.
+
+Q5. Are macros a supported package mechanism for rewriting Dwi.run call sites?
+-----------------------------------------------------------------------------
+No. The front end knows the experiment, but it is off by default:
+
+  pkg/front_end/lib/src/api_prototype/experimental_flags_generated.dart:230-235
+    static const ExperimentalFlag macros = const ExperimentalFlag(
+      name: 'macros',
+      isEnabledByDefault: false,
+      ...
+
+No `package:macros` implementation or analyzer macro API is shipped in this
+SDK. A package cannot depend on it as a supported mechanism.
+
+Q6. How do dart2js and dart2wasm tree shaking, deferred loading and minification
+    affect a generated reference?
+-----------------------------------------------------------------------------
+Reachability is a whole-program property, not a textual one:
+
+  pkg/compiler/lib/src/universe/world_impact.dart:22
+    class WorldImpact { ... }
+    (the compiler combines the impact objects of reachable elements)
+
+DWI's generator already emits static references, not names:
+  packages/dwi_builder/lib/src/generator.dart:53
+    '// Every task is a static reference. A task name alone would be ...'
+  packages/dwi_builder/lib/src/generator.dart:73
+    'final Map<String, DwiWorkerTask> _tasks = ...'
+
+Probe 3 (audit/evidence/dwi5-tree-shaking-2026-11-10.txt) re-measures this on
+3.13.7. A name in a string does not keep a function alive; a static reference
+does. Deferred loading was not measured in this increment.
+
+Q7. Can the generated worker import the task dependency closure without pulling
+    in Flutter UI libraries?
+-----------------------------------------------------------------------------
+Only if the task libraries stay worker-safe. dwi_builder traverses the import
+and export closure and fails the build on Flutter, dart:ui, dart:io, dart:html
+or dart:isolate:
+
+  packages/dwi_builder/lib/src/discovery.dart:899 (DWI002, imports)
+  packages/dwi_builder/lib/src/discovery.dart:924 (DWI002, exports)
+
+For a closure lifted from app code, that guarantee applies only after the
+generator knows which libraries the body references. A closure can capture a
+Flutter widget or a DOM object; the analyzer probe can flag the type, but no
+supported transform exists to re-home the body into a worker-safe library.
+
+Q8. Can the analyzer or build system guarantee generated sources exist before
+    the first Flutter compile on an unmodified released SDK?
+-----------------------------------------------------------------------------
+No. The web compile targets still do not depend on the web hooks target:
+
+  .research/flutter-sdk/packages/flutter_tools/lib/src/build_system/targets/web.dart:143
+    List<Target> get dependencies => const <Target>[
+      WebEntrypointTarget(),
+      GenerateLocalizationsTarget(),
+    ];
+
+  web.dart:604
+    LinkHooks(platform: HookPlatform.web, extraDependencies: compileTargets)
+
+Re-ran tooling/proxy_gate on the released 3.47.9 checkout on 2026-11-10: the
+first ordinary `flutter build web --release` exits 1 on the missing
+`lib/dwi_tasks.g.dart`; the second succeeds. Patched 3.47.9 passes the first
+build (docs/upstream/flutter-web-hook-ordering.md#3479-measurement-2026-11-10).
+Generated sources are still one pre-build step on any released SDK.
+
+What this establishes
+---------------------
+- Discovery is not the blocker for statically written forms (1, 2, and the
+  outer shape of 3, 4, 6): the analyzer can name the target and the captures.
+- There is no supported compiler/build interface that turns a call-site
+  function value into a second entrypoint, and no supported source-transform
+  phase (macros off, `dart build` only `cli`).
+- The worker must be a second compilation with static references, and DWI
+  already does that for annotated named tasks.
+- Fresh Flutter builds still need the documented pre-build step.
+
+Not established
+---------------
+- That any lifted closure preserves Dart semantics (return, break, this,
+  mutation, exception stacks, type parameters).
+- Deferred-loading behaviour for a generated worker.
+- dart2wasm behaviour of any lifted function; no such generated code exists.
+- That an IDE sees or can navigate a lifted call site.
