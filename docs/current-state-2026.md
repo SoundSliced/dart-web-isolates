@@ -9,6 +9,14 @@ Environment: Dart 3.13.5 (stable, 2026-09-29) shipped with Flutter
 arm64. Evidence base: `dart-lang/sdk` @ `e21f9245`, MDN/WHATWG pages fetched
 2026-11-03, local probes in `.research/probes/`.
 
+Release status: **0.8.0 is published on pub.dev** (2026-11-10, all seven
+packages; `dwi_builder` and `dwi` carry the opt-in dart2wasm worker backend,
+ADR-018). The dart2js worker is still the default; the Wasm worker is opt-in and
+experimental. Release notes and the deployment/cache contract:
+`docs/release-notes-0.8.0.md`, `audit/evidence/pub-0.8.0-upload-2026-11-10.txt`.
+The answers below describe the platform research that release is built on, not
+the release mechanics.
+
 ## Answers
 
 **1. Why exactly is `dart:isolate` unavailable under dart2js?**

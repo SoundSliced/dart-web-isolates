@@ -5,10 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.0] - prepared, not published
+## [0.8.0] - 2026-11-10
 
-Prepared on 2026-11-10 from `main`; **not uploaded to pub.dev**. Do not publish
-without separate authorization. All seven packages move to `0.8.0` in lockstep.
+Published to pub.dev on 2026-11-10 from `main` at `fcb8af6`, in dependency order
+(`dwi_annotations`, `dwi_protocol`, `dwi_core`, `dwi_native`, `dwi_web`,
+`dwi_builder`, `dwi`), each verified before the next. All seven packages move to
+`0.8.0` in lockstep.
 
 ### Added
 
@@ -26,8 +28,12 @@ without separate authorization. All seven packages move to `0.8.0` in lockstep.
 
 - The generated `int` decoder and the worker/host channel meta readers accept
   integral doubles, which a dart2wasm boundary yields.
-- A Wasm build retains the current and previous generation and prunes older
-  ones; a failed publication leaves the previous entry usable.
+- A Wasm build never deletes a published `gen-*` generation. A browser can keep
+  the `worker.boot.mjs` it cached, and that bootstrap names one generation until
+  it is revalidated, so retaining a generation is a deployment decision, not a
+  build one (ADR-018, amended 2026-11-10). A build only removes abandoned
+  `.dwi-wasm-*` temporary directories. `dwi clean` still removes every
+  generation; a failed publication still leaves the previous entry usable.
 
 ### Compatibility
 
@@ -39,6 +45,13 @@ without separate authorization. All seven packages move to `0.8.0` in lockstep.
   fail with a typed `DwiStartupException`.
 - Measured in Chrome 157, Edge 157, Firefox 159 and Safari 26.5 for dart2js and
   dart2wasm hosts at `/` and `/sub/app/`.
+- Deployment must upload generations before the entry and delete them last.
+  Serve `worker.boot.mjs` with `no-cache` (or a lifetime shorter than the
+  generation retention window) and `gen-*` files as immutable. A client whose
+  cached bootstrap names a removed generation fails with a typed
+  `DwiStartupException`; no client loads a mixed generation. Flutter 3.47.6's
+  generated service worker caches nothing, so these are HTTP cache-header
+  decisions.
 
 ## [0.7.0] - 2026-11-09
 
