@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.1
+
+- Pick up `dwi_web` 0.8.1: a missing worker asset now settles `Dwi.run` and
+  `DwiWorker.spawn` with `DwiStartupException` instead of an uncaught page
+  error. No API change.
+
 ## 0.8.0
 
 - Re-export `DwiWorkerBackend` and support the opt-in Wasm worker backend

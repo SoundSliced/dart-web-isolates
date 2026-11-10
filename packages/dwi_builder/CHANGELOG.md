@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.1
 
 - Detect a `dwi.yaml` created after an earlier Flutter build by declaring the
   optional path as a hook dependency even when absent.

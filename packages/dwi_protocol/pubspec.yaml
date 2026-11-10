@@ -1,6 +1,6 @@
 name: dwi_protocol
 description: Versioned wire protocol shared by DWI hosts, workers and tooling.
-version: 0.8.0
+version: 0.8.1
 repository: https://github.com/SoundSliced/dart-web-isolates
 topics:
   - isolate

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.1
+
+- Synchronised release with `dwi` 0.8.1. No API change.
+
 ## 0.8.0
 
 - Synchronised release with `dwi` 0.8.0. No API change.
