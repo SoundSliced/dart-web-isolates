@@ -19,6 +19,7 @@ directory holds the maintained reference material.
 | `benchmarks.md` | Benchmark methodology and results. |
 | `limitations.md` | Known gaps, stated plainly. |
 | `upstream-strategy.md` | Path toward Dart/Flutter upstream integration. |
+| `upstream/flutter-web-hook-ordering.md` | Prepared proposal: order web build hooks before Dart compilation. |
 | `prior-art.md` | Existing packages and what to reuse or avoid. |
 
 Research evidence lives in `../research/`; findings that shaped a decision are

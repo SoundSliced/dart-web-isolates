@@ -5,6 +5,35 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+No package code changed. Evidence, documentation and the upstream proposal for
+the fresh typed-proxy ordering gap.
+
+### Changed
+
+- Re-measured the fresh-build ordering gap on Flutter 3.47.6 / Dart 3.13.5
+  per mode: first builds fail for `--release`, `--wasm` and `--debug`;
+  `flutter run -d chrome` (debug) succeeds because the resident web runner
+  awaits build hooks before its DDC compile. ADR-009 amended.
+- Corrected two earlier observations: an app-root `hook/build.dart` does run on
+  Flutter 3.47.6 when the app depends on `hooks` (still unordered relative to
+  the compiler), and the earlier "did not run" claim no longer reproduces.
+- `tooling/proxy_gate` now pins the checkout with a `pubspec_overrides.yaml`;
+  without it the fixture cannot resolve against the published `dwi_builder`.
+
+### Added
+
+- `docs/upstream/flutter-web-hook-ordering.md`: prepared (not posted) proposal
+  to order web build hooks before Dart compilation, with the 3.47.6 build-graph
+  references, a disposable-SDK prototype (`BuildHooks(platform: HookPlatform.web)`
+  in `Dart2WebTarget.dependencies`), two Flutter tool regression tests, and
+  measured js/wasm results.
+- `audit/evidence/flutter-fresh-build-ordering-2026-11-10.txt`.
+- Limitations 51 (a missing worker asset surfaces as an uncaught JS `TypeError`,
+  not a typed failure) and 52 (creating `dwi.yaml` after a first build does not
+  re-run the hook).
+
 ## [0.8.0] - 2026-11-10
 
 Published to pub.dev on 2026-11-10 from `main` at `fcb8af6`, in dependency order

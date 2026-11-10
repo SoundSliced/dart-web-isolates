@@ -60,3 +60,10 @@ does not require a concurrency design debate.
 
 After v0.3 and a filled browser matrix: open a discussion (not a PR) linking
 M001 measurements, the protocol spec, and the secondary-entrypoint tooling gap.
+
+**Prepared 2026-11-10:** the ordering-specific ask is written up in
+`docs/upstream/flutter-web-hook-ordering.md` — minimal reproduction, 3.47.6
+build-graph references, the proposed `BuildHooks(platform: web)` dependency on
+`Dart2WebTarget`, a disposable-SDK prototype that passes on the first command
+for js and wasm, the Flutter tool regression tests, and the measured cost. It is
+ready for review and has not been posted.
