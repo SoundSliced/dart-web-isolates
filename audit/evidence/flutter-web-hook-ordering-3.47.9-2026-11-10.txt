@@ -140,7 +140,7 @@ Engines are driven by the repository's own harness
     "minified:hp: worker error".
     Assets all serve 200: dwi/worker.boot.mjs (1455 B),
     dwi/gen-076cabe0.../worker.mjs (13092 B), .../worker.wasm (81204 B).
-  This is a DWI worker-runtime failure on the wasm host, not a packaging or
+  This is an unexplained Wasm-worker startup failure on the wasm host, not a packaging or
   hook-ordering failure; it is recorded as an open failure below.
 
 Method notes (do not read these rows as more than they are)
@@ -152,7 +152,7 @@ Method notes (do not read these rows as more than they are)
 
 Open failures and environmental blocks
 ---------------------------------------
-1. Wasm worker runtime: "minified:hp: worker error" on all four engines for
+1. Unexplained Wasm-worker startup failure: "minified:hp: worker error" on all four engines for
    both mounts of the dart2wasm-host/Wasm-worker build. Not diagnosed here.
 2. Asset bundling for a hooks-API DataAsset was not measured; the asset-only
    fixture writes a file as a side effect instead.
@@ -167,4 +167,5 @@ Not claimed
 -----------
 - That this prototype is accepted, merged, or shipped in any released SDK.
 - That any web target other than the six rows above was measured.
-- That the Wasm worker runtime failure is caused by, or fixed by, this patch.
+- That the unexplained Wasm-worker startup failure is caused by, or fixed by,
+  this patch.

@@ -211,7 +211,7 @@ Chrome 157.0.8103.50, Safari 26.5, Firefox 159.0.1 and Edge 157.0.4341.42, at
 both `/` and `/sub/app/`, with `dwi/worker.dart.js` served 200. The
 dart2wasm host with a Wasm worker boots on all four engines and serves
 `worker.boot.mjs` and the `gen-<hash>` trio 200, but reports
-`minified:hp: worker error` — a DWI worker runtime failure recorded as an open
+`minified:hp: worker error` — an unexplained Wasm-worker startup failure recorded as an open
 issue, not a packaging or ordering result.
 
 Evidence: `../../audit/evidence/flutter-web-hook-ordering-3.47.9-2026-11-10.txt`.
