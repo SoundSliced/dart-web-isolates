@@ -146,18 +146,22 @@ class DwiBuilder {
     var cacheHit = false;
     if (cfg.compile) {
       final existing = await _readManifest(cfg.absoluteManifest);
-      final currentDigests = await _artifactDigests(cfg);
+      final generation = hash;
+      final existingGeneration = existing?['generation'];
+      final currentDigests = await _artifactDigests(cfg, generation);
       cacheHit =
           !cfg.force &&
           existing != null &&
           existing['hash'] == hash &&
           existing['compiled'] == true &&
+          existing['target'] == cfg.target &&
+          (!cfg.isWasm || existing['generation'] == generation) &&
           _manifestFilesMatch(existing, currentDigests);
       if (!cacheHit) {
-        await compileWorker(cfg);
+        await compileWorker(cfg, generation: generation);
         compiled = true;
       }
-      final artifactDigests = await _artifactDigests(cfg);
+      final artifactDigests = await _artifactDigests(cfg, generation);
       final entryDigest = artifactDigests[_servedUrl(cfg, cfg.absoluteEntry)];
       if (entryDigest == null || entryDigest.isEmpty) {
         throw DwiBuildException(
@@ -169,12 +173,20 @@ class DwiBuilder {
         _manifestJson(
           config: cfg,
           hash: hash,
+          generation: generation,
           tasks: discovery.sortedTasks,
           compiled: true,
           artifactDigest: entryDigest,
           artifactFiles: artifactDigests,
         ),
       );
+      if (cfg.isWasm) {
+        await _pruneGenerations(cfg, <String>{
+          generation,
+          if (existingGeneration is String && existingGeneration.isNotEmpty)
+            existingGeneration,
+        });
+      }
     }
 
     stopwatch.stop();
@@ -245,7 +257,10 @@ class DwiBuilder {
     );
 
     final manifest = await _readManifest(cfg.absoluteManifest);
-    final artifactDigests = await _artifactDigests(cfg);
+    final generation = cfg.isWasm ? (manifest?['generation']) : null;
+    final digestGeneration =
+        generation is String && generation.isNotEmpty ? generation : hash;
+    final artifactDigests = await _artifactDigests(cfg, digestGeneration);
     final artifactExists = artifactDigests.values.every(
       (digest) => digest.isNotEmpty,
     );
@@ -257,6 +272,16 @@ class DwiBuilder {
       }
       if (manifest['compiled'] != true) {
         issues.add('Manifest does not record a successful compilation.');
+      }
+      if (manifest['target'] != cfg.target) {
+        issues.add(
+          'Manifest target is ${manifest['target'] ?? 'missing'}, expected '
+          '${cfg.target}.',
+        );
+      }
+      if (cfg.isWasm &&
+          (generation is! String || generation.isEmpty)) {
+        issues.add('Manifest does not record the Wasm generation.');
       }
       final digest = manifest['artifactDigest'];
       if (digest is! String || digest.isEmpty) {
@@ -292,16 +317,57 @@ class DwiBuilder {
       cfg.absoluteWorkerSource,
       cfg.absoluteProxies,
       cfg.absoluteArtifact,
-      ...cfg.absoluteArtifacts,
+      cfg.absoluteEntry,
+      cfg.absoluteWasmLoader,
+      cfg.absoluteWasmModule,
       cfg.absoluteManifest,
     }) {
       final file = File(path);
       if (await file.exists()) await file.delete();
     }
+    if (cfg.isWasm) {
+      final directory = Directory(cfg.absoluteArtifactDir);
+      if (await directory.exists()) {
+        await for (final entity in directory.list(followLinks: false)) {
+          final name = p.basename(entity.path);
+          if (entity is Directory &&
+              (name.startsWith('gen-') || name.startsWith('.dwi-wasm-'))) {
+            try {
+              await entity.delete(recursive: true);
+            } on FileSystemException {
+              // A generation a live reader still holds can be retried later.
+            }
+          }
+        }
+      }
+    }
     final workerDirectory = Directory(p.dirname(cfg.absoluteWorkerSource));
     if (p.basename(workerDirectory.path) == '.dwi' &&
         await workerDirectory.exists()) {
       await workerDirectory.delete(recursive: true);
+    }
+  }
+
+  /// Removes generation directories not in [keep].
+  ///
+  /// The current and the immediately previous generation are retained so a
+  /// worker that started from the old entry can still load its files while a
+  /// page is switching over.
+  Future<void> _pruneGenerations(
+    DwiBuildConfig config,
+    Set<String> keep,
+  ) async {
+    final directory = Directory(config.absoluteArtifactDir);
+    if (!await directory.exists()) return;
+    await for (final entity in directory.list(followLinks: false)) {
+      final name = p.basename(entity.path);
+      if (entity is! Directory || !name.startsWith('gen-')) continue;
+      if (keep.contains(name.substring('gen-'.length))) continue;
+      try {
+        await entity.delete(recursive: true);
+      } on FileSystemException {
+        // Best effort: an orphan generation is inert and retried next build.
+      }
     }
   }
 
@@ -336,6 +402,7 @@ class DwiBuilder {
   String _manifestJson({
     required DwiBuildConfig config,
     required String hash,
+    required String generation,
     required List<DwiTaskDescriptor> tasks,
     required bool compiled,
     required String artifactDigest,
@@ -349,6 +416,7 @@ class DwiBuilder {
       'generatorVersion': dwiBuilderVersion,
       'hash': hash,
       'target': config.target,
+      if (config.isWasm) 'generation': generation,
       'optimization': config.optimization,
       'compiled': compiled,
       'artifactDigest': artifactDigest,
@@ -359,6 +427,7 @@ class DwiBuilder {
       'workers': <String, Object?>{
         config.workerId: <String, Object?>{
           'artifact': _servedUrl(config, config.absoluteEntry),
+          if (config.isWasm) 'generation': generation,
           'files': files.map((entry) => entry.key).toList(growable: false),
           'entrypoint': _relative(
             config.absoluteWorkerSource,
@@ -371,10 +440,13 @@ class DwiBuilder {
     return '${const JsonEncoder.withIndent('  ').convert(data)}\n';
   }
 
-  /// Served URL and digest for every file this target publishes.
-  Future<Map<String, String>> _artifactDigests(DwiBuildConfig config) async {
+  /// Served URL and digest for every file the entry needs for [generation].
+  Future<Map<String, String>> _artifactDigests(
+    DwiBuildConfig config,
+    String generation,
+  ) async {
     final result = <String, String>{};
-    for (final path in config.absoluteArtifacts) {
+    for (final path in config.artifactSet(generation)) {
       result[_servedUrl(config, path)] = await fileDigest(path);
     }
     return result;

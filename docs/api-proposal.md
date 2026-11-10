@@ -519,9 +519,9 @@ dart run dwi_builder:dwi build --target=wasm
 - The public task, typed-proxy, handle, channel and lifecycle APIs are
   unchanged; only the worker compiler/output and the explicit backend selector
   are new.
-- The builder publishes `worker.wasm`, `worker.mjs` (compiler loader) and
-  `worker.boot.mjs` (generated bootstrap) and records their digests. `target=js`
-  keeps the existing single `worker.dart.js` artefact.
+- The builder publishes a content-addressed `gen-<generation>/` directory
+  (`worker.wasm`, `worker.mjs`) and a small `worker.boot.mjs` entry that is
+  switched atomically only after the generation is complete (ADR-018).
 - A missing/incompatible Wasm runtime, missing/mis-served loader or module, or a
   requested/observed backend mismatch raises `DwiStartupException` before the
   first request. There is no fallback.

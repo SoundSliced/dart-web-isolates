@@ -140,8 +140,9 @@ Keep the two sides apart:
   Chrome 156 on Flutter 3.47.6, with a dart2js worker
   (`docs/browser-matrix.md` §4). This says nothing about the worker.
 - **Worker compiled with dart2wasm**: implemented as an opt-in experimental
-  slice (ADR-018). `dwi build --target=wasm` publishes `worker.wasm`, the
-  compiler's `worker.mjs` loader and a generated `worker.boot.mjs` bootstrap;
+  slice (ADR-018). `dwi build --target=wasm` publishes a content-addressed
+  `gen-<generation>/` directory (`worker.wasm` and the compiler's `worker.mjs`
+  loader) plus one small `worker.boot.mjs` entry, which is switched atomically;
   the host loads them as a module worker with `workerBackend:
   DwiWorkerBackend.wasm` and `workerScript: DwiConfig.defaultWasmWorkerScript`.
   A dart2js host with this worker passed the contracts in

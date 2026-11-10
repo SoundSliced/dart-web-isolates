@@ -129,11 +129,15 @@ Diagnostics are build-time; they never turn into a silent main-thread fallback.
 }
 ```
 
-For `--target=wasm` the same shape records `"target": "wasm"`, entry
-`dwi/worker.boot.mjs`, and three `artifactFiles`: `worker.boot.mjs`,
-`worker.mjs` and `worker.wasm`. `dwi check` verifies every listed file and
-digest, and fails when any file is missing, truncated or from the other target
-(ADR-018). The Wasm backend is experimental.
+For `--target=wasm` the same shape records `"target": "wasm"`, a `generation`
+id, entry `dwi/worker.boot.mjs`, and three `artifactFiles` under
+`dwi/gen-<generation>/`: the loader `worker.mjs`, the module `worker.wasm` and
+the entry `dwi/worker.boot.mjs`. A generation is written completely before the
+entry references it, so a reader sees either the old pair or the new pair
+(ADR-018). `dwi check` verifies every listed file and digest, and fails when any
+file is missing, truncated or from the other target. The Wasm backend is
+experimental. Deployment must upload `gen-*` directories before the entry and
+serve the entry without long-lived caching.
 
 The developer never edits this file. It is written only by `dwi build` when
 compilation is enabled; `dwi generate` and `dwi build --no-compile` write the
@@ -256,9 +260,10 @@ correction to the earlier "no web build hook" conclusion.
 - Runtime compilation in the browser: no browser-hosted Dart compiler; CSP and
   size make it non-viable for v0.x. See R013 §4.5.
 - Wasm worker generation: experimental under ADR-018
-  (`dwi build --target=wasm`, opt-in `DwiWorkerBackend.wasm`, three-file
-  artefact set) with no promised release number and no Flutter-hook target
-  selection. See `docs/browser-matrix.md` §7 for the measured contracts.
+  (`dwi build --target=wasm`, opt-in `DwiWorkerBackend.wasm`, content-addressed
+  generation directory plus one entry) with no promised release number and no
+  Flutter-hook target selection. See `docs/browser-matrix.md` §7 for the
+  measured contracts.
 - Flutter hot reload of an existing worker (page reload is required).
 
 ## Verification

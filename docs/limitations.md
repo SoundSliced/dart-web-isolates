@@ -79,8 +79,9 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
     generated worker uses static references, and v0.3 compiles and runs in
     Chrome. A universal proof for every library shape is not claimed.
 14. **Wasm worker generation is experimental.** `dwi build --target=wasm`
-    publishes `worker.wasm`, the compiler's `worker.mjs` loader and a generated
-    `worker.boot.mjs`; the host must opt in with
+    publishes a content-addressed `gen-<generation>/` directory (module and
+    loader) plus a small `worker.boot.mjs` entry that is switched atomically;
+    the host must opt in with
     `workerBackend: DwiWorkerBackend.wasm`. It is not part of any supported
     release statement. A dart2wasm worker receives JS numbers as `double`
     (generated `int` decoders and meta fields accept integral doubles), and

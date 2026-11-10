@@ -97,14 +97,42 @@ class DwiBuildConfig {
       : absoluteArtifact;
 
   /// Absolute `.wasm` module path (wasm target only).
+  ///
+  /// Prefer [wasmGeneration] paths; a generation is published as a complete
+  /// directory before the entry references it (ADR-018).
   String get absoluteWasmModule => p.join(absoluteArtifactDir, 'worker.wasm');
 
   /// Absolute compiler loader path (wasm target only).
   String get absoluteWasmLoader => p.join(absoluteArtifactDir, 'worker.mjs');
 
+  /// Directory that holds the files of one content-addressed generation.
+  String wasmGenerationDir(String generation) =>
+      p.join(absoluteArtifactDir, 'gen-$generation');
+
+  /// Loader inside a generation directory.
+  String wasmGenerationLoader(String generation) =>
+      p.join(wasmGenerationDir(generation), 'worker.mjs');
+
+  /// Module inside a generation directory.
+  String wasmGenerationModule(String generation) =>
+      p.join(wasmGenerationDir(generation), 'worker.wasm');
+
+  /// Every file the worker entry needs for [generation].
+  ///
+  /// For `js` the generation is ignored and the single artefact is returned.
+  List<String> artifactSet(String generation) => isWasm
+      ? <String>[
+          absoluteEntry,
+          wasmGenerationLoader(generation),
+          wasmGenerationModule(generation),
+        ]
+      : <String>[absoluteArtifact];
+
   /// Every file this build publishes.
+  ///
+  /// Only meaningful for the `js` target; a wasm build needs its generation.
   List<String> get absoluteArtifacts => isWasm
-      ? <String>[absoluteEntry, absoluteWasmLoader, absoluteWasmModule]
+      ? <String>[absoluteEntry]
       : <String>[absoluteArtifact];
 
   /// Absolute manifest file.

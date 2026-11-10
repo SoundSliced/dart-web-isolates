@@ -13,6 +13,13 @@ import 'version.dart';
 /// platform-specific filesystem permissions. Application code never sets it.
 Future<void> Function(File temporary, File artifact)? debugPublishOverride;
 
+/// Test seam called after each named publication step of a Wasm build.
+///
+/// Steps are `generation` (all generation files published, entry still old)
+/// and `entry` (entry switched, manifest not yet written). Throwing here
+/// simulates an interrupted or failed publication at that exact boundary.
+Future<void> Function(String step)? debugPublicationStep;
+
 /// Result of one compiler invocation.
 class DwiCompileResult {
   const DwiCompileResult({
@@ -37,14 +44,25 @@ class DwiCompileResult {
 ///
 /// Throws [DwiBuildException] when the compiler is missing, exits non-zero,
 /// produces no artefact, or the artefact cannot be published.
-Future<DwiCompileResult> compileWorker(DwiBuildConfig config) async {
+Future<DwiCompileResult> compileWorker(
+  DwiBuildConfig config, {
+  String? generation,
+}) async {
   final source = File(config.absoluteWorkerSource);
   if (!source.existsSync()) {
     throw DwiBuildException(
       'Generated worker entrypoint does not exist: ${source.path}',
     );
   }
-  if (config.isWasm) return _compileWasm(config, source);
+  if (config.isWasm) {
+    final id = generation;
+    if (id == null || id.isEmpty) {
+      throw DwiBuildException(
+        'A Wasm worker build requires its content generation id.',
+      );
+    }
+    return _compileWasm(config, source, id);
+  }
 
   final artifact = File(config.absoluteArtifact);
   await artifact.parent.create(recursive: true);
@@ -119,25 +137,24 @@ Future<void> _deleteCompanions(File temporary) async {
   }
 }
 
-/// Compiles the worker with `dart compile wasm` and publishes the three-file
-/// artefact set (ADR-018).
+/// Compiles the worker with `dart compile wasm` and publishes a complete
+/// content-addressed generation before switching the entry (ADR-018).
 ///
-/// The compiler runs in a temporary directory; the module, loader and generated
-/// bootstrap are published by atomic replace only after every file exists. A
-/// failed compilation therefore leaves the previous worker untouched.
+/// A generation is never referenced while it is being written: the stable
+/// `worker.boot.mjs` entry is replaced only after `gen-<id>/worker.mjs` and
+/// `gen-<id>/worker.wasm` are in place. A failed build therefore leaves the
+/// previous entry and generation usable, and a reader sees either the old pair
+/// or the new pair. Deployment must upload generation directories before the
+/// entry; a reader that arrives mid-deploy fails with a typed startup error
+/// rather than executing mixed files.
 Future<DwiCompileResult> _compileWasm(
   DwiBuildConfig config,
   File source,
+  String generation,
 ) async {
   final directory = Directory(config.absoluteArtifactDir);
   await directory.create(recursive: true);
-  final temporaryDir = Directory(
-    p.join(
-      directory.path,
-      '.dwi-wasm-$pid-${DateTime.now().microsecondsSinceEpoch}.tmp',
-    ),
-  );
-  await temporaryDir.create(recursive: true);
+  final temporaryDir = await directory.createTemp('.dwi-wasm-');
   final module = File(p.join(temporaryDir.path, 'worker.wasm'));
   final loader = File(p.join(temporaryDir.path, 'worker.mjs'));
   final bootstrap = File(p.join(temporaryDir.path, 'worker.boot.mjs'));
@@ -182,17 +199,52 @@ Future<DwiCompileResult> _compileWasm(
       );
     }
 
-    await bootstrap.writeAsString(_bootstrapSource, flush: true);
+    await bootstrap.writeAsString(
+      _bootstrapSource(generation),
+      flush: true,
+    );
 
     final publish = debugPublishOverride ?? replaceFile;
+    final generationDir = Directory(config.wasmGenerationDir(generation));
+    await generationDir.create(recursive: true);
     try {
-      await publish(bootstrap, File(config.absoluteEntry));
-      await publish(loader, File(config.absoluteWasmLoader));
-      await publish(module, File(config.absoluteWasmModule));
+      await publish(
+        loader,
+        File(config.wasmGenerationLoader(generation)),
+      );
+      await publish(
+        module,
+        File(config.wasmGenerationModule(generation)),
+      );
     } on Object catch (error) {
       throw DwiBuildException(
-        'Could not publish the compiled Wasm worker to '
-        '${config.absoluteArtifactDir}: $error',
+        'Could not publish Wasm generation $generation to '
+        '${generationDir.path}: $error',
+      );
+    }
+    try {
+      await debugPublicationStep?.call('generation');
+    } on Object catch (error) {
+      throw DwiBuildException(
+        'Wasm generation $generation publication was interrupted after the '
+        'generation files were written: $error',
+      );
+    }
+
+    try {
+      await publish(bootstrap, File(config.absoluteEntry));
+    } on Object catch (error) {
+      throw DwiBuildException(
+        'Could not switch the Wasm worker entry to generation $generation: '
+        '$error',
+      );
+    }
+    try {
+      await debugPublicationStep?.call('entry');
+    } on Object catch (error) {
+      throw DwiBuildException(
+        'Wasm worker entry was switched to generation $generation but the '
+        'build did not finish: $error',
       );
     }
 
@@ -216,13 +268,15 @@ Future<DwiCompileResult> _compileWasm(
 ///
 /// `dart compile wasm` emits a module and a loader that never invokes `main`.
 /// This wrapper imports the loader, fetches the module relative to its own URL,
-/// instantiates it and calls `main`. It posts a typed startup failure instead of
-/// letting a load error disappear (ADR-018).
-const String _bootstrapSource = '''
+/// and instantiates the generation [generation]. The generation is content
+/// addressed, so an entry switch is the only mutable reference (ADR-018).
+String _bootstrapSource(String generation) => '''
 // GENERATED CODE - DO NOT MODIFY BY HAND.
-// Generated by dwi_builder $dwiBuilderVersion; bootstrap format 1.
+// Generated by dwi_builder $dwiBuilderVersion; bootstrap format 2.
+// Generation: $generation
 // Generic dart2wasm worker bootstrap. No application logic belongs here.
 const PROTOCOL_VERSION = 2;
+const GENERATION = '$generation';
 
 const post = (message) => {
   try {
@@ -252,11 +306,13 @@ function startupFailure(error) {
 }
 
 try {
-  const loader = await import(new URL('./worker.mjs', import.meta.url));
-  const response = await fetch(new URL('./worker.wasm', import.meta.url));
+  const base = new URL('gen-' + GENERATION + '/', import.meta.url);
+  const loader = await import(new URL('worker.mjs', base));
+  const response = await fetch(new URL('worker.wasm', base));
   if (!response.ok) {
     throw new Error(
-      'wasm fetch failed: ' + response.status + ' ' + response.statusText,
+      'wasm fetch failed: ' + response.status + ' ' + response.statusText +
+      ' (' + base.pathname + 'worker.wasm)',
     );
   }
   const compiled = await loader.compileStreaming(response);

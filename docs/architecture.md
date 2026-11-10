@@ -1266,22 +1266,27 @@ it does not declare the backend supported.
    and setting `workerBackend: DwiWorkerBackend.wasm`. The host then creates a
    **module** worker; the JS path keeps a classic worker. DWI never retries on
    the main thread and never silently switches backend.
-3. **Packaging.** For `target=wasm` the builder publishes three files into the
-   worker directory:
-   - `worker.wasm` — the compiled module;
-   - `worker.mjs` — the compiler-emitted loader, byte-identical to the
-     compiler output;
+3. **Packaging.** For `target=wasm` the builder publishes a content-addressed
+   **generation directory** plus one small stable entry:
+   - `gen-<generation>/worker.wasm` — the compiled module;
+   - `gen-<generation>/worker.mjs` — the compiler-emitted loader, byte-identical
+     to the compiler output;
    - `worker.boot.mjs` — a generated, versioned, application-independent
-     bootstrap that imports the loader and fetches the module.
-   The source map is not published. `worker.support.js` is not required at
-   runtime for the module-worker path (the probe logged zero fetches) and is
-   not published. The manifest records the entry URL, the file list and a
-   SHA-256 digest per file. For `target=js` the existing single-file
-   `worker.dart.js` layout is unchanged.
+     bootstrap that imports the loader and fetches the module for exactly one
+     generation.
+   The generation id is the content hash already used for the build cache. A
+   generation is written completely before the entry references it, and the
+   entry is replaced by a single atomic rename. The source map is not published.
+   `worker.support.js` is not required at runtime for the module-worker path
+   (the probe logged zero fetches) and is not published. The manifest records
+   the target, the generation, the entry URL, the file list and a SHA-256
+   digest per file. For `target=js` the existing single-file `worker.dart.js`
+   layout is unchanged.
 4. **URL resolution.** Every reference inside `worker.boot.mjs` is relative to
-   `import.meta.url` (`./worker.mjs`, `./worker.wasm`). No absolute or
-   base-href-specific path is embedded. The probe verified the same artefacts
-   at `/` and `/sub/app/` without recompilation.
+   `import.meta.url` (`gen-<generation>/worker.mjs`,
+   `gen-<generation>/worker.wasm`). No absolute or base-href-specific path is
+   embedded. The probe verified the same artefacts at `/` and `/sub/app/`
+   without recompilation.
 5. **Protocol.** Wire protocol v1 is unchanged. The worker `ready` envelope's
    `capabilities` map gains `'backend': 'dart2wasm' | 'dart2js'`; the host
    compares the observed value with `workerBackend` and treats a mismatch as
@@ -1296,27 +1301,47 @@ it does not declare the backend supported.
    bootstrap emits a typed `startup-error`; the host raises
    `DwiStartupException` naming the failed phase. There is no main-thread
    execution and no implicit JS retry.
-8. **Cache, check, clean and watch.** The worker hash includes `target`.
-   `dwi check` verifies every published file and its recorded digest, and fails
-   on a missing, truncated or mismatched companion. `clean` removes all Wasm
-   artefacts and the bootstrap. `watch` republishes the whole file set.
-   Publication is all-or-nothing: companions are written to temporary names and
-   the manifest is written only after every file is in place.
-9. **Version compatibility.** The manifest carries the target, a bootstrap
-   format version and the per-file digests. A host/loader/worker mismatch of
-   the bootstrap format, protocol version or requested backend is rejected
-   before the first request, not worked around.
+8. **Publication, cache, check, clean and watch.** The worker hash includes
+   `target`; for Wasm it is also the generation id. Publication order is fixed:
+   1. write the module and loader into `gen-<generation>/` (not referenced yet;
+      safe to retry or interrupt);
+   2. atomically replace `worker.boot.mjs` so it references that complete
+      generation;
+   3. write the manifest.
+   A reader therefore observes either the previous entry with its previous
+   complete generation, or the new entry with its new complete generation. It
+   can never mix files from two generations. A failed build before step 2
+   leaves the old entry and generation untouched; a failure after step 2 leaves
+   a working new entry and an old manifest, which `dwi check` rejects until the
+   next build completes.
+   `dwi check` verifies the target, the recorded generation, the entry and every
+   generation file against the manifest. `clean` removes the entry, all
+   `gen-*` directories and interrupted temporary directories. A successful
+   build retains the current and the immediately previous generation and prunes
+   older ones, so a worker that started from the old entry can still load its
+   files. Live workers are unaffected by a switch: their assets are already
+   loaded. `watch` republishes the same order.
+   Deployment contract: upload generation directories before replacing the
+   entry, and serve the entry without long-lived caching. A reader that arrives
+   between those two steps gets a typed startup error (missing generation), not
+   a mixed pair.
+9. **Version compatibility.** The manifest carries the target, the generation, a
+   bootstrap format version and the per-file digests. A host/loader/worker
+   mismatch of the bootstrap format, protocol version or requested backend is
+   rejected before the first request, not worked around.
 10. **Defaults.** JS remains the default and the only backend in any supported
     release statement. Wasm is opt-in and experimental until the acceptance
     gates in this milestone pass on all four engines for every contract.
 
 **Consequences and open gates.**
 
-- The builder's single-file publication path must become a small multi-file
-  publication path; the existing atomic-rename discipline applies per file.
-- The Wasm runtime artefact graph is larger (three files) and each request still
-  crosses a structured-clone boundary. Startup and dispatch cost must be
-  measured, not assumed, before any performance statement.
+- The builder's single-file publication path becomes a content-addressed
+  generation publication: generation files first, then one atomic entry switch,
+  then the manifest. The old generation is retained for one build so live pages
+  can finish loading it.
+- The Wasm runtime artefact graph is larger (a generation directory plus one
+  entry) and each request still crosses a structured-clone boundary. Startup and
+  dispatch cost must be measured, not assumed, before any performance statement.
 - A module worker is required, so a deployment that serves `.mjs` with the
   wrong MIME now has a new failure mode; it is a typed startup failure.
 - The generated bootstrap is an application-independent DWI artefact. It is not
