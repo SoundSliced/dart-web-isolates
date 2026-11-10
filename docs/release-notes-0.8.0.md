@@ -107,9 +107,12 @@ an older generation:
   loading across B, C and D builds), and a removed generation fails typed
   without requesting any other generation
   (`audit/evidence/cached-bootstrap-deployment-2026-11-10.txt`).
-- Flutter 3.47.6 production build (Chrome 157): the generated service worker is
-  a self-unregistering stub with no cache; cache behaviour comes from the
-  deployment headers (`audit/evidence/flutter-production-cache-2026-11-10.txt`).
+- Flutter 3.47.6 production build in Chrome 157, Edge 157, Firefox 159 and
+  Safari 26.5: the generated service worker is a self-unregistering stub with no
+  cache, so cache behaviour comes from the deployment headers. A cached client
+  keeps working while its generation is retained or cached, and fails typed once
+  the generation is pruned
+  (`audit/evidence/flutter-production-cache-four-engines-2026-11-10.txt`).
 - Wasm worker contracts: Chrome, Edge, Firefox and Safari, `dart2js` and
   `dart2wasm` hosts, at `/` and `/sub/app/`; the `dart2wasm` host + `dart2js`
   worker control also passes. Contracts: typed proxy, unknown task, state,

@@ -514,14 +514,18 @@ Live rebuild with deployment headers (`worker.boot.mjs` `no-cache`, `gen-*`
 `immutable`) passes in Chrome, Edge, Firefox and Safari across three successive
 deployments: `packages/dwi_builder/test/browser_wasm_publication_test.dart`.
 
-Flutter 3.47.6 production build (Chrome 157): the generated
-`flutter_service_worker.js` is a self-unregistering stub with no `RESOURCES` map
-and no cache, and `navigator.serviceWorker.controller` stayed `null`. Flutter
-caches nothing here; the deployment headers decide the outcome. With immutable
-generations a cached client keeps working across A, B and C; with a cached
-bootstrap and uncached generations a reload or a later spawn fails with a typed
-startup error once A is gone. Details and request logs in
-`audit/evidence/flutter-production-cache-2026-11-10.txt`.
+Flutter 3.47.6 production build, measured in Chrome 157, Edge 157, Firefox 159
+and Safari 26.5: the generated `flutter_service_worker.js` is the same
+self-unregistering stub in every engine, with no `RESOURCES` map and no cache,
+and `navigator.serviceWorker.controller` stayed `null`. Flutter caches nothing
+here; the deployment headers decide the outcome. With immutable generations a
+cached client keeps working across A, B and C; with uncached generations but
+retained generations it also keeps working; once maintenance deletes the
+generation the cached bootstrap names, a reload or a later spawn fails with a
+typed startup error. Every engine requested only generation A and never a later
+one. Details and request logs in
+`audit/evidence/flutter-production-cache-2026-11-10.txt` and
+`audit/evidence/flutter-production-cache-four-engines-2026-11-10.txt`.
 
 Not measured: browser cache eviction or revalidation timing; a dart2wasm host in
 the cached-bootstrap fixture (it uses a dart2js host).

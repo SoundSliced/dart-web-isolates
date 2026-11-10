@@ -123,8 +123,10 @@ Conclusions
   4. The open-page case is bounded by the same rule. A running worker keeps
      working; a spawn after the switch needs its generation to exist.
 
-Not established
-  - Safari, Firefox and Edge for the Flutter production build (Chrome only).
+Not established here
+  - Safari, Firefox and Edge in this file; they are measured separately in
+    `flutter-production-cache-four-engines-2026-11-10.txt` with the same fixture
+    and deployment sequence.
   - Cache eviction and revalidation timing beyond Chrome's behaviour in these
     runs; no claim is made about how long any browser keeps an entry.
   - Any Flutter SDK other than 3.47.6.

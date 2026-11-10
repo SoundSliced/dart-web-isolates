@@ -109,9 +109,11 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
     nothing (it unregisters itself), so these are HTTP cache-header decisions;
     a client is safe only while its generation is either retained by the
     deployment or still in the browser cache. Measured in Chrome, Safari,
-    Firefox and Edge
+    Firefox and Edge, for both the DWI fixture and a real Flutter 3.47.6
+    production build
     (`audit/evidence/cached-bootstrap-deployment-2026-11-10.txt`,
-    `audit/evidence/flutter-production-cache-2026-11-10.txt`).
+    `audit/evidence/flutter-production-cache-2026-11-10.txt`,
+    `audit/evidence/flutter-production-cache-four-engines-2026-11-10.txt`).
 15. **Runtime compilation is not implemented and is not planned for v0.x.** A
     browser-hosted Dart compiler, CSP `eval` restrictions, size and attack
     surface make it non-viable on current evidence (R013 §4.5).
