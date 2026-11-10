@@ -12,4 +12,5 @@ export 'src/diagnostics.dart';
 export 'src/discovery.dart';
 export 'src/generator.dart';
 export 'src/hasher.dart';
+export 'src/project_config.dart';
 export 'src/version.dart';

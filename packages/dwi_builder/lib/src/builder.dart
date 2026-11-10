@@ -318,6 +318,7 @@ class DwiBuilder {
       cfg.absoluteProxies,
       cfg.absoluteArtifact,
       cfg.absoluteEntry,
+      p.join(cfg.absoluteArtifactDir, 'worker.boot.mjs'),
       cfg.absoluteWasmLoader,
       cfg.absoluteWasmModule,
       cfg.absoluteManifest,
@@ -325,18 +326,18 @@ class DwiBuilder {
       final file = File(path);
       if (await file.exists()) await file.delete();
     }
-    if (cfg.isWasm) {
-      final directory = Directory(cfg.absoluteArtifactDir);
-      if (await directory.exists()) {
-        await for (final entity in directory.list(followLinks: false)) {
-          final name = p.basename(entity.path);
-          if (entity is Directory &&
-              (name.startsWith('gen-') || name.startsWith('.dwi-wasm-'))) {
-            try {
-              await entity.delete(recursive: true);
-            } on FileSystemException {
-              // A generation a live reader still holds can be retried later.
-            }
+    // Remove every wasm generation and interrupted temporary directory even
+    // when the current target is js: `clean` means no generated worker remains.
+    final directory = Directory(cfg.absoluteArtifactDir);
+    if (await directory.exists()) {
+      await for (final entity in directory.list(followLinks: false)) {
+        final name = p.basename(entity.path);
+        if (entity is Directory &&
+            (name.startsWith('gen-') || name.startsWith('.dwi-wasm-'))) {
+          try {
+            await entity.delete(recursive: true);
+          } on FileSystemException {
+            // A generation a live reader still holds can be retried later.
           }
         }
       }

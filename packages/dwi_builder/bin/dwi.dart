@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:dwi_builder/dwi_builder.dart';
 import 'package:path/path.dart' as p;
-
 Future<void> main(List<String> arguments) async {
   final parser = _parser();
   ArgResults results;
@@ -157,20 +156,26 @@ ArgParser _commonOptions({required bool build}) {
 DwiBuildConfig _config(ArgResults command, {required bool compile}) {
   final include = command['include'] as List<String>;
   final exclude = command['exclude'] as List<String>;
+  final projectRoot = p.absolute(command['project-root'] as String);
   final configuredCompile = command.options.contains('compile')
       ? command['compile'] as bool
       : true;
+  final cliTarget =
+      command.options.contains('target') && command.wasParsed('target')
+      ? command['target'] as String
+      : null;
   return DwiBuildConfig(
-    projectRoot: p.absolute(command['project-root'] as String),
+    projectRoot: projectRoot,
     includePaths: include.isEmpty ? const <String>['lib'] : include,
     excludePaths: exclude,
     workerSourcePath: command['worker-source'] as String,
     proxiesPath: command['proxies'] as String,
     artifactPath: command['artifact'] as String,
     manifestPath: command['manifest'] as String,
-    target: command.options.contains('target')
-        ? command['target'] as String
-        : 'js',
+    target: DwiProjectConfig.resolveTarget(
+      projectRoot: projectRoot,
+      cliTarget: cliTarget,
+    ),
     optimization: command['optimization'] as String,
     compile: compile && configuredCompile,
     force: command.options.contains('force') ? command['force'] as bool : false,
@@ -278,13 +283,19 @@ Future<int> _check(ArgResults command) async {
 }
 
 Future<int> _clean(ArgResults command) async {
+  final projectRoot = p.absolute(command['project-root'] as String);
   final config = DwiBuildConfig(
-    projectRoot: p.absolute(command['project-root'] as String),
+    projectRoot: projectRoot,
     workerSourcePath: command['worker-source'] as String,
     proxiesPath: command['proxies'] as String,
     artifactPath: command['artifact'] as String,
     manifestPath: command['manifest'] as String,
-    target: command['target'] as String,
+    target: DwiProjectConfig.resolveTarget(
+      projectRoot: projectRoot,
+      cliTarget: command.wasParsed('target')
+          ? command['target'] as String
+          : null,
+    ),
     compile: false,
   );
   await DwiBuilder(config).clean();
@@ -409,6 +420,7 @@ Map<String, String> _snapshot(
   for (final path in <String>[
     p.join(config.absoluteProjectRoot, 'pubspec.yaml'),
     p.join(config.absoluteProjectRoot, 'pubspec.lock'),
+    DwiProjectConfig.pathFor(config.absoluteProjectRoot),
     p.join(config.absoluteProjectRoot, '.dart_tool', 'package_config.json'),
   ]) {
     final file = File(path);

@@ -28,7 +28,13 @@ void main(List<String> args) async {
       '$root${separator}lib${separator}dwi_tasks.g.dart',
     );
     final hadProxies = proxies.existsSync();
-    final result = await DwiBuilder(DwiBuildConfig(projectRoot: root)).build();
+    // The application declares its target once in dwi.yaml; the hook and the
+    // CLI read the same file, so neither can silently choose the other backend.
+    final config = DwiBuildConfig(
+      projectRoot: root,
+      target: DwiProjectConfig.resolveTarget(projectRoot: root),
+    );
+    final result = await DwiBuilder(config).build();
 
     // Flutter schedules the web build hook and `dart2js` as independent targets,
     // so on a project that has never generated proxies the compiler can start
@@ -53,12 +59,16 @@ void main(List<String> args) async {
       output.dependencies.add(Uri.file(path));
     }
     // Runtime sources and package resolution are compilation inputs too.
-    for (final path in await collectRuntimeDependencies(
-      DwiBuildConfig(projectRoot: root),
-    )) {
+    for (final path in await collectRuntimeDependencies(config)) {
       output.dependencies.add(Uri.file(path));
     }
     output.dependencies.add(Uri.file('$root${separator}pubspec.yaml'));
     output.dependencies.add(Uri.file('$root${separator}pubspec.lock'));
+    final projectConfig = File(
+      '$root${separator}${DwiProjectConfig.fileName}',
+    );
+    if (projectConfig.existsSync()) {
+      output.dependencies.add(Uri.file(projectConfig.path));
+    }
   });
 }

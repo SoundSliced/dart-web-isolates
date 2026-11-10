@@ -200,9 +200,18 @@ flutter build web --release --base-href /sub/app/
 ```
 
 `dwi_builder/hook/build.dart` finds the application package from Flutter's
-package config, runs the same builder as the CLI, writes
-`web/dwi/worker.dart.js`, and declares task files as hook dependencies so
-Flutter re-runs it only when they change. See ADR-009 in
+package config, reads the application's `dwi.yaml`, runs the same builder as the
+CLI, writes the worker artefacts, and declares task files and `dwi.yaml` as hook
+dependencies so Flutter re-runs it only when they change. The CLI reads the same
+file, so the two paths cannot disagree about the target:
+
+```yaml
+# dwi.yaml — next to pubspec.yaml
+target: wasm   # js (default) or wasm (experimental, ADR-018)
+```
+
+An explicit `--target` on the CLI overrides the file; an invalid file or target
+fails the build instead of falling back. See ADR-009 in
 `docs/architecture.md` for evidence and limitations. The hook is skipped for
 packages without a `dwi` dependency or without `web/index.html`.
 

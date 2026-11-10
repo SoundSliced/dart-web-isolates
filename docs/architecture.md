@@ -1332,6 +1332,13 @@ it does not declare the backend supported.
 10. **Defaults.** JS remains the default and the only backend in any supported
     release statement. Wasm is opt-in and experimental until the acceptance
     gates in this milestone pass on all four engines for every contract.
+11. **One target setting.** The application package may contain `dwi.yaml`
+    (`target: js|wasm`) next to `pubspec.yaml`. The Flutter build hook and the
+    CLI both read it through `DwiProjectConfig`; an explicit CLI `--target`
+    overrides it. The hook declares the file as a dependency, so a target change
+    re-runs it. An invalid or unknown setting fails the build rather than
+    silently selecting the other backend, and the hook can never replace a
+    requested Wasm worker with a JS one.
 
 **Consequences and open gates.**
 

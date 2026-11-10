@@ -516,6 +516,10 @@ Build side:
 dart run dwi_builder:dwi build --target=wasm
 ```
 
+In a Flutter application the same choice is written once in `dwi.yaml`
+(`target: wasm`) and is read by both the build hook and the CLI; `--target`
+overrides it. An invalid file fails the build.
+
 - The public task, typed-proxy, handle, channel and lifecycle APIs are
   unchanged; only the worker compiler/output and the explicit backend selector
   are new.
