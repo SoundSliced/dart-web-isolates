@@ -1,0 +1,11 @@
+name: data_asset_gate_package
+description: "Dependency package whose web build hook declares a DataAsset"
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  hooks: ^2.0.0
+  data_assets: ^0.20.0

@@ -248,9 +248,57 @@ generation and worker compilation.
 - Link hooks and final packaging still run: the worker asset is present in
   `build/web/dwi` in every row above.
 
-Not measured: a dependency hook that emits only assets (no Dart source),
-multiple dependencies with web hooks, non-Chrome engines, and a build on
-3.47.9 (source inspection only).
+Not measured in this 3.47.6 round: a dependency hook that emits only assets (no
+Dart source), multiple dependencies with web hooks, non-Chrome engines, and a
+build on 3.47.9. All four were measured afterwards: the 3.47.9 matrix, the
+multi-hook and asset-only shapes, and the four-engine browser rows are in
+[3.47.9 measurement](#3479-measurement-2026-11-10), and the declared
+`DataAsset` shape is in
+[declared data assets](#declared-data-assets-dependency-hook-2026-11-10).
+
+## Declared data assets (dependency hook, 2026-11-10)
+
+The ordering change must not break a hook that declares its outputs through the
+hooks API rather than writing files. Gate: `tooling/data_asset_gate` — a scratch
+app path-depends on a package whose web `hook/build.dart` calls
+`output.assets.data.add(DataAsset(...))` for one declared file and one file it
+generates itself.
+
+| Case | Unmodified 3.47.9 | Patched 3.47.9 |
+| --- | --- | --- |
+| first build | exit 0, hook runs 1, both assets bundled | same |
+| `build/web/assets/packages/<pkg>/data/id1.txt` | `package_content1` | same |
+| `.../data/generated.txt` | `generated_content1` | same |
+| unchanged rebuild | hook skipped, asset kept | same |
+| changed input | hook reruns, bundled content follows | same |
+| removed input | exit 1, `Target build_hooks failed`, compiler never starts | same |
+| throwing hook | exit 1, `Bad state: data asset hook boom`, compiler never starts | same |
+
+So the patch **preserves** declared `DataAsset` bundling for a dependency hook,
+including invalidation and the failure paths. It says nothing about app-root
+hooks (Flutter's `dev/integration_tests/data_asset_app` covers that upstream)
+and nothing about acceptance.
+
+Data assets are behind `flutter config --enable-dart-data-assets` on 3.47.x;
+the gate exits 7 rather than changing that flag for you. Evidence:
+`../../audit/evidence/data-asset-gate-2026-11-10.txt`.
+
+The gate lives in DWI rather than in the patch: Flutter's own
+`dart_data_asset_flutter_build_test.dart` already asserts web data-asset
+bundling, so adding a second copy upstream would duplicate coverage. If
+maintainers ask for the ordering regression in their suite, the shape to port is
+`tooling/data_asset_gate/fixture/` with the assertions from `run.sh`.
+
+## Evidence status of every claim in this document
+
+| Claim set | Status |
+| --- | --- |
+| 3.47.6 first-build failure, cost, hook-failure and `dwi.yaml` lifecycle | measured on a 3.47.6 prototype checkout |
+| 3.47.9 six-row matrix, regression shapes, 623-test suite, integration test | measured, unmodified vs patched 3.47.9 |
+| Four-engine browser rows at `/` and `/sub/app/` | measured on production builds from the patched 3.47.9 SDK |
+| Declared `DataAsset` behaviour | measured on both 3.47.9 SDKs (`tooling/data_asset_gate`) |
+| `master` build graph, 3.47.9 source shape before building it | source inspection only |
+| App-root hook behaviour, dart2wasm coverage of the data-asset gate | not measured |
 
 ## What DWI does until this lands
 
@@ -265,5 +313,7 @@ No main-thread fallback exists at any point.
 - That every hook should run before compilation for every platform.
 - That a generated-source input contract is unnecessary (it is the better long
   term design; the dependency is the minimal one).
-- Results on any Flutter version other than 3.47.6, or on 3.47.9 beyond the
-  source inspection above.
+- Results on any Flutter version other than 3.47.6 and 3.47.9. The 3.47.6 column
+  is browser/cost work; the 3.47.9 column is the unmodified-vs-patched matrix,
+  the regression shapes and the four-engine rows. Both are labelled where they
+  appear. Anything else is source inspection only, and says so.
