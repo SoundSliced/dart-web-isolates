@@ -17,9 +17,7 @@ List<String> leftoverTemporaryFiles(Directory root) {
       .whereType<File>()
       .map((file) => file.path)
       .where(
-        (path) =>
-            path.endsWith('.bak') ||
-            temporary.hasMatch(p.basename(path)),
+        (path) => path.endsWith('.bak') || temporary.hasMatch(p.basename(path)),
       )
       .toList(growable: false);
 }
@@ -66,9 +64,7 @@ void main() {
     'builds, checks and cleans a content-addressed wasm generation',
     () async {
       project.write('lib/tasks.dart', simpleTasks);
-      final wasmConfig = project.config(compile: true).copyWith(
-        target: 'wasm',
-      );
+      final wasmConfig = project.config(compile: true).copyWith(target: 'wasm');
 
       final first = await DwiBuilder(wasmConfig).build();
       expect(first.compiled, isTrue);
@@ -76,9 +72,9 @@ void main() {
       expect(first.artifactPath, endsWith('worker.boot.mjs'));
       expect(project.exists('web/dwi/worker.boot.mjs'), isTrue);
 
-      final manifest =
-          jsonDecode(project.read('.dwi/worker_manifest.json'))
-              as Map<String, dynamic>;
+      final manifest = jsonDecode(
+        project.read('.dwi/worker_manifest.json'),
+      ) as Map<String, dynamic>;
       expect(manifest['target'], 'wasm');
       expect(manifest['artifactDigest'], isA<String>());
       final generation = manifest['generation'] as String;
@@ -100,9 +96,8 @@ void main() {
         ]),
       );
 
-      final check = await DwiBuilder(project.config().copyWith(
-        target: 'wasm',
-      )).check();
+      final check = await DwiBuilder(project.config().copyWith(target: 'wasm'))
+          .check();
       expect(check.ok, isTrue, reason: check.issues.join('\n'));
 
       final second = await DwiBuilder(wasmConfig).build();
@@ -110,12 +105,10 @@ void main() {
       expect(second.cacheHit, isTrue);
 
       // A missing companion must fail the check instead of being ignored.
-      File(
-        p.join(project.root.path, 'web/dwi/gen-$generation/worker.mjs'),
-      ).deleteSync();
-      final broken = await DwiBuilder(project.config().copyWith(
-        target: 'wasm',
-      )).check();
+      File(p.join(project.root.path, 'web/dwi/gen-$generation/worker.mjs'))
+          .deleteSync();
+      final broken = await DwiBuilder(project.config().copyWith(target: 'wasm'))
+          .check();
       expect(broken.ok, isFalse);
       expect(broken.issues.join('\n'), contains('artefact'));
 
@@ -137,7 +130,8 @@ void main() {
       final oldEntry = entry.readAsStringSync();
       final oldGeneration =
           (jsonDecode(project.read('.dwi/worker_manifest.json'))
-              as Map<String, dynamic>)['generation'] as String;
+                  as Map<String, dynamic>)['generation']
+              as String;
 
       project.write(
         'lib/tasks.dart',
@@ -166,14 +160,14 @@ void main() {
       expect(rebuilt.compiled, isTrue);
       final newGeneration =
           (jsonDecode(project.read('.dwi/worker_manifest.json'))
-              as Map<String, dynamic>)['generation'] as String;
+                  as Map<String, dynamic>)['generation']
+              as String;
       expect(newGeneration, isNot(oldGeneration));
       expect(entry.readAsStringSync(), contains(newGeneration));
       expect(project.exists('web/dwi/gen-$newGeneration/worker.wasm'), isTrue);
       expect(project.exists('web/dwi/gen-$oldGeneration/worker.wasm'), isTrue);
-      final check = await DwiBuilder(
-        project.config().copyWith(target: 'wasm'),
-      ).check();
+      final check = await DwiBuilder(project.config().copyWith(target: 'wasm'))
+          .check();
       expect(check.ok, isTrue, reason: check.issues.join('\n'));
     },
     timeout: const Timeout(Duration(minutes: 5)),
@@ -207,56 +201,103 @@ void main() {
       // The entry already points at the complete new generation, but the
       // manifest was not written. check must reject that state.
       expect(entry.readAsStringSync(), isNot(oldEntry));
-      final stale = await DwiBuilder(
-        project.config().copyWith(target: 'wasm'),
-      ).check();
+      final stale = await DwiBuilder(project.config().copyWith(target: 'wasm'))
+          .check();
       expect(stale.ok, isFalse);
 
       final recovered = await DwiBuilder(config).build();
       expect(recovered.compiled, isTrue);
-      final check = await DwiBuilder(
-        project.config().copyWith(target: 'wasm'),
-      ).check();
+      final check = await DwiBuilder(project.config().copyWith(target: 'wasm'))
+          .check();
       expect(check.ok, isTrue, reason: check.issues.join('\n'));
     },
     timeout: const Timeout(Duration(minutes: 5)),
   );
 
-  test(
-    'retains the current and previous generation and prunes older ones',
-    () async {
-      project.write('lib/tasks.dart', simpleTasks);
-      final config = project.config(compile: true).copyWith(target: 'wasm');
-      final first = await DwiBuilder(config).build();
-      final genA =
-          (jsonDecode(project.read('.dwi/worker_manifest.json'))
-              as Map<String, dynamic>)['generation'] as String;
+  test('retains every generation across A, B and C builds', () async {
+    project.write('lib/tasks.dart', simpleTasks);
+    final config = project.config(compile: true).copyWith(target: 'wasm');
+    final generations = <String>[];
 
-      project.write(
-        'lib/tasks.dart',
-        simpleTasks.replaceAll('value * 2', 'value * 6'),
+    Future<void> buildVariant(String replacement) async {
+      if (replacement.isNotEmpty) {
+        project.write(
+          'lib/tasks.dart',
+          simpleTasks.replaceAll('value * 2', replacement),
+        );
+      }
+      final result = await DwiBuilder(config).build();
+      expect(result.hash, isNotEmpty);
+      generations.add(
+        (jsonDecode(project.read('.dwi/worker_manifest.json'))
+                as Map<String, dynamic>)['generation']
+            as String,
       );
-      final second = await DwiBuilder(config).build();
-      final genB =
-          (jsonDecode(project.read('.dwi/worker_manifest.json'))
-              as Map<String, dynamic>)['generation'] as String;
+    }
 
-      project.write(
-        'lib/tasks.dart',
-        simpleTasks.replaceAll('value * 2', 'value * 7'),
+    await buildVariant('');
+    await buildVariant('value * 6');
+    await buildVariant('value * 7');
+    await buildVariant('value * 8');
+
+    expect(generations.toSet(), hasLength(4));
+    // A cached bootstrap can still name any generation the project served,
+    // so every complete generation stays on disk (ADR-018).
+    for (final generation in generations) {
+      expect(
+        project.exists('web/dwi/gen-$generation/worker.wasm'),
+        isTrue,
+        reason: 'generation $generation was removed',
       );
-      final third = await DwiBuilder(config).build();
-      final genC =
-          (jsonDecode(project.read('.dwi/worker_manifest.json'))
-              as Map<String, dynamic>)['generation'] as String;
+      expect(
+        project.exists('web/dwi/gen-$generation/worker.mjs'),
+        isTrue,
+        reason: 'generation $generation was removed',
+      );
+    }
+    final entry = project.read('web/dwi/worker.boot.mjs');
+    expect(entry, contains(generations.last));
+    for (final generation in generations.take(3)) {
+      expect(entry, isNot(contains(generation)));
+    }
+    final check = await DwiBuilder(project.config().copyWith(target: 'wasm'))
+        .check();
+    expect(check.ok, isTrue, reason: check.issues.join('\n'));
+  }, timeout: const Timeout(Duration(minutes: 5)));
 
-      expect({first.hash, second.hash, third.hash}, hasLength(3));
-      expect(project.exists('web/dwi/gen-$genA'), isFalse);
-      expect(project.exists('web/dwi/gen-$genB/worker.wasm'), isTrue);
-      expect(project.exists('web/dwi/gen-$genC/worker.wasm'), isTrue);
-    },
-    timeout: const Timeout(Duration(minutes: 5)),
-  );
+  test('rebuilding an existing content hash reuses its generation', () async {
+    project.write('lib/tasks.dart', simpleTasks);
+    final config = project.config(compile: true).copyWith(target: 'wasm');
+    await DwiBuilder(config).build();
+    final generationA =
+        (jsonDecode(project.read('.dwi/worker_manifest.json'))
+                as Map<String, dynamic>)['generation']
+            as String;
+
+    project.write(
+      'lib/tasks.dart',
+      simpleTasks.replaceAll('value * 2', 'value * 9'),
+    );
+    await DwiBuilder(config).build();
+    final generationB =
+        (jsonDecode(project.read('.dwi/worker_manifest.json'))
+                as Map<String, dynamic>)['generation']
+            as String;
+
+    // Revert to the earlier content: its generation is rebuilt, not
+    // duplicated, and both generations remain available.
+    project.write('lib/tasks.dart', simpleTasks);
+    await DwiBuilder(config).build();
+    final generations = Directory(p.join(project.root.path, 'web/dwi'))
+        .listSync()
+        .whereType<Directory>()
+        .map((entity) => p.basename(entity.path))
+        .toSet();
+    expect(generations, <String>{'gen-$generationA', 'gen-$generationB'});
+    final check = await DwiBuilder(project.config().copyWith(target: 'wasm'))
+        .check();
+    expect(check.ok, isTrue, reason: check.issues.join('\n'));
+  }, timeout: const Timeout(Duration(minutes: 5)));
 
   test(
     'a corrupt module or an interrupted temp directory is handled',
@@ -266,37 +307,74 @@ void main() {
       final first = await DwiBuilder(config).build();
       final generation =
           (jsonDecode(project.read('.dwi/worker_manifest.json'))
-              as Map<String, dynamic>)['generation'] as String;
+                  as Map<String, dynamic>)['generation']
+              as String;
 
       // Simulate an interrupted publication from an earlier process.
-      Directory(
+      final leftover = Directory(
         p.join(project.root.path, 'web/dwi/.dwi-wasm-leftover.tmp'),
-      ).createSync(recursive: true);
+      )..createSync(recursive: true);
 
-      File(
-        p.join(project.root.path, 'web/dwi/gen-$generation/worker.wasm'),
-      ).writeAsBytesSync(<int>[0, 1, 2]);
+      File(p.join(project.root.path, 'web/dwi/gen-$generation/worker.wasm'))
+          .writeAsBytesSync(<int>[0, 1, 2]);
       final corrupt = await DwiBuilder(
         project.config().copyWith(target: 'wasm'),
       ).check();
       expect(corrupt.ok, isFalse);
       expect(corrupt.issues.join('\n'), contains('artefact'));
 
-      // A rebuild repairs the generation; clean removes the leftover temp dir.
+      // A rebuild repairs the generation and removes the abandoned temporary
+      // directory; it never removes a published generation.
       await DwiBuilder(config).build();
+      expect(leftover.existsSync(), isFalse);
+      expect(project.exists('web/dwi/gen-$generation/worker.wasm'), isTrue);
       expect(
-        (await DwiBuilder(project.config().copyWith(target: 'wasm')).check())
-            .ok,
+        (await DwiBuilder(
+          project.config().copyWith(target: 'wasm'),
+        ).check()).ok,
         isTrue,
       );
       await DwiBuilder(project.config().copyWith(target: 'wasm')).clean();
       expect(
-        Directory(
-          p.join(project.root.path, 'web/dwi/.dwi-wasm-leftover.tmp'),
-        ).existsSync(),
+        Directory(p.join(project.root.path, 'web/dwi/gen-$generation'))
+            .existsSync(),
         isFalse,
       );
       expect(first.hash, isNotEmpty);
+    },
+    timeout: const Timeout(Duration(minutes: 5)),
+  );
+
+  test(
+    'a missing current generation is reported by check and rebuilt',
+    () async {
+      project.write('lib/tasks.dart', simpleTasks);
+      final config = project.config(compile: true).copyWith(target: 'wasm');
+      await DwiBuilder(config).build();
+      final generation =
+          (jsonDecode(project.read('.dwi/worker_manifest.json'))
+                  as Map<String, dynamic>)['generation']
+              as String;
+
+      final directory = Directory(
+        p.join(project.root.path, 'web/dwi/gen-$generation'),
+      );
+      directory.deleteSync(recursive: true);
+
+      final missing = await DwiBuilder(
+        project.config().copyWith(target: 'wasm'),
+      ).check();
+      expect(missing.ok, isFalse);
+      expect(missing.issues.join('\n'), contains('artefact'));
+
+      await DwiBuilder(config).build();
+      expect(project.exists('web/dwi/gen-$generation/worker.wasm'), isTrue);
+      expect(
+        (await DwiBuilder(
+          project.config().copyWith(target: 'wasm'),
+        ).check()).ok,
+        isTrue,
+      );
     },
     timeout: const Timeout(Duration(minutes: 5)),
   );
@@ -363,10 +441,7 @@ void main() {
     expect(project.read('.dwi/worker_manifest.json'), compiled);
     final check = await DwiBuilder(project.config()).check();
     expect(check.ok, isFalse);
-    expect(
-      check.issues.join('\n'),
-      contains('Manifest hash does not match'),
-    );
+    expect(check.issues.join('\n'), contains('Manifest hash does not match'));
   }, timeout: const Timeout(Duration(minutes: 2)));
 
   test('force recompiles an unchanged worker', () async {
@@ -424,10 +499,7 @@ void main() {
 
     final rebuilt = await DwiBuilder(project.config(compile: true)).build();
     expect(rebuilt.compiled, isTrue);
-    expect(
-      (await DwiBuilder(project.config()).check()).ok,
-      isTrue,
-    );
+    expect((await DwiBuilder(project.config()).check()).ok, isTrue);
   }, timeout: const Timeout(Duration(minutes: 3)));
 
   test('a failed compilation leaves the previous artefact intact', () async {
@@ -523,8 +595,9 @@ void main() {
       expect(content, contains('dart2js'));
       expect(leftoverTemporaryFiles(project.root), isEmpty);
 
-      final manifest = jsonDecode(project.read('.dwi/worker_manifest.json'))
-          as Map<String, Object?>;
+      final manifest = jsonDecode(
+        project.read('.dwi/worker_manifest.json'),
+      ) as Map<String, Object?>;
       expect(manifest['artifactDigest'], await fileDigest(built.artifactPath));
 
       final check = await DwiBuilder(project.config()).check();
@@ -534,50 +607,45 @@ void main() {
     timeout: const Timeout(Duration(minutes: 3)),
   );
 
-  test(
-    'overlapping builds publish one consistent set of outputs',
-    () async {
-      project.write('lib/tasks.dart', simpleTasks);
+  test('overlapping builds publish one consistent set of outputs', () async {
+    project.write('lib/tasks.dart', simpleTasks);
 
-      final results = await Future.wait(<Future<DwiBuildResult>>[
-        DwiBuilder(project.config(compile: true)).build(),
-        DwiBuilder(project.config(compile: true)).build(),
-        DwiBuilder(project.config(compile: true)).build(),
-      ]);
+    final results = await Future.wait(<Future<DwiBuildResult>>[
+      DwiBuilder(project.config(compile: true)).build(),
+      DwiBuilder(project.config(compile: true)).build(),
+      DwiBuilder(project.config(compile: true)).build(),
+    ]);
 
-      // Serialized builds: the first compiles and the rest reuse its outputs.
-      expect(results.where((result) => result.compiled).length, 1);
-      final hashes = results.map((result) => result.hash).toSet();
-      expect(hashes, hasLength(1));
+    // Serialized builds: the first compiles and the rest reuse its outputs.
+    expect(results.where((result) => result.compiled).length, 1);
+    final hashes = results.map((result) => result.hash).toSet();
+    expect(hashes, hasLength(1));
 
-      final check = await DwiBuilder(project.config()).check();
-      expect(check.ok, isTrue, reason: check.issues.join('\n'));
+    final check = await DwiBuilder(project.config()).check();
+    expect(check.ok, isTrue, reason: check.issues.join('\n'));
 
-      final manifest = jsonDecode(project.read('.dwi/worker_manifest.json'))
-          as Map<String, Object?>;
-      expect(manifest['hash'], check.hash);
-      expect(
-        manifest['artifactDigest'],
-        await fileDigest(project.config().absoluteArtifact),
-      );
+    final manifest = jsonDecode(
+      project.read('.dwi/worker_manifest.json'),
+    ) as Map<String, Object?>;
+    expect(manifest['hash'], check.hash);
+    expect(
+      manifest['artifactDigest'],
+      await fileDigest(project.config().absoluteArtifact),
+    );
 
-      final proxies = project.read('lib/dwi_tasks.g.dart');
-      final worker = project.read('.dwi/generated_worker.dart');
-      for (final name in <String>['twice', 'hello']) {
-        expect(proxies, contains(name));
-        expect(worker, contains(name));
-      }
+    final proxies = project.read('lib/dwi_tasks.g.dart');
+    final worker = project.read('.dwi/generated_worker.dart');
+    for (final name in <String>['twice', 'hello']) {
+      expect(proxies, contains(name));
+      expect(worker, contains(name));
+    }
 
-      expect(leftoverTemporaryFiles(project.root), isEmpty);
-    },
-    timeout: const Timeout(Duration(minutes: 3)),
-  );
+    expect(leftoverTemporaryFiles(project.root), isEmpty);
+  }, timeout: const Timeout(Duration(minutes: 3)));
 
-  test(
-    'editing a dependency of the task file invalidates the cache',
-    () async {
-      project.write('lib/helper.dart', 'int offset() => 1;\n');
-      project.write('lib/tasks.dart', r'''
+  test('editing a dependency of the task file invalidates the cache', () async {
+    project.write('lib/helper.dart', 'int offset() => 1;\n');
+    project.write('lib/tasks.dart', r'''
 import 'helper.dart';
 import 'package:dwi_annotations/dwi_annotations.dart';
 
@@ -585,36 +653,33 @@ import 'package:dwi_annotations/dwi_annotations.dart';
 int shifted(int value) => value + offset();
 ''');
 
-      final first = await DwiBuilder(project.config(compile: true)).build();
-      expect(first.compiled, isTrue);
+    final first = await DwiBuilder(project.config(compile: true)).build();
+    expect(first.compiled, isTrue);
 
-      final hit = await DwiBuilder(project.config(compile: true)).build();
-      expect(hit.cacheHit, isTrue);
-      expect(hit.compiled, isFalse);
+    final hit = await DwiBuilder(project.config(compile: true)).build();
+    expect(hit.cacheHit, isTrue);
+    expect(hit.compiled, isFalse);
 
-      project.write('lib/helper.dart', 'int offset() => 2;\n');
-      final stale = await DwiBuilder(project.config()).check();
-      expect(stale.ok, isFalse);
+    project.write('lib/helper.dart', 'int offset() => 2;\n');
+    final stale = await DwiBuilder(project.config()).check();
+    expect(stale.ok, isFalse);
 
-      final rebuilt = await DwiBuilder(project.config(compile: true)).build();
-      expect(rebuilt.compiled, isTrue);
-      expect(rebuilt.hash, isNot(first.hash));
+    final rebuilt = await DwiBuilder(project.config(compile: true)).build();
+    expect(rebuilt.compiled, isTrue);
+    expect(rebuilt.hash, isNot(first.hash));
 
-      final after = await DwiBuilder(project.config()).check();
-      expect(after.ok, isTrue, reason: after.issues.join('\n'));
-    },
-    timeout: const Timeout(Duration(minutes: 3)),
-  );
+    final after = await DwiBuilder(project.config()).check();
+    expect(after.ok, isTrue, reason: after.issues.join('\n'));
+  }, timeout: const Timeout(Duration(minutes: 3)));
 
-  test('package-resolution changes invalidate the cache', () async {    project.write('lib/tasks.dart', simpleTasks);
+  test('package-resolution changes invalidate the cache', () async {
+    project.write('lib/tasks.dart', simpleTasks);
     await DwiBuilder(project.config(compile: true)).build();
 
     final packageConfig = File(
       p.join(project.root.path, '.dart_tool', 'package_config.json'),
     );
-    packageConfig.writeAsStringSync(
-      '${packageConfig.readAsStringSync()}\n',
-    );
+    packageConfig.writeAsStringSync('${packageConfig.readAsStringSync()}\n');
 
     final check = await DwiBuilder(project.config()).check();
     expect(check.ok, isFalse);

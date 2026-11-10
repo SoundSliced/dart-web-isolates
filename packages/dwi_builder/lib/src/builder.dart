@@ -147,7 +147,6 @@ class DwiBuilder {
     if (cfg.compile) {
       final existing = await _readManifest(cfg.absoluteManifest);
       final generation = hash;
-      final existingGeneration = existing?['generation'];
       final currentDigests = await _artifactDigests(cfg, generation);
       cacheHit =
           !cfg.force &&
@@ -158,6 +157,13 @@ class DwiBuilder {
           (!cfg.isWasm || existing['generation'] == generation) &&
           _manifestFilesMatch(existing, currentDigests);
       if (!cacheHit) {
+        if (cfg.isWasm) {
+          // Builds are serialized by the project lock, so any temporary wasm
+          // directory still present belongs to an interrupted build. It is
+          // never referenced by an entry and is safe to remove. Published
+          // `gen-*` directories are never removed by a build (ADR-018).
+          await _removeAbandonedTemporaryDirectories(cfg);
+        }
         await compileWorker(cfg, generation: generation);
         compiled = true;
       }
@@ -180,13 +186,6 @@ class DwiBuilder {
           artifactFiles: artifactDigests,
         ),
       );
-      if (cfg.isWasm) {
-        await _pruneGenerations(cfg, <String>{
-          generation,
-          if (existingGeneration is String && existingGeneration.isNotEmpty)
-            existingGeneration,
-        });
-      }
     }
 
     stopwatch.stop();
@@ -258,8 +257,9 @@ class DwiBuilder {
 
     final manifest = await _readManifest(cfg.absoluteManifest);
     final generation = cfg.isWasm ? (manifest?['generation']) : null;
-    final digestGeneration =
-        generation is String && generation.isNotEmpty ? generation : hash;
+    final digestGeneration = generation is String && generation.isNotEmpty
+        ? generation
+        : hash;
     final artifactDigests = await _artifactDigests(cfg, digestGeneration);
     final artifactExists = artifactDigests.values.every(
       (digest) => digest.isNotEmpty,
@@ -279,8 +279,7 @@ class DwiBuilder {
           '${cfg.target}.',
         );
       }
-      if (cfg.isWasm &&
-          (generation is! String || generation.isEmpty)) {
+      if (cfg.isWasm && (generation is! String || generation.isEmpty)) {
         issues.add('Manifest does not record the Wasm generation.');
       }
       final digest = manifest['artifactDigest'];
@@ -349,25 +348,25 @@ class DwiBuilder {
     }
   }
 
-  /// Removes generation directories not in [keep].
+  /// Removes `.dwi-wasm-*` directories left by an interrupted build.
   ///
-  /// The current and the immediately previous generation are retained so a
-  /// worker that started from the old entry can still load its files while a
-  /// page is switching over.
-  Future<void> _pruneGenerations(
+  /// A build only reaches this point while holding the project lock, so any
+  /// temporary directory present belongs to an earlier interrupted build and is
+  /// never referenced by a published entry. Published generations (`gen-*`) are
+  /// never removed here: a cached bootstrap can still name them (ADR-018).
+  Future<void> _removeAbandonedTemporaryDirectories(
     DwiBuildConfig config,
-    Set<String> keep,
   ) async {
     final directory = Directory(config.absoluteArtifactDir);
     if (!await directory.exists()) return;
     await for (final entity in directory.list(followLinks: false)) {
       final name = p.basename(entity.path);
-      if (entity is! Directory || !name.startsWith('gen-')) continue;
-      if (keep.contains(name.substring('gen-'.length))) continue;
+      if (entity is! Directory || !name.startsWith('.dwi-wasm-')) continue;
       try {
         await entity.delete(recursive: true);
       } on FileSystemException {
-        // Best effort: an orphan generation is inert and retried next build.
+        // Best effort: an abandoned temporary directory is inert and retried
+        // on the next build.
       }
     }
   }
@@ -508,10 +507,7 @@ final Map<String, Future<void>> _buildQueues = <String, Future<void>>{};
 ///   are serialized too. The operating system releases it if the process dies,
 ///   and a stale lock file on disk is inert: only the held lock, never its
 ///   presence, serializes builds.
-Future<T> _withBuildLock<T>(
-  DwiBuildConfig config,
-  Future<T> Function() body,
-) {
+Future<T> _withBuildLock<T>(DwiBuildConfig config, Future<T> Function() body) {
   final key = config.absoluteProjectRoot;
   final previous = _buildQueues[key];
   final released = Completer<void>();
