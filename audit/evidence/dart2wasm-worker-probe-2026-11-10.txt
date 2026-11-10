@@ -1,0 +1,150 @@
+DWI — dart2wasm worker feasibility probe (2026-11-10)
+
+Question
+  Can a DWI worker be compiled with dart2wasm, packaged as a browser worker,
+  loaded without app-specific handwritten JavaScript, and exchange a versioned
+  request and a typed response?
+
+Environment
+  macOS 26.5.1 arm64 (Apple M2)
+  Dart SDK 3.13.5 (stable) (2026-09-29), the SDK bundled with Flutter 3.47.6
+  Google Chrome 157.0.8103.50
+  Microsoft Edge 157.0.4341.42
+  Mozilla Firefox 159.0.1
+  Safari 26.5
+  Each engine was driven independently and sequentially; no run is copied into
+  another engine's column.
+
+Probe (disposable, in the session scratch directory; not added to the repo)
+  worker.dart        dart2wasm entrypoint using dart:js_interop(_unsafe):
+                     posts {v:1,kind:'ready'}, listens for 'message', replies
+                     {v:1,id,...} with typed results, throws on request, and
+                     can throw outside the handler.
+  worker_boot.mjs    generic module-worker bootstrap (no application logic):
+                     reads ?loader= and ?wasm= from its own URL, imports the
+                     loader, fetches the module, compileStreaming + instantiate,
+                     invokeMain, and reports startup-error / worker-error /
+                     unhandledrejection envelopes.
+  index.html         harness: ready handshake; v1 double, typed map with a
+                     Uint8List, wrong protocol version, caught throw, follow-up
+                     request, uncaught throw, post-uncaught request, and three
+                     startup-failure cases.
+  server.dart        serves web/ at / and /sub/app/ from one process;
+                     .wasm -> application/wasm, .mjs/.js -> text/javascript,
+                     .html -> text/html, plus /badmime/ serving .wasm as
+                     application/octet-stream.
+
+Compiler command
+  dart compile wasm -o web/worker.wasm worker.dart
+  stdout: Generated wasm module 'web/worker.wasm', and JS init file
+          'web/worker.mjs'.
+
+Emitted files (this probe)
+  worker.wasm         51,410 B  runtime module (required)
+  worker.mjs          11,059 B  loader (required)
+  worker.wasm.map     68,216 B  source map (debug only; --no-source-maps drops it)
+  worker.support.js      200 B  WasmGC feature-detection snippet; the module
+                                loader never fetches it (server log: zero
+                                requests for worker.support.js)
+  A worker cannot be launched from these two files alone: the emitted .mjs only
+  exports compile/compileStreaming and instantiate; it never invokes main. A
+  generic bootstrap module worker (~60 lines, no app logic) is required. This
+  is a packaging requirement, not an application-specific shim.
+
+Runtime requirements observed
+  - Module worker: new Worker(url, {type: 'module'}); the loader uses `export`
+    and the bootstrap uses a static import.
+  - .wasm must be served as application/wasm for compileStreaming. Serving the
+    same bytes as application/octet-stream fails with an engine-specific
+    TypeError (messages below).
+  - .mjs / the bootstrap must be served as a JavaScript MIME type.
+  - All URLs resolve relative to the worker script URL. / and /sub/app/ need no
+    configuration change: the same page, loader, module and bootstrap ran at
+    both prefixes with byte-identical artifacts.
+  - No COOP/COEP, SharedArrayBuffer or cross-origin isolation is needed for
+    this single-instance-per-worker path.
+
+Versioned request and typed response (all four engines, both prefixes)
+  ready      -> {v:1, kind:'ready', backend:'dart2wasm'}
+  {v:1,id:'r1',kind:'double',input:21} -> {v:1,id:'r1',ok:true,value:42}
+  {v:1,id:'r2',kind:'typed'} -> {ok:true,value:{text:'héllo wasm',count:3,
+                                 bytes:<Uint8Array [1,2,3,255]>}}
+              The bytes arrived as a real Uint8Array in every engine.
+  {v:2,id:'r3',...} -> {ok:false,error:{code:'protocol-version',
+                          message:'unsupported protocol version 2'}}
+
+Error reporting (all four engines, both prefixes)
+  Caught task failure after a valid response:
+    {v:1,id:'r4',ok:false,error:{code:'task-threw',
+        message:'Bad state: deliberate worker failure',
+        stack:<engine-specific>}}
+    Chrome/Edge: "at M (…worker.wasm:wasm-function[149]:0x71a4)" lines and a
+                 loader frame.
+    Firefox:     "M.@…worker.wasm:wasm-function[149]:0x71a4" lines.
+    Safari:      "@M:wasm-function[149]" only; no URL or byte offset.
+  A follow-up {kind:'double'} then returned 10, so a typed error does not kill
+  the worker.
+
+  Uncaught failure inside the Wasm instance reaches the host as the worker
+  'error' event, with materially different detail per engine:
+    Chrome/Edge: "Uncaught [object WebAssembly.Exception]" (filename = bootstrap,
+                 lineno 0)
+    Firefox:     "uncaught exception: [object WebAssembly.Exception]"
+                 (empty filename, lineno 0)
+    Safari:      "Script error." (empty filename, lineno 0) — opaque, gives no
+                 failure identity at all.
+  After the uncaught failure a further request returned 14 in every engine.
+  Consequence: the observable uncaught-error channel is too coarse to be the
+  DWI failure contract. Every failure that must reach the caller has to be
+  caught inside the Dart runtime and encoded in a typed error envelope; the
+  worker 'error' event is a last-resort signal only.
+
+Startup failures (all four engines, both prefixes)
+  Missing .wasm (404):
+    Chrome/Edge  "wasm fetch failed: 404 Not Found (./missing.wasm)" + stack
+    Firefox      "@…worker_boot.mjs?wasm=./missing.wasm:46:11"
+    Safari       "module code@…worker_boot.mjs:46:20"
+  Wrong .wasm MIME (application/octet-stream):
+    Chrome/Edge  "TypeError: Incorrect response MIME type. Expected
+                  'application/wasm'."
+    Firefox      "TypeError: WebAssembly: Response has unsupported MIME type
+                  'application/octet-stream' expected 'application/wasm'"
+    Safari       "TypeError: Unexpected response MIME type. Expected
+                  'application/wasm'"
+  Missing loader (.mjs):
+    Chrome/Edge  "TypeError: Failed to fetch dynamically imported module: …"
+    Firefox      "TypeError: error loading dynamically imported module: …"
+    Safari       "TypeError: Importing a module script failed." (no URL)
+  All three produced a typed startup-error envelope in every engine. The host
+  can classify the failure from the envelope phase plus the HTTP/MIME condition
+  it controls; it cannot rely on message text being uniform.
+
+Server log (probe, excerpt)
+  200 GET /worker_boot.mjs (text/javascript; charset=utf-8, 1666B)
+  200 GET /worker.mjs      (text/javascript; charset=utf-8, 11059B)
+  200 GET /worker.wasm     (application/wasm, 51410B)
+  200 GET /badmime/worker.wasm (application/octet-stream, 51410B)
+  404 GET /missing.wasm
+  404 GET /missing.mjs
+  …and the same sequence under /sub/app/.
+  No request for worker.support.js or worker.wasm.map.
+
+Conclusions
+  1. dart2wasm worker output runs end to end in Chrome, Edge, Firefox and
+     Safari, at the site root and under a sub-path, with no COOP/COEP headers.
+  2. The runtime artefact set is worker.wasm + worker.mjs + a generic bootstrap
+     module worker; the source map and support.js are not fetched at runtime.
+  3. application/wasm serving is mandatory; a wrong MIME is a typed startup
+     failure, not a silent fallback.
+  4. Versioned envelopes and typed replies survive the boundary in all engines.
+  5. Caught failures produce useful stacks except in Safari, where Wasm frames
+     have no URL/offset. Uncaught Wasm failures are opaque in Safari ("Script
+     error.") and coarse everywhere; DWI must encode failures in-band.
+  6. This is a capability probe, not a DWI worker acceptance test: it does not
+     exercise DWI's protocol, channels, transferables, cancellation, heartbeat
+     or lifecycle. Those stay open until the backend integration gates run.
+
+Not probed
+  Flutter's wasm runtime inside a worker; deferred modules; Wasm threads;
+  cross-origin asset hosting and CORS; CSP-restricted pages; byte-level
+  performance of this backend.
