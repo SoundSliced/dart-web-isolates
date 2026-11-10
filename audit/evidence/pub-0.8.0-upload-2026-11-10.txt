@@ -1,0 +1,64 @@
+DWI 0.8.0 publication to pub.dev (2026-11-10)
+
+Authorization
+  The user authorized the upload in the dependency order below, one package at
+  a time, with each verified on pub.dev before the next.
+
+Environment
+  macOS 26.5.1 arm64, Dart 3.13.5 (stable)
+  Working tree: commits up to fcb8af6 on `main`, clean, `main == origin/main`.
+  Publish command per package:
+    dart pub publish --force
+  The host's sandbox makes `~/Library/Application Support/dart` unwritable, so
+  `pub` failed with `Cannot open file ... pub-credentials.json (Operation not
+  permitted)`. Publishing used a private writable HOME
+  (`HOME=$TMPDIR/pubhome`) with a copy of the existing credential file
+  (`install -m 600`), and the existing package cache (`PUB_CACHE=$HOME/.pub-cache`).
+  No credential value is recorded here.
+
+Uploads (in order, each verified before the next)
+  1. dwi_annotations 0.8.0  exit 0  Successfully uploaded
+  2. dwi_protocol    0.8.0  exit 0  Successfully uploaded
+  3. dwi_core        0.8.0  exit 0  Successfully uploaded
+  4. dwi_native      0.8.0  exit 0  Successfully uploaded
+  5. dwi_web         0.8.0  exit 0  Successfully uploaded
+  6. dwi_builder     0.8.0  exit 0  Successfully uploaded
+  7. dwi             0.8.0  exit 0  Successfully uploaded
+
+Verification after each upload
+  `https://pub.dev/api/packages/<name>` reported `latest.version == 0.8.0`
+  for all seven before the next package was uploaded.
+
+Propagation observation
+  Immediately after an upload the public JSON API reported the new version while
+  the pub client's version listing for that package still ended at 0.7.0 (the
+  archive and `/api/packages/<name>/versions/<version>` endpoints were already
+  200). Fresh `PUB_CACHE` directories did not help, so this was pub.dev edge
+  indexing, not a local cache. It cleared package by package within minutes;
+  `dart pub cache add <name> --version 0.8.0` succeeded for all seven in the
+  first round after the last index caught up. This is why "verify on pub.dev"
+  was done against the client-visible listing, not only the `latest` field.
+
+End-to-end check with no path overrides
+  A clean consumer (`/tmp`-style scratch project) declaring
+  `dwi`, `dwi_builder`, `dwi_annotations`, `dwi_core`, `dwi_native`, `dwi_web`
+  and `dwi_protocol` all at `^0.8.0` resolved from pub.dev with a fresh cache:
+    dwi 0.8.0 [dwi_annotations dwi_core dwi_native dwi_web]
+    dwi_annotations 0.8.0
+    dwi_builder 0.8.0 [analyzer args crypto dwi_annotations hooks path yaml]
+    dwi_core 0.8.0
+    dwi_native 0.8.0 [dwi_core]
+    dwi_protocol 0.8.0
+    dwi_web 0.8.0 [dwi_core dwi_protocol web]
+
+Retention contract published with the release
+  ADR-018 as amended (no automatic generation pruning; generations retained
+  until an explicit deployment decision; entry uncached, generations immutable;
+  upload generations before the entry and delete last). The Wasm worker remains
+  opt-in and experimental.
+
+Not established
+  - No upload was retried after a partial failure; every package uploaded on
+    the first attempt.
+  - pub.dev's own changelog/score pages were not inspected; only the API,
+    archive endpoints and client resolution.

@@ -1,7 +1,8 @@
 # DWI 0.8.0 — release review (prepared, not published)
 
-Status: **prepared on 2026-11-10 from `main`; not uploaded to pub.dev.**
-Publishing requires separate authorization. This release adds the opt-in
+Status: **published to pub.dev on 2026-11-10** from `main` at `fcb8af6`, in the
+upload order below, with each package verified before the next
+(`audit/evidence/pub-0.8.0-upload-2026-11-10.txt`). This release adds the opt-in
 dart2wasm worker backend (ADR-018); the dart2js worker remains the default and
 its contracts are unchanged.
 
@@ -135,8 +136,17 @@ sizes: `dwi_annotations` 3 KB, `dwi_protocol` 5 KB, `dwi_core` 15 KB,
 The only notices were hints that `pubspec_overrides.yaml` (present for local
 path development in `dwi`, `dwi_builder`, `dwi_native` and `dwi_web`) overrides
 non-dev dependencies. That is expected on this checkout; the published
-constraints are `^0.8.0` and uploads must follow the order above. No archive was
-uploaded. Publishing requires separate authorization.
+constraints are `^0.8.0`.
+
+## Publication (2026-11-10)
+
+All seven packages were uploaded in the order above, each verified on pub.dev
+before the next. A clean consumer declaring every package at `^0.8.0` with no
+path overrides resolves the whole graph from pub.dev (`dwi` 0.8.0 depends on
+`dwi_annotations`, `dwi_core`, `dwi_native` and `dwi_web`; `dwi_web` on
+`dwi_core` and `dwi_protocol`). pub.dev edge indexing lagged the upload by
+minutes per package; the public API listed the new version before the pub client
+did. Details: `audit/evidence/pub-0.8.0-upload-2026-11-10.txt`.
 
 ## Compatibility and limits
 
