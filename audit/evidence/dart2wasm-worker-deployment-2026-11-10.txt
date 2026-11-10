@@ -1,0 +1,87 @@
+DWI — dart2wasm worker deployment constraints (2026-11-10)
+
+Scope
+  The ADR-018 content-addressed Wasm worker served under different deployment
+  configurations. Host: dart2js application. Worker: dart2wasm, current
+  generation layout (`dwi/worker.boot.mjs` + `dwi/gen-<hash>/`).
+
+Environment
+  macOS 26.5.1 arm64, Dart 3.13.5
+  Chrome 157.0.8103.50, Edge 157.0.4341.42, Firefox 159.0.1, Safari 26.5
+  Engines run sequentially. A scratch server set the MIME, CSP, CORS and
+  missing-file conditions per case; the same built artefacts were served at
+  `/` and `/sub/app/`.
+
+Baseline and JS control
+  Wasm at `/` and `/sub/app/`: OK:42 in all four engines.
+  Dart2js worker, same page: OK:42 in all four engines.
+  The generation layout therefore loads unchanged under a non-root base path.
+
+MIME
+  Correct: `.wasm` -> application/wasm, `.mjs` -> text/javascript. All pass.
+  Wrong `.wasm` MIME (application/octet-stream):
+    Chrome/Edge  TypeError: Incorrect response MIME type. Expected
+                 'application/wasm'.
+    Firefox      TypeError: WebAssembly: Response has unsupported MIME type
+                 'application/octet-stream' expected 'application/wasm'
+    Safari       TypeError: Unexpected response MIME type. Expected
+                 'application/wasm'
+    Outcome: DwiStartupException in all four.
+  Wrong `.mjs` MIME (text/plain), Chrome: the module worker never starts; the
+    page reports DwiStartupException after the startup deadline. The failure is
+    typed and prompt in outcome, but the message is the startup timeout, not a
+    MIME diagnostic.
+
+Missing and corrupt companions (all four engines)
+  Missing module (404 on worker.wasm): DwiStartupException with the bootstrap's
+    in-band startup error. Firefox and Safari collapse the fetch failure to a
+    loader frame; Chrome/Edge include "wasm fetch failed: 404".
+  Corrupt module (truncated bytes): DwiStartupException with an engine-specific
+    WebAssembly compile/validation error.
+  Missing loader (404 on worker.mjs): DwiStartupException ("Failed to fetch
+    dynamically imported module" in Chrome/Edge; engine-specific elsewhere).
+  Missing entry (404 on worker.boot.mjs): DwiStartupException after the startup
+    deadline ("did not send ready").
+  The typed outcome is common; message text is not. No case fell back to JS or
+  the main thread.
+
+Content-Security-Policy
+  Policy without Wasm permission:
+    default-src 'self'; worker-src 'self'; script-src 'self'
+    Chrome: worker starts, then WebAssembly.compile fails with a CSP
+    violation; page reports DwiStartupException.
+    A CSP that omits 'wasm-unsafe-eval' therefore blocks this backend.
+  Policy with Wasm permission:
+    default-src 'self'; worker-src 'self'; script-src 'self' 'wasm-unsafe-eval'
+    Chrome, Edge, Firefox and Safari: OK:42.
+  Worker blocked entirely:
+    default-src 'self'; worker-src 'none'; script-src 'self'
+    All four engines: DwiStartupException after the startup deadline. The
+    worker is never created, and the failure is typed rather than silent.
+
+Cross-origin
+  Page on origin A, worker entry and generation on origin B (CORS `*` on B):
+    Chrome/Edge  DwiStartupException: SecurityError - Failed to construct
+                 'Worker': Script at <B> cannot be accessed from origin <A>.
+    Firefox/Safari  DwiStartupException after the startup deadline.
+  A module worker script must be same-origin with the page in the measured
+  engines. CORS on the assets does not make a cross-origin worker constructible.
+  Deployment contract: serve the page and the worker artefacts (entry plus
+  `gen-*` directory) from the same origin. Cross-origin asset hosting is not
+  supported by this backend and fails typed.
+
+Conclusions
+  1. Same-origin hosting at `/` and `/sub/app/` works in all four engines.
+  2. `application/wasm` and a JavaScript MIME for `.mjs` are mandatory; wrong
+     values are typed startup failures (one case reports the deadline).
+  3. A CSP must allow `worker-src` for the entry and `'wasm-unsafe-eval'` for
+     Wasm compilation; otherwise startup fails typed.
+  4. The worker entry and its generation must be same-origin with the page;
+     cross-origin workers are rejected by the engines.
+  5. Missing, corrupt or wrong-MIME companions never fall back to JS or the
+     main thread; every case ends in a typed DwiStartupException.
+
+Not measured
+  CDN edge-cache invalidation policies, `Cross-Origin-Resource-Policy` and
+  COEP/COOP combinations, service-worker-cached assets, and subresource
+  integrity on the bootstrap entry.

@@ -409,9 +409,28 @@ run sequentially. Evidence: `audit/evidence/dart2wasm-worker-acceptance-2026-11-
 Engine-specific startup-failure detail is recorded in the evidence file: the
 typed outcome is identical, but message text (and Safari's loader frame) differs
 per engine. A dart2wasm **host** with a dart2wasm worker is **not measured**;
-the host in every row is dart2js. Flutter integration, benchmarks, CORS and CSP
-are not measured.
+the host in every row is dart2js.
 
-The dependency build hook currently emits a dart2js worker regardless of
-`--target`; a Flutter workflow that needs the Wasm backend requires a target
-selection that the hook does not yet have.
+### Deployment constraints (same engines)
+
+Evidence: `audit/evidence/dart2wasm-worker-deployment-2026-11-10.txt`.
+
+| Configuration | Chrome 157 | Edge 157 | Firefox 159 | Safari 26.5 |
+| --- | --- | --- | --- | --- |
+| correct MIME, `/` and `/sub/app/` | pass | pass | pass | pass |
+| dart2js worker control | pass | pass | pass | pass |
+| wrong `.wasm` MIME | typed failure | typed failure | typed failure | typed failure |
+| missing or corrupt module | typed failure | typed failure | typed failure | typed failure |
+| CSP without `'wasm-unsafe-eval'` | typed failure | typed failure | typed failure | typed failure |
+| CSP with `'wasm-unsafe-eval'` | pass | pass | pass | pass |
+| CSP `worker-src 'none'` | typed failure | typed failure | typed failure | typed failure |
+| cross-origin worker entry | typed failure | typed failure | typed failure | typed failure |
+
+`.wasm` must be `application/wasm`, `.mjs` a JavaScript MIME, the worker entry
+and its generation must be same-origin with the page, and a CSP needs
+`worker-src` plus `'wasm-unsafe-eval'`. Non-root bases need no rebuild.
+Missing, wrong-MIME or blocked assets never fall back to JS or the main thread.
+
+The dependency build hook and the CLI now read the same `dwi.yaml` target, so a
+Flutter workflow can request the Wasm backend without the hook replacing it with
+JS. The Flutter dart2wasm-host combination and benchmarks remain unmeasured.

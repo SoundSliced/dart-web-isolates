@@ -85,9 +85,16 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
     `workerBackend: DwiWorkerBackend.wasm`. It is not part of any supported
     release statement. A dart2wasm worker receives JS numbers as `double`
     (generated `int` decoders and meta fields accept integral doubles), and
-    uncaught Wasm failures are coarse, so failures stay in-band. A dart2wasm
-    host with a dart2wasm worker, Flutter hook integration, CORS and CSP are
-    not verified (ADR-018, `audit/evidence/dart2wasm-worker-acceptance-2026-11-10.txt`).
+    uncaught Wasm failures are coarse, so failures stay in-band.
+    Deployment constraints are measured on all four engines: `.wasm` must be
+    served as `application/wasm` and `.mjs` as a JavaScript type; a CSP must
+    allow `worker-src` for the entry and `'wasm-unsafe-eval'` for compilation;
+    and the entry plus its `gen-*` generation must be same-origin with the page
+    (cross-origin workers are rejected). Every unsupported configuration ends
+    in a typed `DwiStartupException`, never a JS/main-thread fallback; message
+    text is engine-specific. A dart2wasm host with a dart2wasm worker and
+    Flutter hook integration are not verified here (ADR-018,
+    `audit/evidence/dart2wasm-worker-deployment-2026-11-10.txt`).
 15. **Runtime compilation is not implemented and is not planned for v0.x.** A
     browser-hosted Dart compiler, CSP `eval` restrictions, size and attack
     surface make it non-viable on current evidence (R013 §4.5).
