@@ -26,3 +26,19 @@ flow. Unknown dynamic functions still cannot be mapped this way.
 The wasm compile succeeded, but execution was not established: the local Node
 21.5 runtime rejected the generated module's Wasm features. No wasm result is
 claimed.
+
+Addendum — dart2wasm identity re-run in Chrome (2026-11-10)
+-----------------------------------------------------------
+The original run compiled Wasm but could not execute it in Node 21.5: that
+runtime rejected the generated module's Wasm features. Re-ran the same probe in
+Chrome 157 through a committed loopback harness:
+
+  $ bash tooling/dwi5_probe/run_static_identity_wasm.sh
+  dart2wasm (Chrome) registered static identity: pass
+
+Observed output: addOne:3 / twice:4
+
+This establishes host-side registered static-function identity on dart2wasm in
+Chrome. It is still not a DWI worker test: the map lookup and the function call
+run on the host, and no worker receives anything. The Wasm worker path is
+separate and remains unverified for this identity mapping.

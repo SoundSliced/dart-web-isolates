@@ -42,7 +42,7 @@ v0.3 unless marked proposed.** No cell claims parity.
 | DWI-2 | long-lived workers, pooled scheduling | handles shipped for native and web JS (Chrome, Safari, Firefox and Edge verified); `Dwi.run` pool unchanged from v0.3 |
 | DWI-3 | port-like messaging | implemented under ADR-014: single-subscriber, named, bounded channels per handle; Chrome, Safari, Firefox and Edge verified |
 | DWI-4 | high `dart:isolate` API similarity | research; increment 1 implemented under ADR-016 (`Dwi.runFresh`, fresh context per call) and increment 2 implemented under ADR-017 (`stopReason`/`stops`, no parity claim) |
-| DWI-5 | compiler-supported arbitrary functions | research complete: no package-only route; compiler/build cooperation required (R016, ADR-019 proposal); no public function API |
+| DWI-5 | compiler-supported arbitrary functions | research; registered static-function subset is a prototype candidate (identity pass on VM, dart2js and a dart2wasm host; no public API and no end-to-end worker test); arbitrary closures still require compiler/build cooperation (R016, ADR-019 proposal) |
 | DWI-6 | SDK-integrated web isolate | upstream proposal only |
 
 ## Never claim

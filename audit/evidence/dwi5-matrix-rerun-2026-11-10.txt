@@ -1,0 +1,86 @@
+DWI-5 six-form matrix — re-run after registered static identity
+Date: 2026-11-10
+Baseline: b2e4ced plus the dart2wasm Chrome addendum in this working tree
+Toolchain: Dart 3.13.7 / Flutter 3.47.9, Chrome 157.0.8103.50, analyzer 14.7.0
+Status: research. No public function API. No compatibility level raised.
+
+Commands rerun
+--------------
+  $ bash tooling/dwi5_probe/run_static_identity.sh
+  VM and dart2js registered static identity: pass
+
+  $ bash tooling/dwi5_probe/run_static_identity_wasm.sh
+  dart2wasm (Chrome) registered static identity: pass
+
+  $ tooling/dwi5_probe/run.sh
+  exit 0; seven call sites classified (six forms + control), output unchanged
+  from audit/evidence/dwi5-analyzer-2026-11-10.txt
+
+The identity probes execute on the host. They do not start a DWI worker, and no
+function value is sent anywhere. The named-task control remains the only
+end-to-end execution path.
+
+Matrix after the re-run
+-----------------------
+Vocabulary: pass / rejected by design / blocked by tooling / unverified.
+
+  Form                          Native VM                  dart2js + JS worker       dart2wasm + Wasm worker
+  1 static top-level            unverified (identity pass) unverified (identity pass) unverified (identity pass)
+  2 static method               unverified (identity pass) unverified (identity pass) unverified (identity pass)
+  3 closure, serializable       unverified                 blocked by tooling         blocked by tooling
+  4 closure, non-serializable   rejected by design         rejected by design         rejected by design
+  5 dynamically chosen          unverified (registered     unverified (registered     unverified (registered
+                                subset identity pass)      subset identity pass)      subset identity pass)
+  6 arbitrary expression body   unverified                 blocked by tooling         blocked by tooling
+  Control: named task           pass                       pass                       pass
+
+Changes from the previous matrix
+--------------------------------
+- Cases 1 and 2: dart2js and dart2wasm host cells move from "blocked by tooling"
+  to "unverified". The identity step is no longer the blocker; end-to-end DWI
+  worker execution is untested and there is no public API.
+- Case 5: same move, for the registered-static subset only. An unregistered or
+  freshly created function value still has no portable task ID and is rejected
+  by design.
+- Cases 3 and 6: unchanged, still blocked by tooling. The identity probe does
+  not lift a closure body or its captures.
+- Case 4: unchanged, rejected by design.
+- Control: unchanged, pass.
+
+Why a compatibility level is not raised
+---------------------------------------
+The compatibility matrix defines DWI-5 as "compiler-supported arbitrary
+functions". The re-run establishes only:
+  - identity mapping for registered top-level/static tear-offs;
+  - on the host, not in a worker;
+  - on VM, dart2js and a dart2wasm host in Chrome;
+  - with no public API, no generated caller registry, no diagnostics, and no
+    dart2wasm worker execution.
+
+That is a prototype candidate for a narrower level, not DWI-5. Raising DWI-5
+would require at least:
+  1. a package-level generated caller registry and a public API decision (ADR);
+  2. end-to-end tests that show the call executes in a JS worker and a Wasm
+     worker, with worker identity observed;
+  3. deterministic diagnostics for unregistered and non-serializable values;
+  4. a decision on closures (forms 3 and 6), which still need compiler/build
+     cooperation;
+  5. repeatable fresh builds, including the released-SDK generated-source
+     ordering constraint.
+
+Until then the DWI-5 row remains research with a registered-static prototype
+candidate, and the public API is unchanged.
+
+What was verified
+-----------------
+- VM and dart2js registered static identity (run_static_identity.sh).
+- dart2wasm registered static identity in Chrome (run_static_identity_wasm.sh).
+- Analyzer classification for all six forms (run.sh).
+- Existing transport, tree-shaking and compiler-contract evidence remains valid.
+
+What was not verified
+---------------------
+- DWI worker execution of any function form.
+- dart2wasm worker execution of the identity-mapped task.
+- Safari, Firefox and Edge for the identity or transport probes.
+- Closure lifting (forms 3 and 6) and non-serializable capture diagnostics.
