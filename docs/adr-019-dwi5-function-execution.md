@@ -70,13 +70,18 @@ The feasibility work measured, on Dart 3.13.7 / Flutter 3.47.9 and Chrome 157:
 A later probe (`audit/evidence/dwi5-static-identity-2026-11-10.txt`) maps
 registered top-level and static-method tear-offs to task IDs by Dart map key.
 The same runtime choice among those registered functions works on the VM,
-dart2js and a dart2wasm host in Chrome 157. Thus an explicit generated caller
-registry may cover forms 1, 2 and part of form 5 without transmitting a function
-or rewriting each call site. This is not an end-to-end DWI worker test, cannot
-identify an arbitrary unregistered function, and does not cover dart2wasm
-worker execution. It does not alter this ADR's decision for the full six-form
-API. If pursued, it needs a separate ADR, worker test and precise registration
-contract.
+dart2js and a dart2wasm host in Chrome 157. A test-only caller registry now also
+executes the mapped task end to end from a dart2js host in a JS worker and a
+Wasm worker (`audit/evidence/dwi5-static-registry-2026-11-11.txt`): both entries
+resolve, the worker token differs from the host token, main-thread ticks
+continue during a worker task, and the observed backend matches. A dart2wasm
+host + Wasm worker end-to-end run was not performed. Thus an
+explicit generated caller registry can cover forms 1, 2 and part of form 5
+without transmitting a function or rewriting each call site. This is not a
+public API, cannot identify an arbitrary unregistered function, and does not
+cover closures. It does not alter this ADR's decision for the full six-form API.
+If pursued, it needs a separate ADR, a production registry generator and
+diagnostics.
 
 ## Alternatives considered
 

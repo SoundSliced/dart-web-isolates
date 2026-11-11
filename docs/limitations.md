@@ -68,7 +68,8 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
    [`R016`](../research/R016_DWI5_FUNCTION_FEASIBILITY.md); the proposed
    decision is [`ADR-019`](adr-019-dwi5-function-execution.md). A registered
    static-tear-off subset has a measured identity mapping on the VM, dart2js and
-   a dart2wasm host, but it is not a public function API and closures remain
+   a dart2wasm host, and a test-only end-to-end prototype on dart2js + JS and
+   dart2wasm + Wasm workers; it is not a public function API and closures remain
    unsupported.
 9. **Generated proxies require one generated import.** Application code imports
    `lib/dwi_tasks.g.dart`; task libraries import

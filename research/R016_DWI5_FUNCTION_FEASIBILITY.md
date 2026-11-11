@@ -13,6 +13,8 @@ accepted). Follow-up static-identity evidence:
 [`dwi5-static-identity`](../audit/evidence/dwi5-static-identity-2026-11-10.txt).
 Re-run matrix and compatibility assessment:
 [`dwi5-matrix-rerun`](../audit/evidence/dwi5-matrix-rerun-2026-11-10.txt).
+End-to-end registered-static prototype:
+[`dwi5-static-registry`](../audit/evidence/dwi5-static-registry-2026-11-11.txt).
 
 ## Plain answer
 
@@ -31,6 +33,9 @@ and have it execute in a web worker.
 - The existing named-task path (annotation → generated static registry → second
   compilation → worker) works on native, dart2js + JS worker, and dart2wasm +
   Wasm worker. It is the control, not the function API.
+- A test-only prototype now maps registered static tear-offs to task names and
+  executes them end to end in JS and Wasm workers, but the consumer still calls
+  `Dwi.run(taskName, input)`; it is not a public function API.
 
 This is the same conclusion ADR-002 and limitations §1/§8 already state; DWI-5
 now has measured evidence for it rather than only a design argument.
@@ -73,21 +78,22 @@ reject it or capture the receiver and its whole object graph.
 
 ## 3. Decision table — six forms across the tested hosts
 
-Re-run 2026-11-10 after the registered-static identity probe; see
-[`dwi5-matrix-rerun`](../audit/evidence/dwi5-matrix-rerun-2026-11-10.txt).
+Re-run 2026-11-11 after the end-to-end prototype; see
+[`dwi5-static-registry`](../audit/evidence/dwi5-static-registry-2026-11-11.txt)
+and [`dwi5-matrix-rerun`](../audit/evidence/dwi5-matrix-rerun-2026-11-10.txt).
 
 Status vocabulary: **pass**, **rejected by design**, **blocked by tooling**,
 **unverified**.
 
-| Form | Native VM | dart2js host + JS worker | dart2wasm host + Wasm worker |
-| --- | --- | --- | --- |
-| 1 static top-level | unverified — registered identity pass; no DWI function API | unverified — registered identity pass; worker execution untested | unverified — registered identity pass in Chrome; worker execution untested |
-| 2 static method | unverified — registered identity pass; no DWI function API | unverified — registered identity pass; worker execution untested | unverified — registered identity pass in Chrome; worker execution untested |
-| 3 closure, serializable capture | unverified | blocked by tooling — no body lifting | blocked by tooling — no body lifting |
-| 4 closure, non-serializable capture | rejected by design | rejected by design | rejected by design |
-| 5 dynamically chosen function | unverified — registered subset identity pass; unregistered rejected | unverified — registered subset identity pass; unregistered rejected | unverified — registered subset identity pass in Chrome; unregistered rejected |
-| 6 arbitrary expression body | unverified | blocked by tooling — no body lifting | blocked by tooling — no body lifting |
-| Control: named task (`@DwiTask` + proxy) | pass | pass | pass |
+| Form | Native VM | dart2js host + JS worker | dart2js host + Wasm worker | dart2wasm host + Wasm worker |
+| --- | --- | --- | --- | --- |
+| 1 static top-level | unverified — registered identity pass; no DWI function API | pass — prototype registry; worker token and backend observed | pass — prototype registry; worker token and backend observed | unverified — host identity pass; no end-to-end run |
+| 2 static method | unverified — registered identity pass; no DWI function API | pass — prototype registry; worker token and backend observed | pass — prototype registry; worker token and backend observed | unverified — host identity pass; no end-to-end run |
+| 3 closure, serializable capture | unverified | blocked by tooling — no body lifting | blocked by tooling — no body lifting | blocked by tooling — no body lifting |
+| 4 closure, non-serializable capture | rejected by design | rejected by design | rejected by design | rejected by design |
+| 5 dynamically chosen function | unverified — registered subset identity pass; unregistered rejected | pass (registered subset) — prototype registry; unregistered rejected | pass (registered subset) — prototype registry; unregistered rejected | unverified — registered subset identity pass; unregistered rejected |
+| 6 arbitrary expression body | unverified | blocked by tooling — no body lifting | blocked by tooling — no body lifting | blocked by tooling — no body lifting |
+| Control: named task (`@DwiTask` + proxy) | pass | pass | pass | pass |
 
 Notes on the cells:
 
@@ -99,12 +105,16 @@ Notes on the cells:
 - **Web.** Case 4 is rejected by design: the capture cannot cross the boundary
   and a generator can see that from the type. Cases 3 and 6 remain blocked by
   tooling: lifting a body and its captures still has no supported transform.
-  Cases 1, 2 and the registered-static subset of 5 are no longer blocked at the
-  **identity** step: a generated caller registry maps registered top-level and
-  static-method tear-offs to task IDs by function key on VM, dart2js and
-  dart2wasm (Chrome). They remain **unverified** end to end because no DWI
-  function API exists and no worker has received one of these calls. An
-  unregistered function value still has no portable task ID.
+  Cases 1, 2 and the registered-static subset of 5 pass end to end on a
+  dart2js host + JS worker and a dart2js host + Wasm worker through the
+  prototype caller registry (`dwi5-static-registry`): the tear-off is mapped to
+  a task name, the task executes in the worker, the worker token differs from
+  the host token, the main thread keeps ticking, and the observed worker backend
+  matches. The separate dart2wasm host identity probe passes, but a dart2wasm
+  host + Wasm worker end-to-end run was not performed. This is **not** a public
+  function API: the registry generator lives in the test, and a consumer still
+  calls `Dwi.run(taskName, input)`. An unregistered function value still has no
+  portable task ID and is not executed.
 - **Control.** The named-task path is measured on all three hosts in the DWI
   browser/worker evidence (`docs/browser-matrix.md`,
   `audit/evidence/flutter-wasm-worker-matrix-2026-11-10.txt`). It is the only
@@ -230,12 +240,15 @@ transform re-homes the body into a worker-safe library.
    a supported source-transform step. An explicit generated caller registry
    could map the tear-off by identity without a rewrite, but that is a narrower
    API and has not been implemented end-to-end. The identity map is measured on
-   VM, dart2js and dart2wasm (Chrome). **Not blocked at identity; unverified
-   end to end; registered-static subset is a prototype candidate.**
+   VM, dart2js and dart2wasm (Chrome), and the end-to-end prototype passes in a
+   JS worker and a Wasm worker from a dart2js host. **Passes in the prototype
+   for the dart2js host + JS/Wasm worker paths; no public API; native and
+   dart2wasm-host end-to-end untested.**
 2. **Static method reference.** Same as 1, plus the worker must import the
    declaring library. Static methods have no receiver; instance methods capture
-   one and are rejected. The registered-static subset is a prototype candidate;
-   the automatic call-site API remains **blocked by tooling**.
+   one and are rejected. The registered-static subset passes end to end in the
+   prototype on the dart2js host + JS and Wasm worker paths; the automatic
+   call-site API remains **blocked by tooling**, and no public API is added.
 3. **Closure with serializable captures.** The analyzer can list captures and
    reject unsupported types. Lifting the body is a source transformation with
    semantic obligations (lexical scope, `this`, type parameters, nested
@@ -249,11 +262,12 @@ transform re-homes the body into a worker-safe library.
    runtime. A follow-up probe shows that a generated caller registry can map a
    runtime choice **among registered static tear-offs** to task IDs by function
    identity on the VM, dart2js and dart2wasm (Chrome). This needs neither
-   whole-program data flow nor function transport, but it does need generated
-   caller code and has not been tested end-to-end with DWI workers. An
-   unregistered or freshly created function value still has no portable task ID.
-   **Unverified end to end for the registered subset; rejected by design for
-   unregistered values.**
+   whole-program data flow nor function transport. The test-only prototype now
+   runs the mapping end to end in a JS worker and a Wasm worker from a dart2js
+   host. An unregistered or freshly created function value still has no portable
+   task ID. **Registered subset passes end to end in the prototype for the
+   dart2js host + JS/Wasm worker paths; unregistered values rejected; no public
+   API.**
 6. **Arbitrary expression body.** Same lifting problem as 3, plus statement
    semantics. **Blocked by tooling.**
 
@@ -261,12 +275,13 @@ transform re-homes the body into a worker-safe library.
 
 **Outcome 2 — compiler or SDK cooperation is required.**
 
-The follow-up identity probe narrows this decision: forms 1, 2 and the
-registered-static subset of form 5 may be implementable with the existing
-generator and an explicit generated caller import. It does not establish the
-normal function-call API requested by DWI-5, automatic first-build generation,
-closure lifting, or worker execution. Forms 3 and 6 still require a supported
-pre-compilation transformation; form 4 remains a deterministic rejection.
+The identity probe and the end-to-end prototype narrow this decision: forms 1,
+2 and the registered-static subset of form 5 are implemented as a test-only
+prototype and pass end to end from a dart2js host in a JS worker and a Wasm
+worker. It does not establish the normal function-call API requested by DWI-5,
+automatic first-build generation, closure lifting, or a public registry
+generator. Forms 3 and 6 still require a supported pre-compilation
+transformation; form 4 remains a deterministic rejection.
 
 - No public function or closure API is added. The named-task API and generated
   proxies remain the only supported shape.
@@ -318,6 +333,12 @@ tooling/dwi5_probe/run.sh
 tooling/dwi5_probe/run_static_identity.sh
 tooling/dwi5_probe/run_static_identity_wasm.sh
 
+# end-to-end registered-static prototype (JS and Wasm workers, Chrome)
+cd packages/dwi_builder
+PUB_CACHE=../../.research/pub-cache \
+  ../../.research/flutter-sdk/bin/dart test \
+    test/browser_static_registry_test.dart -r expanded
+
 # compiler/build surface
 .research/flutter-sdk/bin/dart compile --help
 .research/flutter-sdk/bin/dart compile js --help
@@ -345,6 +366,10 @@ FLUTTER=.research/flutter-sdk/bin/flutter \
   key on the VM, dart2js (`-O1`) and dart2wasm (Chrome 157). The runtime choice
   among those registered functions is therefore identifiable without sending a
   function to a worker.
+- The test-only caller registry executes the mapped task end to end from a
+  dart2js host in a JS worker and a Wasm worker: both entries resolve, the worker
+  token differs from the host token, main-thread ticks continue during a worker
+  task, and the observed `workerBackend` matches the requested backend.
 - `dart compile` has one entrypoint and one output; `dart build` has only `cli`;
   `macros` is off by default.
 - Released 3.47.9 does not order web hooks before the compiler; the named-task
@@ -352,12 +377,13 @@ FLUTTER=.research/flutter-sdk/bin/flutter \
 
 **Not verified**
 
-- Any execution of forms 1–6 through a DWI function API; none exists.
-- Native VM behaviour of a hypothetical function API (unverified, not tested).
+- Any execution of forms 1–6 through a public DWI function API; none exists.
+- Native VM end-to-end execution of the registered-static mapping (the identity
+  probe passes; the worker prototype is web-only).
 - Safari, Firefox and Edge for the transport probe, and the dart2wasm identity
   probe outside Chrome.
-- dart2wasm closure representation, and dart2wasm worker execution of any
-  function form.
+- dart2wasm closure representation, and dart2wasm worker execution of closures
+  or any non-registered function form.
 - Deferred-loading or minification effects beyond the `-O1` tree-shaking probe.
 - Semantic equivalence of any lifted closure (return/break/this/mutation/
   exceptions/type parameters).

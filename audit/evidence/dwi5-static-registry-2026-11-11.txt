@@ -1,0 +1,99 @@
+DWI-5 registered-static end-to-end prototype
+Date: 2026-11-11
+Status: prototype evidence. No public API change.
+
+Environment
+-----------
+OS:       macOS 26.5.1 (25F80), arm64
+Dart:     3.13.7 (stable) from .research/flutter-sdk (Flutter 3.47.9, c197ca5199e)
+Analyzer: 14.7.0
+Chrome:   157.0.8103.50 (headless)
+Test:     packages/dwi_builder/test/browser_static_registry_test.dart (committed)
+Runner:   dart test, plus the repo's existing serve/probe harness
+
+What the prototype does
+-----------------------
+1. Writes a task library with @DwiTask() addOne, twice, identity and busyPrimes.
+2. Runs discovery (discoverTasks) and emits a test-only generated caller registry:
+     final Map<Function, String> dwiCallerRegistry = <Function, String>{
+       tasks0.addOne: "addOne",
+       tasks0.twice: "twice",
+       tasks0.identity: "identity",
+       tasks0.busyPrimes: "busyPrimes",
+     };
+   The keys are static Dart references, not names.
+3. The host chooses addOne or twice at runtime, looks the tear-off up in the
+   map, and calls the existing Dwi.run<int>(taskName, 21). No function value is
+   sent to the worker.
+4. It also resolves both entries directly (addOne -> 22, twice -> 42), and looks
+   up an unregistered function (null, not executed).
+5. It runs busyPrimes, which delays 200 ms inside the worker and counts primes
+   <= 100000 while a 10 ms main-thread timer counts ticks.
+6. It runs identity, whose token is created inside the worker program, and reads
+   Dwi.capabilities() for the observed worker backend.
+
+Command
+-------
+  cd packages/dwi_builder
+  PUB_CACHE=../../.research/pub-cache \
+    ../../.research/flutter-sdk/bin/dart test \
+      test/browser_static_registry_test.dart -r expanded
+
+Observed payloads (one run)
+---------------------------
+JS worker (dart2js), dart2js host:
+{"selectedName":"addOne","mappedTask":"addOne","mappedResult":22,"mappedAddOne":22,"mappedTwice":42,"unregisteredMapped":null,"busyPrimes":9592,"ticks":21,"workerToken":"worker-1794383009564000-2139429476","hostToken":"host-1794383009564000-915676796","distinctToken":true,"backend":"worker","workerBackend":"dart2js","workerCount":1,"protocolVersion":2,"ok":true}
+
+Wasm worker (dart2wasm), dart2js host:
+{"selectedName":"addOne","mappedTask":"addOne","mappedResult":22,"mappedAddOne":22,"mappedTwice":42,"unregisteredMapped":null,"busyPrimes":9592,"ticks":22,"workerToken":"worker-1794383019483000-428541251","hostToken":"host-1794383019484000-147938223","distinctToken":true,"backend":"worker","workerBackend":"dart2wasm","workerCount":1,"protocolVersion":2,"ok":true}
+
+Assertions
+----------
+- selectedName == mappedTask.
+- mappedResult == 22 for addOne and 42 for twice.
+- mappedAddOne == 22 and mappedTwice == 42 (both registry entries).
+- unregisteredMapped == null (the registry is closed over registered tasks).
+- busyPrimes == 9592 (pi(100000)).
+- ticks > 0 (main thread kept running while the worker computed).
+- workerToken != hostToken (the token was created in a separate program).
+- backend == worker.
+- workerBackend == dart2js for the JS worker, dart2wasm for the Wasm worker.
+- workerCount >= 1; protocolVersion == 2.
+
+What this establishes
+---------------------
+- A generated caller registry can map registered top-level/static tear-offs to
+  task names by identity and execute them end to end from a dart2js host in a
+  real JS worker and a real Wasm worker.
+- The main thread keeps ticking while the worker computes, and the worker's
+  token differs from the host's.
+- The observed worker backend matches the requested one.
+- Both registered entries work; an unregistered function has no mapping.
+
+Limits
+------
+- Prototype only: the registry generator lives in the test and is not part of
+  the public builder or API. A consumer cannot call Dwi.run(fn) today.
+- Registered static tear-offs only. Closures and arbitrary inline bodies still
+  need a compiler/build transformation that lifts the body and captures.
+- An unregistered or dynamically created function value has no task ID; the
+  prototype returns null rather than executing it or falling back.
+- The host imports the task library to build the map, so those functions are
+  also compiled into the host bundle. The cost was not measured.
+- Chrome only; Safari, Firefox and Edge were not run.
+- Native VM end-to-end execution of this mapping was not tested.
+- A dart2wasm host + Wasm worker end-to-end run was not performed; only the
+  dart2wasm host identity map and a dart2js host + dart2wasm worker run are
+  measured.
+- No Flutter build-hook or fresh-build test; this is a plain Dart web fixture.
+- No public API decision, no compatibility-level raise.
+
+Reading for the matrix
+----------------------
+Cases 1, 2 and the registered-static subset of 5 now pass end to end on a
+dart2js host + JS worker and a dart2js host + Wasm worker, through the
+prototype registry. The dart2wasm host identity map passes separately
+(run_static_identity_wasm.sh), but a dart2wasm host + Wasm worker end-to-end run
+was not performed. This is still not a public function API, so DWI-5 itself is
+not raised. Cases 3 and 6 remain blocked by tooling; case 4 remains rejected by
+design.
