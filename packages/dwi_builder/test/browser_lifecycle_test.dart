@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
+
+import 'package:crypto/crypto.dart';
 
 import 'package:dwi_builder/dwi_builder.dart';
 import 'package:path/path.dart' as p;
@@ -262,6 +265,19 @@ Future<void> main() async {
     result['hRepeatedCancel'] = await hRunning.cancel();
     result['hAfter'] = await _outcome(Dwi.run<Object?>('echo', 'afterCancel'));
 
+    // A call whose worker is still starting is neither queued nor running. It
+    // must still be cancellable, and must not run after the cancel.
+    await Dwi.close();
+    final hStarting = Dwi.runCancellable<String>('spin', 3000);
+    await Future<void>.delayed(Duration.zero);
+    final hStartingWatch = Stopwatch()..start();
+    result['hStartingCancel'] = await hStarting.cancel();
+    result['hStartingResult'] = await _outcome(hStarting.result);
+    result['hStartingMs'] = hStartingWatch.elapsedMilliseconds;
+    result['hStartingAfter'] = await _outcome(
+      Dwi.run<Object?>('echo', 'afterStartingCancel'),
+    );
+
     final hDone = Dwi.runCancellable<String>('echo', 'done');
     result['hDoneValue'] = await hDone.result;
     result['hDoneCancel'] = await hDone.cancel();
@@ -361,41 +377,78 @@ void main() {
   setUp(() => project = FixtureProject.create());
   tearDown(() => project.dispose());
 
-  test(
-    'worker pool settles every caller after timeout, overflow, close and '
-    'startup failure in Chrome',
-    () async {
-      project.write('lib/tasks.dart', lifecycleTasks);
-      project.write('web/main.dart', lifecycleMain);
-      project.write('web/index.html', lifecycleIndex);
-
-      await DwiBuilder(project.config(compile: true)).build();
-
-      final compiled = await Process.run(
-        Platform.resolvedExecutable,
-        <String>[
-          'compile',
-          'js',
-          '-O1',
-          '-o',
-          'web/main.dart.js',
-          'web/main.dart',
-        ],
-        workingDirectory: project.root.path,
-        environment: <String, String>{
-          'PUB_CACHE': Platform.environment['PUB_CACHE'] ?? '',
+  // Every engine is measured on its own page load (AGENTS.md rule 8). An
+  // engine that cannot be started fails the test instead of being skipped, so
+  // a pass always means all four engines ran.
+  final evidence = <Map<String, Object?>>[];
+  tearDownAll(() async {
+    final path = Platform.environment['DWI_LIFECYCLE_EVIDENCE'];
+    if (path == null) return;
+    final revision = await Process.run('git', <String>['rev-parse', 'HEAD']);
+    if (revision.exitCode != 0) throw StateError('${revision.stderr}');
+    File(path).writeAsStringSync(
+      '${const JsonEncoder.withIndent('  ').convert(<String, Object?>{
+        'sdk': Platform.version,
+        'revision': (revision.stdout as String).trim(),
+        'sourceDigests': <String, String>{
+          for (final source in <String>['../dwi_web/lib/src/web_backend.dart', 'test/browser_lifecycle_test.dart', 'test/support/browser_engines.dart', 'test/support/browser_probe.dart']) source: sha256.convert(File(source).readAsBytesSync()).toString(),
         },
-      );
-      expect(
-        compiled.exitCode,
-        0,
-        reason: '${compiled.stdout}\n${compiled.stderr}',
-      );
+        'fixture': 'packages/dwi_builder/test/browser_lifecycle_test.dart',
+        'command': 'dart test test/browser_lifecycle_test.dart -r expanded',
+        'runs': evidence,
+        'complete': evidence.length == BrowserEngine.values.length && evidence.every((run) => run['status'] == 'pass'),
+      })}\n',
+    );
+  });
 
-      final server = await serveDirectory(p.join(project.root.path, 'web'));
-      try {
-        final decoded = await probeChrome(
+  test('worker pool settles every caller after timeout, overflow, close and '
+      'startup failure in every engine', () async {
+    project.write('lib/tasks.dart', lifecycleTasks);
+    project.write('web/main.dart', lifecycleMain);
+    project.write('web/index.html', lifecycleIndex);
+
+    await DwiBuilder(project.config(compile: true)).build();
+
+    final compiled = await Process.run(
+      Platform.resolvedExecutable,
+      <String>[
+        'compile',
+        'js',
+        '-O1',
+        '-o',
+        'web/main.dart.js',
+        'web/main.dart',
+      ],
+      workingDirectory: project.root.path,
+      environment: <String, String>{
+        'PUB_CACHE': Platform.environment['PUB_CACHE'] ?? '',
+      },
+    );
+    expect(
+      compiled.exitCode,
+      0,
+      reason: '${compiled.stdout}\n${compiled.stderr}',
+    );
+
+    final server = await serveDirectory(p.join(project.root.path, 'web'));
+    try {
+      for (final engine in BrowserEngine.values) {
+        final availability = browserAvailability(engine);
+        if (!availability.available) {
+          throw StateError('${engine.name} blocked: ${availability.reason}');
+        }
+        final observed = await probeBrowser(
+          engine,
           'http://127.0.0.1:${server.port}/index.html',
+        );
+        final decoded = observed.data;
+        evidence.add(<String, Object?>{
+          'engine': engine.name,
+          'browserVersion': observed.browserVersion,
+          'result': decoded,
+        });
+        print(
+          'dwi-lifecycle: ${jsonEncode(<String, Object?>{'engine': engine.name, 'browserVersion': observed.browserVersion, 'result': decoded})}',
         );
 
         expect(
@@ -404,11 +457,7 @@ void main() {
           reason: '${decoded['error']}\n${decoded['stack']}',
         );
 
-        expect(decoded['a'], <String>[
-          'DwiTimeoutException',
-          'OK:a',
-          'OK:b',
-        ]);
+        expect(decoded['a'], <String>['DwiTimeoutException', 'OK:a', 'OK:b']);
         expect(decoded['aWorkers'], lessThanOrEqualTo(1));
         expect(decoded['aAfter'], 'OK:later');
 
@@ -444,6 +493,10 @@ void main() {
         expect(decoded['hRunningMs'], lessThan(1000));
         expect(decoded['hRepeatedCancel'], isFalse);
         expect(decoded['hAfter'], 'OK:afterCancel');
+        expect(decoded['hStartingCancel'], isTrue);
+        expect(decoded['hStartingResult'], 'DwiCancelledException');
+        expect(decoded['hStartingMs'], lessThan(1000));
+        expect(decoded['hStartingAfter'], 'OK:afterStartingCancel');
         expect(decoded['hDoneValue'], 'done');
         expect(decoded['hDoneCancel'], isFalse);
         expect(decoded['hRaceCancel'], isTrue);
@@ -476,11 +529,10 @@ void main() {
           'DwiStartupException',
         ]);
         expect(decoded['kWorkers'], 0);
-      } finally {
-        await server.close(force: true);
+        evidence.last['status'] = 'pass';
       }
-    },
-    timeout: const Timeout(Duration(minutes: 5)),
-    skip: chromeExecutable() == null ? 'Google Chrome is not installed.' : false,
-  );
+    } finally {
+      await server.close(force: true);
+    }
+  }, timeout: const Timeout(Duration(minutes: 10)));
 }

@@ -233,6 +233,15 @@ class WebBackend implements DwiBackend {
       _terminate(slot, error);
       return true;
     }
+    if (slot == null && id == null) {
+      // The call is still acquiring a worker (the worker is starting): it is
+      // neither queued nor sent. Settle the caller now; [_execute] sees the
+      // flag once the worker is ready, sends nothing, and releases the worker
+      // for the next caller.
+      state.cancelled = true;
+      handle.completeError(error);
+      return true;
+    }
     return false;
   }
 
