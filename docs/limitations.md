@@ -255,7 +255,13 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
     context, cancelling terminates it and discards undelivered items, and
     `taskTimeout` bounds the whole stream. A stream task cannot run on the
     pool. Native and all sixteen browser cells pass
-    (`audit/evidence/stream-tasks-acceptance-2026-11-13T012032.json`). `SendPort`/`ReceivePort` emulation remains a separate, later ADR.
+    (`audit/evidence/stream-tasks-acceptance-2026-11-13T012032.json`).
+    Two handles can be connected with `DwiWorker.link` (ADR-023, checkout
+    only): the host relays every message (one extra copy and hop), both ends
+    acknowledge on consumption, and the surviving worker sees a closed channel,
+    not an error, when its peer fails. There are no `SendPort`/`ReceivePort`
+    objects and no direct worker-to-worker path. Native and all sixteen
+    browser cells pass (`audit/evidence/worker-link-acceptance-2026-11-13T100732.json`).
 29. **dart2wasm host support is measured in all four engines.** A dart2wasm
     application (`flutter build web --wasm`) can host DWI since the 2026-11-05
     integral-double fix. A 2026-11-10 Flutter 3.47.6 matrix measured, at `/`:

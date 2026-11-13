@@ -1543,6 +1543,68 @@ and worker compilation in each measured browser; actual worker realm and
 independent task state; clean builds, cache invalidation and cleanup. Prototype
 identity or worker-only compilation cannot satisfy that gate.
 
+## ADR-023 — Links between two handles (port-like messaging, increment 2)
+
+**Status.** Accepted, 2026-11-13. Completion-plan tranche C, second increment
+(master plan §30, handoff §24). Closes the ADR-014 decision 11 gap "channels
+that cross handles". No protocol version change.
+
+**Problem.** A channel connects the host to one worker. Two workers could only
+talk through host code written for that purpose, and a worker writing faster
+than the other read failed with `DwiChannelBufferException`.
+
+**Decision.**
+
+```dart
+final link = await DwiWorker.link(producer, consumer, 'rows');
+// in each worker: DwiWorkerChannels.find('rows')
+await link.close();   // or: await link.done
+```
+
+`DwiWorker.link(a, b, name)` opens channel `name` on both handles and relays
+messages in both directions. New public API: `DwiWorker.link`, `DwiLink`
+(`name`, `done`, `isClosed`, `close`), and
+`DwiWorkerHandle.openChannel(name, {ackOnConsume})` /
+`DwiChannelEndpoint.ackOnConsume` for backends.
+
+**Flow control.** Both link channels are opened with `ackOnConsume`: each end
+acknowledges a message when its reader takes it, not when it is buffered. A
+worker that awaits each send therefore waits for the relay, and the relay
+waits for the other worker's reader, so a slow reader paces the writer end to
+end. The worker-side endpoint learns the mode from `channelOpen` (native: a
+fifth list element; web: `meta.ackOnConsume`). Ordinary channels keep
+acknowledge-on-buffer (ADR-014, corrected).
+
+**Semantics.**
+
+- Per-direction FIFO. Each message is copied by the relay; transferred bytes
+  reach the host by transfer and the other worker by copy.
+- Closing either end, a failed or closed handle, or `DwiLink.close()` closes
+  both ends. The surviving worker sees its channel end normally; the host sees
+  the failure through `done`.
+- The two handles must differ and the name must be free on both; a failure
+  opening the second end closes the first.
+- A channel name is a plain `String`, so "sending a port" is sending the name.
+
+**Not provided.** A direct worker-to-worker path (`MessageChannel` on web,
+`SendPort` hand-over on native): it would save one hop but needs a protocol
+change and its own failure signalling, because a `MessagePort` reports no
+closure when its peer worker dies. Revisit only with a before/after benchmark
+(AGENTS.md rule 15). No `SendPort`/`ReceivePort` objects, broadcast, or links
+that survive `restart()`.
+
+**Alternatives rejected.** Changing every channel to acknowledge on
+consumption (changes shipped, tested ADR-014 behaviour); rejecting at the relay
+(a fast writer would fail under ordinary load, which the first prototype did:
+9 of 25 native runs failed with `channel "pipe" is full`).
+
+**Acceptance.** 200 ordered messages; 150 messages through a 4-message window
+to a reader that pauses every 25; request and reply; names released after
+close; closing the producer mid-stream (consumer keeps three messages, `done`
+reports `DwiWorkerClosedException`, consumer stays usable); same-handle and
+duplicate-name rejection with cleanup; every web worker terminated. Native and
+all four host/worker compiler pairs in Chrome, Safari, Firefox and Edge.
+
 ## ADR-022 — Tasks that return a `Stream`
 
 **Status.** Accepted, 2026-11-13. Completion-plan tranche C, first increment

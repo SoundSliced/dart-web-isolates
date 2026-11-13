@@ -1,0 +1,28 @@
+{
+  "engine": "chrome",
+  "status": "pass",
+  "browserVersion": "Google Chrome 157.0.8103.78",
+  "harness": "packages/dwi_builder/test/browser_handle_test.dart",
+  "command": "dart test test/browser_handle_test.dart --plain-name \"handle lifecycle contract in chrome\"",
+  "environment": {
+    "os": "Version 26.5.1 (Build 25F80)",
+    "dartVersion": "3.13.7 (stable) (Thu Oct 22 14:28:57 2026 -0700) on \"macos_arm64\"",
+    "cpuCount": 8
+  },
+  "runs": [
+    {
+      "run": 1,
+      "status": "pass"
+    },
+    {
+      "run": 2,
+      "status": "pass"
+    },
+    {
+      "run": 3,
+      "status": "pass"
+    }
+  ],
+  "passed": 3,
+  "failed": 0
+}

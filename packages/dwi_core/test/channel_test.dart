@@ -10,10 +10,15 @@ class _Transport {
   int closedReplies = 0;
   int terminations = 0;
 
-  DwiChannelEndpoint endpoint({int bufferSize = 4, String name = 'chat'}) {
+  DwiChannelEndpoint endpoint({
+    int bufferSize = 4,
+    String name = 'chat',
+    bool ackOnConsume = false,
+  }) {
     return DwiChannelEndpoint(
       name: name,
       bufferSize: bufferSize,
+      ackOnConsume: ackOnConsume,
       onSend: (seq, message, transfer) => sends.add((seq, message, transfer)),
       onAck: acks.add,
       onClose: () => closes++,
@@ -91,6 +96,36 @@ void main() {
 
       await channel.close();
       await done.future;
+    });
+
+    test('with ackOnConsume, acknowledges only what the listener took',
+        () async {
+      final transport = _Transport();
+      final channel = transport.endpoint(ackOnConsume: true);
+
+      expect(channel.deliver(1, 'a'), isTrue);
+      expect(channel.deliver(2, 'b'), isTrue);
+      // Buffered but not consumed: nothing is acknowledged yet.
+      expect(transport.acks, isEmpty);
+
+      final received = <Object?>[];
+      final subscription = channel.messages.listen(received.add);
+      await Future<void>.delayed(Duration.zero);
+      expect(received, <Object?>['a', 'b']);
+      expect(transport.acks, <int>[1, 2]);
+
+      // A paused listener takes nothing, so nothing more is acknowledged.
+      subscription.pause();
+      expect(channel.deliver(3, 'c'), isTrue);
+      await Future<void>.delayed(Duration.zero);
+      expect(transport.acks, <int>[1, 2]);
+      subscription.resume();
+      await Future<void>.delayed(Duration.zero);
+      expect(received, <Object?>['a', 'b', 'c']);
+      expect(transport.acks, <int>[1, 2, 3]);
+
+      await subscription.cancel();
+      await channel.close();
     });
 
     test('refuses a delivery when the receive buffer is full', () {

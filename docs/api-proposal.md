@@ -131,6 +131,24 @@ There is no function overload for `Dwi.run`/`Dwi.runFresh`, fresh-function API,
 capture introspection or compatibility-level raise. Use the existing explicit
 pre-build workflow on released SDKs.
 
+### Links between handles (ADR-023, checkout only)
+
+```dart
+final class DwiWorker {
+  static Future<DwiLink> link(DwiWorker a, DwiWorker b, String name);
+}
+final class DwiLink {
+  String get name;
+  Future<void> get done;
+  bool get isClosed;
+  Future<void> close();
+}
+```
+
+Opens channel `name` on both handles and relays messages between them with
+acknowledge-on-consume flow control. Task code uses
+`DwiWorkerChannels.find(name)` as for any channel.
+
 ### Stream tasks (ADR-022, since 0.9.0)
 
 ```dart

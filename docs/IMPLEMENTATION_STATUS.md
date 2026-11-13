@@ -46,7 +46,7 @@ text is the older intent.
 | 27 | Worker pools | partial | pool size, queue, limits, replacement done; idle termination and alternative scheduling policies absent | D |
 | 28 | Timeouts and cancellation | partial | timeouts, queued cancellation, termination-based running cancellation; no cooperative cancellation | D |
 | 29 | Worker lifecycle states | limited | handle states and `stopReason` (ADR-013, ADR-017); pool slots have no public state | G |
-| 30 | Port-like messaging | limited | named bounded channels (ADR-014); no port objects | C |
+| 30 | Port-like messaging | limited | named bounded channels (ADR-014); handle-to-handle links relayed by the host (ADR-023, unreleased; native + 16 cells); no `SendPort` objects or direct worker-to-worker path | — |
 | 31 | Streaming and progress | limited | `Stream<T>` tasks (ADR-022, 0.9.0): fresh context per listen, credit flow control, cancel terminates | — |
 | 32–33 | Serialization contract, typed serializers | limited | primitives, collections, typed data; enums, `DateTime`, `Duration`, `BigInt`, `Uri`, records and `@DwiPayload` classes through generated codecs (ADR-021, 0.9.0; native + 16 cells, `payload-types-acceptance-2026-11-13T012032.json`); payload classes must opt in and be trees | — |
 | 34 | Transferable data | complete | `DwiTransferableBytes` (ADR-010) | — |

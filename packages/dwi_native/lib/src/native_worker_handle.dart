@@ -77,13 +77,20 @@ void _handleChannel(_HandleStart start, Object? message) {
       final gen = message.length > 3 && message[3] is int
           ? message[3]! as int
           : 0;
+      final ackOnConsume = message.length > 4 && message[4] == true;
       try {
         if (_channelGens.containsKey(name)) {
           throw DwiChannelStateException(
             'channel "$name" is already open in this worker',
           );
         }
-        final endpoint = _isolateChannel(start, name, bufferSize, gen);
+        final endpoint = _isolateChannel(
+          start,
+          name,
+          bufferSize,
+          gen,
+          ackOnConsume,
+        );
         DwiWorkerChannels.register(name, endpoint);
         _channelGens[name] = gen;
         endpoint.markOpened();
@@ -189,10 +196,12 @@ DwiChannelEndpoint _isolateChannel(
   String name,
   int bufferSize,
   int gen,
+  bool ackOnConsume,
 ) {
   return DwiChannelEndpoint(
     name: name,
     bufferSize: bufferSize,
+    ackOnConsume: ackOnConsume,
     onSend: (seq, message, transfer) {
       final payload = transfer ? _encodeForIsolate(message) : message;
       start.owner.send(<Object?>['channelMessage', name, gen, seq, payload]);
@@ -695,7 +704,10 @@ class NativeWorkerHandle implements DwiWorkerHandle {
   }
 
   @override
-  Future<DwiChannel> openChannel(String name) async {
+  Future<DwiChannel> openChannel(
+    String name, {
+    bool ackOnConsume = false,
+  }) async {
     validateDwiChannelName(name);
     if (!isUsable) throw _stateError();
     if (_channels.containsKey(name)) {
@@ -708,7 +720,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
       throw const DwiWorkerFailedException('worker isolate is not available');
     }
     final gen = _nextChannelGen++;
-    final channel = _createChannel(name, gen);
+    final channel = _createChannel(name, gen, ackOnConsume);
     _channels[name] = _HostChannel(gen, channel);
     try {
       workerPort.send(<Object?>[
@@ -716,6 +728,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
         name,
         _config.channelBufferSize,
         gen,
+        ackOnConsume,
       ]);
     } catch (error) {
       _channels.remove(name);
@@ -734,10 +747,11 @@ class NativeWorkerHandle implements DwiWorkerHandle {
     return channel;
   }
 
-  DwiChannelEndpoint _createChannel(String name, int gen) {
+  DwiChannelEndpoint _createChannel(String name, int gen, bool ackOnConsume) {
     return DwiChannelEndpoint(
       name: name,
       bufferSize: _config.channelBufferSize,
+      ackOnConsume: ackOnConsume,
       onSend: (seq, message, transfer) {
         final workerPort = _workerPort;
         if (workerPort == null) {

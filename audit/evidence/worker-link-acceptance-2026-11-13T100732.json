@@ -1,0 +1,794 @@
+{
+  "sdk": "3.13.7 (stable) (Thu Oct 22 14:28:57 2026 -0700) on \"macos_arm64\"",
+  "revision": "9e471316a878274c861696152bd08a8a492189eb",
+  "sourceState": "local ADR-023 implementation, uncommitted",
+  "sourceDigests": {
+    "../dwi/lib/dwi.dart": "bc8d25fae80c6da41554e2590f82cf8979b8fe03f5ade2143d2658af468241a8",
+    "../dwi_core/lib/src/channel_endpoint.dart": "0e9bfcc1a80f5317bc992bb90e96a21a4748a69acd11e2b13cc389eb5a3a6e96",
+    "../dwi_native/lib/src/native_worker_handle.dart": "cf4c5995e9bd2beb8d77d908540c40ea556403ec79a5c607498b49aa4f6282a0",
+    "../dwi_web/lib/src/web_worker_handle.dart": "2c021289370df78e18f427e14622af643115e18240c63cdf637f52f88629f9c6",
+    "../dwi_web/lib/src/worker_dispatcher.dart": "8bc258c455b798832493fbaa4957972701e9270bdcab2035599ddbb5a37882a8",
+    "lib/src/descriptor.dart": "d77905bd4010dfe0b7c166b46e0ab75054bcf14576c9e6bdd62682cb74c4e733",
+    "lib/src/discovery.dart": "059dbb946eee56011b9d6e072594199c3baeaac542f0d74d1546fa33e2155fdc",
+    "lib/src/generator.dart": "33da3257a11c97e6f3f24079e5bcf335c7162efdf5fc3b587aeea549a408a6d5",
+    "test/browser_worker_link_test.dart": "f28fe27cd8a5098ea43aaf41f3910fd4a90fb509990eda2266dcc10de55bbf3d",
+    "test/native_worker_link_test.dart": "ae1767993e3a4329a0009b6805c168499f1d4ce46f2f0da72c48640fc443e6a3",
+    "test/support/browser_engines.dart": "f9a966c5ef5e5dc1549e6571e27fe3791aa421f5895cc1ec1ca53409f0b51744",
+    "test/support/browser_probe.dart": "bd47500f59a49a366b99d69d27c7a07e62b77d691933cad19553c16da6871109",
+    "test/support/fixture.dart": "fc51a81a45180802e4cf4b78a246b8af32d66cad8d32d881edd4bd9a4d43f380",
+    "test/support/link_fixture.dart": "814cbfc68707027d7376bfba562011785510d0fdd5994dc19da70b3599d91abe"
+  },
+  "fixture": "packages/dwi_builder/test/browser_worker_link_test.dart",
+  "command": "dart test test/browser_worker_link_test.dart -r expanded",
+  "runs": [
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "registered": [],
+        "openDuring": [
+          [
+            "pipe"
+          ],
+          [
+            "pipe"
+          ]
+        ],
+        "pipe": [
+          200,
+          true
+        ],
+        "pipeClosed": true,
+        "slow": [
+          150,
+          true
+        ],
+        "chat": "re: ping",
+        "openAfter": [
+          [],
+          []
+        ],
+        "partial": [
+          1,
+          2,
+          3
+        ],
+        "tailDone": "DwiWorkerClosedException",
+        "consumerUsable": true,
+        "self": true,
+        "duplicate": [],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "registered": [],
+        "openDuring": [
+          [
+            "pipe"
+          ],
+          [
+            "pipe"
+          ]
+        ],
+        "pipe": [
+          200,
+          true
+        ],
+        "pipeClosed": true,
+        "slow": [
+          150,
+          true
+        ],
+        "chat": "re: ping",
+        "openAfter": [
+          [],
+          []
+        ],
+        "partial": [
+          1,
+          2,
+          3
+        ],
+        "tailDone": "DwiWorkerClosedException",
+        "consumerUsable": true,
+        "self": true,
+        "duplicate": [],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 160.0",
+      "result": {
+        "registered": [],
+        "openDuring": [
+          [
+            "pipe"
+          ],
+          [
+            "pipe"
+          ]
+        ],
+        "pipe": [
+          200,
+          true
+        ],
+        "pipeClosed": true,
+        "slow": [
+          150,
+          true
+        ],
+        "chat": "re: ping",
+        "openAfter": [
+          [],
+          []
+        ],
+        "partial": [
+          1,
+          2,
+          3
+        ],
+        "tailDone": "DwiWorkerClosedException",
+        "consumerUsable": true,
+        "self": true,
+        "duplicate": [],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "registered": [],
+        "openDuring": [
+          [
+            "pipe"
+          ],
+          [
+            "pipe"
+          ]
+        ],
+        "pipe": [
+          200,
+          true
+        ],
+        "pipeClosed": true,
+        "slow": [
+          150,
+          true
+        ],
+        "chat": "re: ping",
+        "openAfter": [
+          [],
+          []
+        ],
+        "partial": [
+          1,
+          2,
+          3
+        ],
+        "tailDone": "DwiWorkerClosedException",
+        "consumerUsable": true,
+        "self": true,
+        "duplicate": [],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "registered": [],
+        "openDuring": [
+          [
+            "pipe"
+          ],
+          [
+            "pipe"
+          ]
+        ],
+        "pipe": [
+          200,
+          true
+        ],
+        "pipeClosed": true,
+        "slow": [
+          150,
+          true
+        ],
+        "chat": "re: ping",
+        "openAfter": [
+          [],
+          []
+        ],
+        "partial": [
+          1,
+          2,
+          3
+        ],
+        "tailDone": "DwiWorkerClosedException",
+        "consumerUsable": true,
+        "self": true,
+        "duplicate": [],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "registered": [],
+        "openDuring": [
+          [
+            "pipe"
+          ],
+          [
+            "pipe"
+          ]
+        ],
+        "pipe": [
+          200,
+          true
+        ],
+        "pipeClosed": true,
+        "slow": [
+          150,
+          true
+        ],
+        "chat": "re: ping",
+        "openAfter": [
+          [],
+          []
+        ],
+        "partial": [
+          1,
+          2,
+          3
+        ],
+        "tailDone": "DwiWorkerClosedException",
+        "consumerUsable": true,
+        "self": true,
+        "duplicate": [],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 160.0",
+      "result": {
+        "registered": [],
+        "openDuring": [
+          [
+            "pipe"
+          ],
+          [
+            "pipe"
+          ]
+        ],
+        "pipe": [
+          200,
+          true
+        ],
+        "pipeClosed": true,
+        "slow": [
+          150,
+          true
+        ],
+        "chat": "re: ping",
+        "openAfter": [
+          [],
+          []
+        ],
+        "partial": [
+          1,
+          2,
+          3
+        ],
+        "tailDone": "DwiWorkerClosedException",
+        "consumerUsable": true,
+        "self": true,
+        "duplicate": [],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "registered": [],
+        "openDuring": [
+          [
+            "pipe"
+          ],
+          [
+            "pipe"
+          ]
+        ],
+        "pipe": [
+          200,
+          true
+        ],
+        "pipeClosed": true,
+        "slow": [
+          150,
+          true
+        ],
+        "chat": "re: ping",
+        "openAfter": [
+          [],
+          []
+        ],
+        "partial": [
+          1,
+          2,
+          3
+        ],
+        "tailDone": "DwiWorkerClosedException",
+        "consumerUsable": true,
+        "self": true,
+        "duplicate": [],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "registered": [],
+        "openDuring": [
+          [
+            "pipe"
+          ],
+          [
+            "pipe"
+          ]
+        ],
+        "pipe": [
+          200,
+          true
+        ],
+        "pipeClosed": true,
+        "slow": [
+          150,
+          true
+        ],
+        "chat": "re: ping",
+        "openAfter": [
+          [],
+          []
+        ],
+        "partial": [
+          1,
+          2,
+          3
+        ],
+        "tailDone": "DwiWorkerClosedException",
+        "consumerUsable": true,
+        "self": true,
+        "duplicate": [],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "registered": [],
+        "openDuring": [
+          [
+            "pipe"
+          ],
+          [
+            "pipe"
+          ]
+        ],
+        "pipe": [
+          200,
+          true
+        ],
+        "pipeClosed": true,
+        "slow": [
+          150,
+          true
+        ],
+        "chat": "re: ping",
+        "openAfter": [
+          [],
+          []
+        ],
+        "partial": [
+          1,
+          2,
+          3
+        ],
+        "tailDone": "DwiWorkerClosedException",
+        "consumerUsable": true,
+        "self": true,
+        "duplicate": [],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 160.0",
+      "result": {
+        "registered": [],
+        "openDuring": [
+          [
+            "pipe"
+          ],
+          [
+            "pipe"
+          ]
+        ],
+        "pipe": [
+          200,
+          true
+        ],
+        "pipeClosed": true,
+        "slow": [
+          150,
+          true
+        ],
+        "chat": "re: ping",
+        "openAfter": [
+          [],
+          []
+        ],
+        "partial": [
+          1,
+          2,
+          3
+        ],
+        "tailDone": "DwiWorkerClosedException",
+        "consumerUsable": true,
+        "self": true,
+        "duplicate": [],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "registered": [],
+        "openDuring": [
+          [
+            "pipe"
+          ],
+          [
+            "pipe"
+          ]
+        ],
+        "pipe": [
+          200,
+          true
+        ],
+        "pipeClosed": true,
+        "slow": [
+          150,
+          true
+        ],
+        "chat": "re: ping",
+        "openAfter": [
+          [],
+          []
+        ],
+        "partial": [
+          1,
+          2,
+          3
+        ],
+        "tailDone": "DwiWorkerClosedException",
+        "consumerUsable": true,
+        "self": true,
+        "duplicate": [],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "registered": [],
+        "openDuring": [
+          [
+            "pipe"
+          ],
+          [
+            "pipe"
+          ]
+        ],
+        "pipe": [
+          200,
+          true
+        ],
+        "pipeClosed": true,
+        "slow": [
+          150,
+          true
+        ],
+        "chat": "re: ping",
+        "openAfter": [
+          [],
+          []
+        ],
+        "partial": [
+          1,
+          2,
+          3
+        ],
+        "tailDone": "DwiWorkerClosedException",
+        "consumerUsable": true,
+        "self": true,
+        "duplicate": [],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "registered": [],
+        "openDuring": [
+          [
+            "pipe"
+          ],
+          [
+            "pipe"
+          ]
+        ],
+        "pipe": [
+          200,
+          true
+        ],
+        "pipeClosed": true,
+        "slow": [
+          150,
+          true
+        ],
+        "chat": "re: ping",
+        "openAfter": [
+          [],
+          []
+        ],
+        "partial": [
+          1,
+          2,
+          3
+        ],
+        "tailDone": "DwiWorkerClosedException",
+        "consumerUsable": true,
+        "self": true,
+        "duplicate": [],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 160.0",
+      "result": {
+        "registered": [],
+        "openDuring": [
+          [
+            "pipe"
+          ],
+          [
+            "pipe"
+          ]
+        ],
+        "pipe": [
+          200,
+          true
+        ],
+        "pipeClosed": true,
+        "slow": [
+          150,
+          true
+        ],
+        "chat": "re: ping",
+        "openAfter": [
+          [],
+          []
+        ],
+        "partial": [
+          1,
+          2,
+          3
+        ],
+        "tailDone": "DwiWorkerClosedException",
+        "consumerUsable": true,
+        "self": true,
+        "duplicate": [],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "registered": [],
+        "openDuring": [
+          [
+            "pipe"
+          ],
+          [
+            "pipe"
+          ]
+        ],
+        "pipe": [
+          200,
+          true
+        ],
+        "pipeClosed": true,
+        "slow": [
+          150,
+          true
+        ],
+        "chat": "re: ping",
+        "openAfter": [
+          [],
+          []
+        ],
+        "partial": [
+          1,
+          2,
+          3
+        ],
+        "tailDone": "DwiWorkerClosedException",
+        "consumerUsable": true,
+        "self": true,
+        "duplicate": [],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    }
+  ],
+  "complete": true
+}

@@ -347,7 +347,10 @@ class WebWorkerHandle implements DwiWorkerHandle {
   }
 
   @override
-  Future<DwiChannel> openChannel(String name) async {
+  Future<DwiChannel> openChannel(
+    String name, {
+    bool ackOnConsume = false,
+  }) async {
     validateDwiChannelName(name);
     if (!isUsable) throw _stateError();
     final capabilities = _capabilities;
@@ -367,7 +370,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
       throw const DwiWorkerFailedException('dedicated worker is not available');
     }
     final gen = _nextChannelGen++;
-    final channel = _createChannel(name, gen);
+    final channel = _createChannel(name, gen, ackOnConsume);
     _channels[name] = _WebChannel(gen, channel);
     try {
       worker.postMessage(
@@ -377,6 +380,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
             'channel': name,
             'bufferSize': _config.channelBufferSize,
             'gen': gen,
+            if (ackOnConsume) 'ackOnConsume': true,
           },
         ).toMap().jsify(),
       );
@@ -397,10 +401,11 @@ class WebWorkerHandle implements DwiWorkerHandle {
     return channel;
   }
 
-  DwiChannelEndpoint _createChannel(String name, int gen) {
+  DwiChannelEndpoint _createChannel(String name, int gen, bool ackOnConsume) {
     return DwiChannelEndpoint(
       name: name,
       bufferSize: _config.channelBufferSize,
+      ackOnConsume: ackOnConsume,
       onSend: (seq, message, transfer) {
         final worker = _worker;
         if (worker == null) {

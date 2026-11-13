@@ -24,6 +24,7 @@ v0.3 unless marked proposed.** No cell claims parity.
 | dart2wasm host + dart2js worker | n/a | **supported** | no Wasm worker; measured at `/` in Chrome 157, Edge 157, Firefox 159 and Safari 26.5 (control build) | `audit/evidence/flutter-wasm-worker-matrix-2026-11-10.txt` |
 | dart2wasm host + dart2wasm worker | n/a | **supported, opt-in** since 0.8.0 | full contract passed at `/` and `/sub/app/` in all four engines; opt-in `dwi.yaml`, content-addressed generation, no fallback; MIME/CSP/same-origin constraints in limitations §14 | `audit/evidence/flutter-wasm-worker-matrix-2026-11-10.txt` |
 | dart2js host + dart2wasm worker | n/a | **supported, opt-in** since 0.8.0 | same contract at `/` and `/sub/app/` in all four engines; generation retention is a deployment rule (ADR-018) | `audit/evidence/dart2wasm-worker-acceptance-2026-11-10.txt` |
+| Messages between two isolates/workers | `SendPort` hand-over | `DwiWorker.link` | relayed by the host; acknowledge-on-consume flow control; peer failure closes the other end normally | ADR-023 |
 | Streamed results (`Stream<T>` task) | via `ReceivePort` | `Dwi.runStream` / generated proxy | fresh context per listen; credit flow control; cancel terminates the context; whole stream under `taskTimeout` | ADR-022 |
 | Pause / resume / ping | yes | **no** | no browser equivalent | R003 §1 |
 | `onExit` / `onError` listeners | yes | envelope events | `error` events are coarse; promises rejections vanish | R003 §6 |

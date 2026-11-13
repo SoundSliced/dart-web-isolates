@@ -202,11 +202,13 @@ class DwiWorkerDispatcher {
     final rawBuffer = _metaInt(envelope.meta['bufferSize']);
     final bufferSize = rawBuffer != null && rawBuffer > 0 ? rawBuffer : 64;
     final gen = _metaInt(envelope.meta['gen']) ?? 0;
+    final ackOnConsume = envelope.meta['ackOnConsume'] == true;
     try {
       validateDwiChannelName(name);
       final endpoint = DwiChannelEndpoint(
         name: name,
         bufferSize: bufferSize,
+        ackOnConsume: ackOnConsume,
         onSend: (seq, message, transfer) =>
             _emitChannelMessage(name, gen, seq, message, transfer),
         onAck: (seq) => _emit?.call(

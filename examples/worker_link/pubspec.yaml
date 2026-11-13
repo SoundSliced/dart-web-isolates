@@ -1,0 +1,13 @@
+name: dwi_worker_link_example
+description: Two DwiWorker handles talking to each other through DwiWorker.link.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  dwi:
+    path: ../../packages/dwi
+  dwi_core:
+    path: ../../packages/dwi_core

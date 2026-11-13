@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Links between handles (ADR-023)
+
+- `DwiWorker.link(a, b, name)` connects channel `name` in two handles; task
+  code in each worker uses `DwiWorkerChannels.find(name)`. Returns a `DwiLink`
+  with `done`, `isClosed` and `close()`.
+- Link channels acknowledge a message when the reader takes it
+  (`ackOnConsume`), so a slow reader paces an awaiting writer instead of making
+  its sends fail. Ordinary channels are unchanged.
+- New example: `examples/worker_link`.
+
 ## [0.9.0] - 2026-11-13
 
 Minor release. New public API: registered static function selection

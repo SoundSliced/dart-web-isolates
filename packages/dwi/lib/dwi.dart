@@ -417,8 +417,116 @@ final class DwiWorker {
   /// [close] or [restart].
   Future<DwiChannel> openChannel(String name) => _handle.openChannel(name);
 
+  /// Connects channel [name] in [a] to channel [name] in [b] (ADR-023).
+  ///
+  /// Task code in each worker finds its end with
+  /// `DwiWorkerChannels.find(name)` and talks to the other worker as if the
+  /// channel were direct. The host relays every message, so:
+  ///
+  /// - order is preserved per direction, and each message is copied (a
+  ///   transferred buffer is transferred to the host, then copied on);
+  /// - both ends acknowledge a message only when their reader takes it, so a
+  ///   worker that awaits each send waits for the other worker to read: a slow
+  ///   reader slows the writer instead of failing it. A writer that does not
+  ///   await can still exceed [DwiConfig.channelBufferSize] and get
+  ///   [DwiChannelBufferException];
+  /// - when either worker closes its end, fails or is closed, the other end
+  ///   is closed and [DwiLink.done] settles (with the failure, if any).
+  ///
+  /// [a] and [b] must be different, ready handles, and [name] must be free on
+  /// both. A channel name is an ordinary `String`, so a worker can tell another
+  /// worker which link to use by sending the name in a message.
+  ///
+  /// ```dart
+  /// final link = await DwiWorker.link(producer, consumer, 'rows');
+  /// final sum = consumer.run<int>('sumRows');
+  /// await producer.run<void>('emitRows', 1000);
+  /// print(await sum);
+  /// await link.close();
+  /// ```
+  static Future<DwiLink> link(DwiWorker a, DwiWorker b, String name) async {
+    if (identical(a, b)) {
+      throw const DwiChannelStateException(
+        'a link needs two different handles',
+      );
+    }
+    // Both ends acknowledge on consumption, so each worker's awaited send is
+    // paced by the relay and, through it, by the other worker's reader.
+    final first = await a._handle.openChannel(name, ackOnConsume: true);
+    final DwiChannel second;
+    try {
+      second = await b._handle.openChannel(name, ackOnConsume: true);
+    } catch (_) {
+      await first.close();
+      rethrow;
+    }
+    return DwiLink._(name, first, second);
+  }
+
   /// Cancels queued and running work, then terminates the context.
   ///
   /// Every affected caller settles with [DwiWorkerClosedException]. Idempotent.
   Future<void> close() => _handle.close();
+}
+
+/// A host-relayed connection between two handles' channels (ADR-023).
+///
+/// Created by [DwiWorker.link]. This is a logical link, not a transferred
+/// `SendPort`: every message passes through the host.
+final class DwiLink {
+  DwiLink._(this.name, this._a, this._b) {
+    _done.future.ignore();
+    unawaited(_relay(_a, _b));
+    unawaited(_relay(_b, _a));
+  }
+
+  /// Channel name used in both workers.
+  final String name;
+
+  final DwiChannel _a;
+  final DwiChannel _b;
+  final Completer<void> _done = Completer<void>();
+
+  /// Completes when the link closes normally, and completes with the typed
+  /// error that closed it otherwise.
+  Future<void> get done => _done.future;
+
+  /// Whether the link has closed.
+  bool get isClosed => _done.isCompleted;
+
+  /// Closes both ends. Idempotent; pending relayed sends are settled by the
+  /// channels' own close rules.
+  Future<void> close() => _finish(null, null);
+
+  Future<void> _relay(DwiChannel from, DwiChannel to) async {
+    try {
+      await for (final message in from.messages) {
+        await to.send(message);
+      }
+      await _finish(null, null);
+    } on DwiChannelClosedException {
+      // The other direction closed the link first.
+      await _finish(null, null);
+    } on Object catch (error, stack) {
+      await _finish(error, stack);
+    }
+  }
+
+  Future<void> _finish(Object? error, StackTrace? stack) async {
+    if (_done.isCompleted) return;
+    if (error == null) {
+      _done.complete();
+    } else {
+      _done.completeError(error, stack);
+    }
+    await Future.wait(<Future<void>>[_close(_a), _close(_b)]);
+  }
+
+  static Future<void> _close(DwiChannel channel) async {
+    try {
+      await channel.close();
+    } on Object {
+      // A channel whose handle already failed is closed already.
+    }
+  }
 }

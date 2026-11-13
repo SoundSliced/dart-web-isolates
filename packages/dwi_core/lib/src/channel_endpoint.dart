@@ -39,6 +39,7 @@ class DwiChannelEndpoint implements DwiChannel {
     required void Function() onClose,
     required void Function() onClosed,
     void Function()? onTerminated,
+    this.ackOnConsume = false,
   })  : _onSend = onSend,
         _onAck = onAck,
         _onClose = onClose,
@@ -56,6 +57,14 @@ class DwiChannelEndpoint implements DwiChannel {
 
   /// Bound on buffered incoming messages and on unacknowledged sends.
   final int bufferSize;
+
+  /// Whether an incoming message is acknowledged only when it is handed to the
+  /// listener, instead of when it is buffered (ADR-023).
+  ///
+  /// A sender that awaits each send then waits for the reader, so a slower
+  /// reader slows the sender instead of filling the buffer. Links use this;
+  /// ordinary channels keep acknowledge-on-buffer (ADR-014).
+  final bool ackOnConsume;
 
   final void Function(int seq, Object? message, bool transfer) _onSend;
   final void Function(int seq) _onAck;
@@ -141,7 +150,7 @@ class DwiChannelEndpoint implements DwiChannel {
     if (_closed) return false;
     if (_incoming.length >= bufferSize) return false;
     _incoming.add(_Incoming(seq, message));
-    _onAck(seq);
+    if (!ackOnConsume) _onAck(seq);
     _drain();
     return true;
   }
@@ -217,6 +226,13 @@ class DwiChannelEndpoint implements DwiChannel {
         !_controller.isPaused) {
       final item = _incoming.removeFirst();
       _controller.add(item.message);
+      if (ackOnConsume) {
+        try {
+          _onAck(item.seq);
+        } catch (_) {
+          // A dying transport fails the channel through its own path.
+        }
+      }
     }
   }
 

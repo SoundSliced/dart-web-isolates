@@ -10,6 +10,7 @@ the recommended way to use DWI and must not reach into implementation details.
 | `stateful_worker/` | Dedicated `DwiWorker` handle and worker-local state that persists between calls. |
 | `scoped_worker/` | `DwiWorker.using` scope ownership and `Dwi.runFresh` fresh-context calls. |
 | `stop_observer/` | `DwiWorker.stopReason` / `stops` termination observation (ADR-017). |
+| `worker_link/` | `DwiWorker.link`: two handles exchanging messages through a relayed link (ADR-023). |
 
 Earlier revisions of this index listed `json_parser/`, `image_processing/`,
 `worker_pool/`, `flutter_counter/` and `flutter_jank_demo/`. They are **not in

@@ -1,5 +1,29 @@
 # Browser Matrix
 
+## Worker links (ADR-023, 2026-11-13, checkout only)
+
+`browser_worker_link_test.dart` compiles each host and worker separately and,
+with `channelBufferSize: 4`, connects two handles with `DwiWorker.link`: 200
+ordered messages, 150 messages to a reader that pauses every 25, request and
+reply, names released after close, closing the producer mid-stream (consumer
+keeps three messages, `done` reports `DwiWorkerClosedException`, consumer
+stays usable), same-handle and duplicate-name rejection, and every worker the
+page created terminated. All sixteen combinations pass:
+
+| Host / worker | Chrome 157.0.8103.78 | Safari 26.5 | Firefox 160.0 | Edge 157.0.4341.46 |
+| --- | --- | --- | --- | --- |
+| dart2js / dart2js | pass | pass | pass | pass |
+| dart2js / dart2wasm | pass | pass | pass | pass |
+| dart2wasm / dart2js | pass | pass | pass | pass |
+| dart2wasm / dart2wasm | pass | pass | pass | pass |
+
+Native: `native_worker_link_test.dart`. Evidence: `audit/evidence/worker-link-acceptance-2026-11-13T100732.json`. The handle and
+channel contract (`browser_handle_test.dart`) was rerun after the
+acknowledge-on-consume change and passes in all four engines
+(`audit/evidence/handle-matrix-*-20261113.json`). An earlier run
+(`worker-link-acceptance-2026-11-13T094901.json`, incomplete) failed only
+where Safari ended its WebDriver session; kept as history.
+
 ## Stream tasks (ADR-022, since 0.9.0, 2026-11-13)
 
 `browser_stream_tasks_test.dart` compiles each host and worker separately and,

@@ -123,7 +123,10 @@ abstract interface class DwiWorkerHandle {
   /// [DwiChannelStateException] when the name is already open or the handle is
   /// not ready, and [DwiUnsupportedException] when the worker artefact does not
   /// implement protocol v2. Channels never survive [restart].
-  Future<DwiChannel> openChannel(String name);
+  ///
+  /// With [ackOnConsume], both ends acknowledge a message only when their
+  /// reader takes it (ADR-023), so an awaiting sender is paced by the reader.
+  Future<DwiChannel> openChannel(String name, {bool ackOnConsume = false});
 
   /// Terminates the context and settles every caller.
   ///
