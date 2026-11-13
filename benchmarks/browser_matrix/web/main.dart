@@ -30,6 +30,20 @@ void _finish(Map<String, Object?> result) {
   );
 }
 
+@JS('performance')
+external JSObject get _performance;
+
+int? _heapBytes() {
+  try {
+    final memory = _performance.getProperty('memory'.toJS);
+    if (memory == null) return null;
+    final used = (memory as JSObject).getProperty('usedJSHeapSize'.toJS);
+    return (used as JSNumber?)?.toDartDouble.toInt();
+  } catch (_) {
+    return null;
+  }
+}
+
 Object? _navigatorValue(String property) {
   try {
     return _navigator.getProperty(property.toJS)?.dartify();
@@ -62,7 +76,14 @@ Future<void> _run() async {
     result['baseUri'] = Uri.base.toString();
 
     // A: cold start — the first call pays worker spawn and protocol ready.
-    await Dwi.configure(const DwiConfig(workerScript: workerScript));
+    // maxPayloadBytes is raised from the 64 MiB default so the 100 MiB case can
+    // run; every other phase uses this same configuration.
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        maxPayloadBytes: 128 * 1024 * 1024,
+      ),
+    );
     final cold = Stopwatch()..start();
     await Dwi.run<int>('tiny', 1);
     result['coldStartMs'] = cold.elapsedMilliseconds;
@@ -81,9 +102,13 @@ Future<void> _run() async {
 
     // C: copying versus transfer at three payload sizes.
     const sizes = <String, int>{
+      '1KiB': 1024,
+      '100KiB': 100 * 1024,
       '64KiB': 64 * 1024,
       '1MiB': 1024 * 1024,
       '8MiB': 8 * 1024 * 1024,
+      '10MiB': 10 * 1024 * 1024,
+      '100MiB': 100 * 1024 * 1024,
     };
     for (final entry in sizes.entries) {
       final length = entry.value;
@@ -184,6 +209,53 @@ Future<void> _run() async {
       'totalMs': loadWatch.elapsedMilliseconds,
       'workers': (await Dwi.capabilities()).workerCount,
       'correct': values.indexed.every((pair) => pair.$2 == pair.$1 + 1),
+    };
+
+    // E2: 1,000-task burst through the same bounded pool.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        maxWorkers: 4,
+        maxQueuedTasks: 1024,
+      ),
+    );
+    final burstWatch = Stopwatch()..start();
+    final burstValues = await Future.wait(<Future<int>>[
+      for (var i = 0; i < 1000; i++) Dwi.run<int>('tiny', i),
+    ]);
+    result['burst1000'] = <String, Object?>{
+      'tasks': 1000,
+      'settled': burstValues.length,
+      'totalMs': burstWatch.elapsedMilliseconds,
+      'workers': (await Dwi.capabilities()).workerCount,
+      'correct': burstValues.indexed.every((pair) => pair.$2 == pair.$1 + 1),
+    };
+
+    // E3: sustained leak check — 20 rounds of 100 calls on one pool. Main-thread
+    // heap is read where the engine exposes performance.memory (Chromium only);
+    // other engines record null, never an estimate.
+    final heapStart = _heapBytes();
+    final roundMs = <int>[];
+    var leakCorrect = true;
+    for (var round = 0; round < 20; round++) {
+      final watch = Stopwatch()..start();
+      final values = await Future.wait(<Future<int>>[
+        for (var i = 0; i < 100; i++) Dwi.run<int>('tiny', i),
+      ]);
+      roundMs.add(watch.elapsedMilliseconds);
+      if (!values.indexed.every((pair) => pair.$2 == pair.$1 + 1)) {
+        leakCorrect = false;
+      }
+    }
+    result['leak'] = <String, Object?>{
+      'rounds': 20,
+      'tasksPerRound': 100,
+      'correct': leakCorrect,
+      'roundMs': roundMs,
+      'heapStartBytes': heapStart,
+      'heapEndBytes': _heapBytes(),
+      'workers': (await Dwi.capabilities()).workerCount,
     };
 
     // F: crash and restart — an idle worker that dies without an error event.

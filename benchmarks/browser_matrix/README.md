@@ -43,16 +43,19 @@ Generated outputs (`lib/dwi_tasks.g.dart`, `web/dwi/`, `web/main.dart.js`,
 
 ## Engine support
 
-Chrome and Safari are automated. Firefox and Edge must stay recorded as
-unverified with the exact reason, never filled in from another engine
-(AGENTS.md rule 8):
+Chrome and Safari are automated by `run.dart`. Firefox and Edge were measured
+on 2026-11-13 by running the same page through `tooling/hosted_consumer/probe`
+(`--engines chrome,safari,firefox,edge`), not by `run.dart`. Each engine is
+reported only from its own run (AGENTS.md rule 8):
 
 | Engine | State | Notes (measurement machine) |
 | --- | --- | --- |
-| Chrome | measured | `dart run run.dart --engine=chrome --runs=3`; `Google Chrome 156.0.8078.80`, headless with `--no-sandbox` |
+| Chrome | measured | `dart run run.dart --engine=chrome --runs=3`; `Google Chrome 156.0.8078.80`, headless with `--no-sandbox`; 2026-11-13 extended page: Chrome 157 via probe |
 | Safari | measured | `dart run run.dart --engine=safari --runs=3`; Safari 26.5 through `safaridriver`, which needs **Safari → Develop → Allow Remote Automation** enabled (and Safari restarted) or session creation is refused |
-| Firefox | unverified | not installed |
-| Edge | unverified | not installed |
+| Firefox | measured via probe | Firefox 160.0, 2026-11-13; `run.dart` has no Firefox driver yet |
+| Edge | measured via probe | Microsoft Edge 157.0.4341.46, 2026-11-13; `run.dart` has no Edge driver yet |
+
+Results: `docs/browser-matrix.md` (2026-11-13 section).
 
 Extending the runner: add a driver branch in `run.dart` that navigates to the
 served page, reads `document.title`, and returns the decoded JSON. The page

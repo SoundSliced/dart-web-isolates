@@ -1,5 +1,54 @@
 # Browser Matrix
 
+## Burst, leak and payload range, four engines (tranche A, 2026-11-13)
+
+Harness: `benchmarks/browser_matrix/web/main.dart`, run through
+`tooling/hosted_consumer/probe` (three passes, one page load per engine per
+pass). Evidence: `audit/evidence/browser-matrix-four-engines-2026-11-13.json`
+(every pass, every metric). Sandbox was off, with approval.
+
+| Engine | Version | 1,000-task burst (median ms) | 20×100 leak run, round median (ms) | Sustained 100 (median ms) | Heap at start (MB) |
+| --- | --- | --- | --- | --- | --- |
+| Chrome | 157.0.8103.78 | 126 | 3.0 | 73 | 110 |
+| Safari | 26.5 | 82 | 4.0 | 37 | not exposed |
+| Firefox | 160.0 | 74 | 4.0 | 29 | not exposed |
+| Edge | 157.0.4341.46 | 100 | 3.0 | 93 | 110 |
+
+Every pass on every engine passed: all 1,000 burst results and all 2,000 leak
+results were correct, and the pool stayed at four workers.
+
+Payload copy and transfer (median ms over three passes, `DwiTransferableBytes`
+vs copy through `sumTyped`):
+
+| Size | Chrome copy / transfer | Safari | Firefox | Edge |
+| --- | --- | --- | --- | --- |
+| 1 KiB | 0.3 / 0.3 | 0 / 0 | 0 / 0 | 0.3 / 0.2 |
+| 100 KiB | 0.3 / 0.5 | 0 / 1 | 0 / 0 | 0.4 / 0.3 |
+| 1 MiB | 1.7 / 1.7 | 1 / 1 | 1 / 1 | 3.2 / 3.4 |
+| 8 MiB | 11.1 / 6.3 | 6 / 4 | 9 / 6 | 18.4 / 12.9 |
+| 10 MiB | 10.8 / 8.4 | 7 / 5 | 13 / 11 | 18.9 / 16.3 |
+| 100 MiB | 130 / 82.5 | 83 / 44 | 154 / 79 | 214 / 172.6 |
+
+Reading and limits:
+
+- Safari and Firefox show 0 ms for sizes up to 100 KiB. Their clocks are too
+  coarse for those rows, so sub-millisecond differences are not comparable on
+  those engines.
+- The 100 MiB case needs `maxPayloadBytes` raised from its 64 MiB default; the
+  page sets 128 MiB for the payload phase. The library default is unchanged.
+- Heap is read from `performance.memory`, which Chromium exposes and Safari and
+  Firefox do not. The leak run compares heap before and after 20 rounds without
+  forcing garbage collection, so it is a weak check; it shows no growth beyond
+  the payload phase's own allocation, not that no leak exists.
+- Three passes is a small sample. Spread is in the evidence file. A longer soak
+  is still open.
+- Payload timings include the main-thread call and the worker round trip. Worker
+  heap is not visible from the page, so no worker-heap figure is reported.
+
+Chrome's single-run `run.dart` output for the extended page is
+`audit/evidence/browser-matrix-chrome-extended-2026-11-13.json`. The committed
+`browser-matrix-chrome-2026-11-13.json` (three runs, older page) is unchanged.
+
 ## Pause, resume and ping (ADR-028, 2026-11-13, checkout only)
 
 `browser_dispatch_control_test.dart` compiles each host and worker separately.
