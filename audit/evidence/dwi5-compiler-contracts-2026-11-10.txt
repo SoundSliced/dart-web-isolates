@@ -6,7 +6,7 @@ no compiler patch.
 Environment
 -----------
 Dart      3.13.7 (stable, Thu Oct 22 14:28:57 2026)
-Flutter   3.47.9, framework c197ca5199e (from .research/flutter-sdk)
+Flutter   3.47.9, framework c197ca5199e (from $HOME/Development/flutter)
 SDK clone .research/dart-sdk (the sources shipped with that SDK)
 Analyzer  14.7.0 (dwi_builder 0.8.1 dependency)
 OS        macOS 26.5.1 (25F80), arm64
@@ -126,7 +126,7 @@ Q8. Can the analyzer or build system guarantee generated sources exist before
 -----------------------------------------------------------------------------
 No. The web compile targets still do not depend on the web hooks target:
 
-  .research/flutter-sdk/packages/flutter_tools/lib/src/build_system/targets/web.dart:143
+  $HOME/Development/flutter/packages/flutter_tools/lib/src/build_system/targets/web.dart:143
     List<Target> get dependencies => const <Target>[
       WebEntrypointTarget(),
       GenerateLocalizationsTarget(),

@@ -32,7 +32,7 @@ Later production acceptance evidence supersedes these prototype conclusions.
 Environment
 -----------
 OS:       macOS 26.5.1 (25F80), arm64
-Dart:     3.13.7 (stable) from .research/flutter-sdk (Flutter 3.47.9, c197ca5199e)
+Dart:     3.13.7 (stable) from $HOME/Development/flutter (Flutter 3.47.9, c197ca5199e)
 Analyzer: 14.7.0
 Chrome:   157.0.8103.50 (headless)
 Test:     packages/dwi_builder/test/browser_static_registry_test.dart (committed)
@@ -63,7 +63,7 @@ Command
 -------
   cd packages/dwi_builder
   PUB_CACHE=../../.research/pub-cache \
-    ../../.research/flutter-sdk/bin/dart test \
+    $HOME/Development/flutter/bin/dart test \
       test/browser_static_registry_test.dart -r expanded
 
 Observed payloads (one run)

@@ -4,7 +4,7 @@ Status: runtime/compiler probes on released toolchains. Not a DWI feature.
 
 Environment
 -----------
-Dart      3.13.7 (stable) from .research/flutter-sdk (Flutter 3.47.9)
+Dart      3.13.7 (stable) from $HOME/Development/flutter (Flutter 3.47.9)
 Chrome    157.0.8103.50 (headless=new), macOS 26.5.1 arm64
 DWI       0.8.1 named-task control, unchanged
 

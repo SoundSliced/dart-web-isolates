@@ -9,10 +9,10 @@ The probe registers two static function values as keys in a Dart map:
   {addOne: 'addOne', Ops.twice: 'twice'}
 It chooses each value at runtime from a list, looks up its key, and invokes it.
 
-VM command: .research/flutter-sdk/bin/cache/dart-sdk/bin/dart run tooling/dwi5_probe/bin/static_identity_probe.dart
+VM command: $HOME/Development/flutter/bin/cache/dart-sdk/bin/dart run tooling/dwi5_probe/bin/static_identity_probe.dart
 VM output: addOne:3 / twice:4
 
-JS command: .research/flutter-sdk/bin/cache/dart-sdk/bin/dart compile js -O1 -o /private/tmp/dwi5_identity_probe.js tooling/dwi5_probe/bin/static_identity_probe.dart
+JS command: $HOME/Development/flutter/bin/cache/dart-sdk/bin/dart compile js -O1 -o /private/tmp/dwi5_identity_probe.js tooling/dwi5_probe/bin/static_identity_probe.dart
 JS runner: node /private/tmp/dwi5_identity_probe.js
 JS output: addOne:3 / twice:4
 

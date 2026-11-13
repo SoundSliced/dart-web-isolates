@@ -40,8 +40,8 @@ Indexing observation
   matching the 0.8.0 procedure.
 
 Published-consumer test (tooling/hosted_consumer, DWI_HOSTED_VERSION=0.8.1)
-  Command: FLUTTER=.research/flutter-sdk/bin/flutter \
-           DART=.research/flutter-sdk/bin/dart \
+  Command: FLUTTER=$HOME/Development/flutter/bin/flutter \
+           DART=$HOME/Development/flutter/bin/dart \
            WORK_DIR=<scratch> ENGINES=chrome,safari,firefox,edge \
            tooling/hosted_consumer/run.sh
   Exit: 0 (PASS)

@@ -331,17 +331,17 @@ tooling/dwi5_probe/run_static_identity_wasm.sh
 # production static adapters (VM and four host/worker pairs, four engines)
 cd packages/dwi_builder
 PUB_CACHE=../../.research/pub-cache \
-  ../../.research/flutter-sdk/bin/dart test \
+  $HOME/Development/flutter/bin/dart test \
     test/native_static_registry_test.dart \
     test/browser_static_registry_test.dart -r expanded
 
 # compiler/build surface
-.research/flutter-sdk/bin/dart compile --help
-.research/flutter-sdk/bin/dart compile js --help
-.research/flutter-sdk/bin/dart build --help
+$HOME/Development/flutter/bin/dart compile --help
+$HOME/Development/flutter/bin/dart compile js --help
+$HOME/Development/flutter/bin/dart build --help
 
 # released-SDK fresh-build gate (unmodified 3.47.9)
-FLUTTER=.research/flutter-sdk/bin/flutter \
+FLUTTER=$HOME/Development/flutter/bin/flutter \
   PUB_CACHE=.research/pub-cache \
   WORK_DIR=.scratch/proxy-gate-check \
   tooling/proxy_gate/run.sh

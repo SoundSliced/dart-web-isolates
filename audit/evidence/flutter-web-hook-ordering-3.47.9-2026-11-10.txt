@@ -11,7 +11,7 @@ OS:            macOS 26.5.1 (25F80), arm64
 Xcode:         not used (web only)
 Installed SDK: /Users/christophechanteur/Development/flutter — Flutter 3.47.6,
                NOT modified, NOT used for any measurement below
-Unmodified:    <repo>/.research/flutter-sdk         (git checkout of tag 3.47.9)
+Unmodified:    $HOME/Development/flutter         (git checkout of tag 3.47.9)
 Patched:       <repo>/.research/flutter-sdk-patched (git worktree of 3.47.9 with
                docs/upstream/flutter-web-hook-ordering.patch applied, own
                flutter_tools snapshot rebuilt from the patched source)

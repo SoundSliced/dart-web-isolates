@@ -12,7 +12,7 @@ makes `Dart2WebTarget` wait for `BuildHooks(platform: web)`?
 Environment
 -----------
 OS:          macOS 26.5.1 (25F80), arm64
-Unmodified:  .research/flutter-sdk         — Flutter 3.47.9, framework
+Unmodified:  $HOME/Development/flutter         — Flutter 3.47.9, framework
              c197ca5199e, engine 89c39edfdfae (hash 9e025265bef3), Dart 3.13.7
 Patched:     .research/flutter-sdk-patched — same revisions + the hook-ordering
              patch (targets/web.dart plus its two tests), own tool snapshot
@@ -66,7 +66,7 @@ in the verbose log.
 
 Gate runs (commands)
 --------------------
-  FLUTTER=.research/flutter-sdk/bin/flutter         PUB_CACHE=<writable> \
+  FLUTTER=$HOME/Development/flutter/bin/flutter         PUB_CACHE=<writable> \
     tooling/data_asset_gate/run.sh        -> PASS (exit 0)
   FLUTTER=.research/flutter-sdk-patched/bin/flutter PUB_CACHE=<writable> \
     tooling/data_asset_gate/run.sh        -> PASS (exit 0)

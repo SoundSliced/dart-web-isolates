@@ -6,7 +6,7 @@ Environment
 -----------
 OS:       macOS 26.5.1 (25F80), arm64
 Dart:     3.13.7 (stable, Thu Oct 22 14:28:57 2026) from the repo's unmodified
-          .research/flutter-sdk (Flutter 3.47.9, framework c197ca5199e)
+          $HOME/Development/flutter (Flutter 3.47.9, framework c197ca5199e)
 Analyzer: 14.7.0 (the version dwi_builder 0.8.1 depends on)
 Probe:    tooling/dwi5_probe (committed)
 Command:  tooling/dwi5_probe/run.sh

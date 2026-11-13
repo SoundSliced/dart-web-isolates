@@ -3,7 +3,7 @@ DWI — fresh typed-proxy Flutter build gate, re-measured (2026-11-05)
 Environment
   macOS arm64 26.5.1 (25F80), Apple M2, 8 logical cores
   Flutter 3.47.6 stable, framework revision 5fc346839b, Dart 3.13.5
-  Repo-local SDK: .research/flutter-sdk/bin/flutter (writable cache)
+  Repo-local SDK: $HOME/Development/flutter/bin/flutter (writable cache)
   The machine-wide Flutter launcher could not run in this session because its
   SDK cache is read-only here (`Operation not permitted` writing
   bin/cache/lockfile and engine stamps). The repo-local SDK of the same version
