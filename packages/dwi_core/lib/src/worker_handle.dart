@@ -117,6 +117,18 @@ abstract interface class DwiWorkerHandle {
   /// [DwiWorkerFailedException] and are never replayed.
   Future<void> restart();
 
+  /// Measures a round trip to the worker's message loop (ADR-028).
+  ///
+  /// Resolves with the elapsed time once the worker answered. Throws
+  /// [DwiTimeoutException] when no answer arrives within [timeout] (default
+  /// `DwiConfig.heartbeatInterval`): the worker is busy with synchronous work
+  /// or has stopped; the handle itself is not failed by a missed ping. Throws
+  /// the same state errors as [run] when the handle is not ready, and settles
+  /// with [DwiWorkerClosedException] or [DwiWorkerFailedException] when the
+  /// handle closes or fails first. An asynchronous task in progress does not
+  /// delay the answer beyond its next `await`.
+  Future<Duration> ping({Duration? timeout});
+
   /// Opens a named duplex channel on this handle (ADR-014).
   ///
   /// Resolves after the worker acknowledged the channel; throws

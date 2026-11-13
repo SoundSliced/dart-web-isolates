@@ -11,6 +11,7 @@ the recommended way to use DWI and must not reach into implementation details.
 | `scoped_worker/` | `DwiWorker.using` scope ownership and `Dwi.runFresh` fresh-context calls. |
 | `stop_observer/` | `DwiWorker.stopReason` / `stops` termination observation (ADR-017). |
 | `worker_link/` | `DwiWorker.link`: two handles exchanging messages through a relayed link (ADR-023). |
+| `dispatch_control/` | `Dwi.pause`/`resume` and `DwiWorker.ping` (ADR-028). |
 | `cooperative_cancel/` | `DwiCancelToken` and `DwiConfig.cancelGracePeriod`: a task that stops cleanly when cancelled (ADR-027). |
 
 Earlier revisions of this index listed `json_parser/`, `image_processing/`,

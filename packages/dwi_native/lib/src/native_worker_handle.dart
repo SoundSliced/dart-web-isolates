@@ -44,6 +44,11 @@ void _handleMain(_HandleStart start) {
       chain = chain.then<void>((_) => _handleRequest(start, message));
       return;
     }
+    if (message is List && message.length == 2 && message[0] == 'ping') {
+      // Answered from the event loop, not the task chain (ADR-028).
+      start.owner.send(<Object?>['pong', message[1]]);
+      return;
+    }
     // Channel messages are not tasks: handle them immediately so a running
     // asynchronous task cannot block progress or conversation messages
     // (ADR-014). A synchronous task still blocks the isolate event loop.
@@ -438,6 +443,52 @@ class NativeWorkerHandle implements DwiWorkerHandle {
     });
     _pump();
     return handle;
+  }
+
+  /// Pings waiting for an answer, by nonce (ADR-028).
+  final Map<String, Completer<void>> _pings = <String, Completer<void>>{};
+  int _nextPing = 1;
+
+  @override
+  Future<Duration> ping({Duration? timeout}) async {
+    final limit = timeout ?? _config.heartbeatInterval;
+    if (limit <= Duration.zero) {
+      throw ArgumentError.value(timeout, 'timeout', 'must be positive');
+    }
+    if (_state != DwiWorkerState.ready) throw _stateError();
+    final nonce = 'ping-${_nextPing++}';
+    final pong = Completer<void>();
+    _pings[nonce] = pong;
+    final watch = Stopwatch()..start();
+    try {
+      _postPing(nonce);
+      await pong.future.timeout(limit);
+      return watch.elapsed;
+    } on TimeoutException {
+      throw DwiTimeoutException(
+        'worker did not answer a ping within ${limit.inMilliseconds} ms',
+      );
+    } finally {
+      _pings.remove(nonce);
+    }
+  }
+
+  void _answerPing(Object? nonce) {
+    if (nonce is! String) return;
+    final pong = _pings[nonce];
+    if (pong != null && !pong.isCompleted) pong.complete();
+  }
+
+  void _settlePings(DwiException error) {
+    final pending = List<Completer<void>>.of(_pings.values);
+    _pings.clear();
+    for (final pong in pending) {
+      if (!pong.isCompleted) pong.completeError(error);
+    }
+  }
+
+  void _postPing(String nonce) {
+    _workerPort?.send(<Object?>['ping', nonce]);
   }
 
   DwiException _stateError() {
@@ -899,6 +950,10 @@ class NativeWorkerHandle implements DwiWorkerHandle {
     }
 
     if (message[0] is String) {
+      if (message[0] == 'pong') {
+        if (message.length > 1) _answerPing(message[1]);
+        return;
+      }
       if (message[0] == 'protocol') {
         _fail(
           DwiWorkerFailedException(
@@ -1013,6 +1068,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
     }
     _state = DwiWorkerState.failed;
     _recordStop(reason);
+    _settlePings(error);
 
     final ready = _ready;
     _ready = null;
@@ -1056,6 +1112,7 @@ class NativeWorkerHandle implements DwiWorkerHandle {
     _state = DwiWorkerState.closing;
     _recordStop(DwiWorkerStop.callerClosed);
     const error = DwiWorkerClosedException('worker handle was closed');
+    _settlePings(error);
 
     final ready = _ready;
     _ready = null;

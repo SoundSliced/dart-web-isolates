@@ -4,7 +4,7 @@ set -eu
 
 here="$(cd "$(dirname "$0")" && pwd -P)"
 repo="$(cd "$here/../.." && pwd -P)"
-dart="${DART:-$repo/.research/flutter-sdk/bin/cache/dart-sdk/bin/dart}"
+dart="${DART:-$repo/.research/dart-sdk-dev/dart-sdk/bin/dart}"
 source="$here/bin/static_identity_probe.dart"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT

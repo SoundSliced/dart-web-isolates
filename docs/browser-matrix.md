@@ -1,5 +1,32 @@
 # Browser Matrix
 
+## Pause, resume and ping (ADR-028, 2026-11-13, checkout only)
+
+`browser_dispatch_control_test.dart` compiles each host and worker separately.
+In each cell it holds calls with `Dwi.pause()`, checks that held calls run only
+after `resume()` and in order, cancels a held call (it settles with
+`DwiCancelledException`), and checks that a running call keeps running while
+paused. It also checks that `close()` fails held calls with
+`DwiUnsupportedException`, that `close(drain: true)` resumes first and runs
+them, and that a synchronous busy loop makes `ping` time out while an
+asynchronous one still answers. Every worker is terminated at the end. All
+sixteen combinations pass:
+
+| Host / worker | Chrome 157.0.8103.78 | Safari 26.5 | Firefox 160.0 | Edge 157.0.4341.46 |
+| --- | --- | --- | --- | --- |
+| dart2js / dart2js | pass | pass | pass | pass |
+| dart2js / dart2wasm | pass | pass | pass | pass |
+| dart2wasm / dart2js | pass | pass | pass | pass |
+| dart2wasm / dart2wasm | pass | pass | pass | pass |
+
+The handle contract (`browser_handle_test.dart`, `DwiWorkerHandle.ping`) passes
+in all four engines (`handle-matrix-{chrome,safari,firefox,edge}-20261113.json`,
+three runs each). Evidence: `audit/evidence/dispatch-control-acceptance-2026-11-13T140346.json`
+(`complete: true`, sixteen runs, source digests verified against the working
+tree). Source state at the run: ADR-028 implementation, uncommitted, on top of
+`7ca355b`. A first attempt (`…T135625.json`) ran inside the sandbox, which
+blocks local port binding; it is not evidence and is superseded.
+
 ## Cooperative cancellation (ADR-027, 2026-11-13, checkout only)
 
 `browser_cooperative_cancel_test.dart` compiles each host and worker
@@ -154,7 +181,8 @@ in `native_static_registry_test.dart`. SDK details are in the evidence file.
 Reproduce from `packages/dwi_builder`:
 
 ```sh
-PUB_CACHE=../../.research/pub-cache ../../.research/flutter-sdk/bin/dart test \
+PUB_CACHE=../../.research/pub-cache \
+  ../../.research/dart-sdk-dev/dart-sdk/bin/dart test \
   test/native_static_registry_test.dart test/browser_static_registry_test.dart \
   -r expanded
 ```
@@ -283,6 +311,47 @@ Full data: `audit/evidence/browser-matrix-chrome-2026-11-04.json` and
 
 **Firefox and Edge are unverified for this benchmark** (AGENTS.md rule 8): the
 harness was not run there, so their cells stay empty.
+
+### §2 re-run on the project toolchain (Dart 3.15.0-133.0.dev, 2026-11-13)
+
+The same harness, same machine and same protocol, re-run end to end on the
+project toolchain after 2026-11-13. Environment: macOS arm64 26.5.1, Apple M2,
+8 GiB RAM, Dart 3.15.0-133.0.dev, **Chrome 157.0.8103.78** headless and Safari
+26.5 (safaridriver). Three runs each, both clean (0 failed runs).
+
+| Measurement | Chrome 157.0.8103.78 median (min–max) | Safari 26.5 median (min–max) |
+| --- | --- | --- |
+| Cold start (first call, worker spawn + ready) | 71 ms (62–110) | 37 ms (29–44) |
+| Warm dispatch (round trip) | 0.101 ms (0.1005–0.199) | 0.0 ms (below the 1 ms resolution) |
+| 64 KiB copy / transfer | 0.799 ms (0.3–0.799) / 0.699 ms (0.601–1.1) | 0.0 ms (0–1) / 1.0 ms (0–1) |
+| 1 MiB copy / transfer | 3.601 ms (1.9–5.2) / 0.901 ms (0.801–1.699) | 1.0 ms / 1.0 ms |
+| 8 MiB copy / transfer | 10.3 ms (9.101–14.9) / 7.0 ms (6.5–9.3) | 6.0 ms / 4.0 ms |
+| Queued cancellation | 0.1 ms (0.1–0.199) | 0.0 ms |
+| Running cancellation | 0.1 ms (0.1–0.199) | 0.0 ms (0–1) |
+| 100 tasks through 4 workers | 130 ms (106–135), 100/100 settled | 40 ms (29–43), 100/100 settled |
+| Dead idle worker → next call | 26 ms (15–35) | 27 ms (26–35) |
+| UI timer ticks during 300 ms worker CPU | 29 | 25 |
+| UI timer ticks during 300 ms main-thread CPU | 0 | 0 |
+
+Full data: `audit/evidence/browser-matrix-chrome-2026-11-13.json` and
+`audit/evidence/browser-matrix-safari-2026-11-13.json`.
+
+How to read this against the 2026-11-04/05 table above, which was Dart 3.13.5:
+
+- Chrome moved **two** variables at once (Dart 3.13.5 → 3.15.0-133.0.dev and
+  Chrome 156.0.8078.80 → 157.0.8103.78). Cold start 33 → 71 ms and the 100-task
+  burst 66 → 130 ms therefore cannot be attributed to the compiler; no run
+  isolates them. Safari moved only the Dart version, and its cells are
+  unchanged within the harness resolution (cold start 30 → 37 ms, 8 MiB copy
+  6.0 → 6.0 ms, 8 MiB transfer 4.0 → 4.0 ms).
+- The qualitative results reproduce on both engines: transfer never loses to
+  copy and still wins at 8 MiB (Chrome ~32%, Safari ~33%), cancellation stays at
+  the measurement floor, a dead idle worker is replaced in 26–27 ms, and worker
+  CPU keeps 25–29 UI ticks against 0 for the same work on the main thread.
+- Safari's dead-worker figure moved 47 ms → 27 ms. Both are well below
+  `taskTimeout`; the harness reports one figure per run and the spread is
+  (26–35) against (33–58), so this is a narrower distribution, not a speedup
+  claim.
 
 ## 3. v0.5 handle lifecycle matrix (DWI API level)
 

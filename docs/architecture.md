@@ -1545,6 +1545,71 @@ and worker compilation in each measured browser; actual worker realm and
 independent task state; clean builds, cache invalidation and cleanup. Prototype
 identity or worker-only compilation cannot satisfy that gate.
 
+## ADR-028 — Pausing dispatch and pinging a worker (lifecycle, increment 3)
+
+**Status.** Accepted, 2026-11-13. Completion-plan tranche D, third increment
+(master plan §27, handoff §26: "pause/resume of dispatch; `ping`"). No
+protocol version change: `ping` reuses the `heartbeat` message with a string
+nonce, and the native handle gains a `ping`/`pong` pair.
+
+**Problem.** An application could not hold background work (a page going to
+the background, a burst of interaction) without cancelling it and calling it
+again later. The pool's heartbeat checked liveness internally, but nothing
+told the caller whether a dedicated worker's event loop was responsive.
+
+**Decision.**
+
+```dart
+Dwi.pause();          // new pooled and fresh calls are held
+Dwi.resume();         // held calls are dispatched in order
+Dwi.isPaused;
+
+final latency = await worker.ping(timeout: const Duration(seconds: 1));
+```
+
+1. `Dwi.pause()` / `Dwi.resume()` / `Dwi.isPaused`, implemented in the facade
+   so web and native behave the same and `DwiBackend` is unchanged. While
+   paused, `run`, `runCancellable`, `runFresh` and generated proxies are held
+   before reaching the backend; calls already dispatched keep running.
+2. Held calls obey the queue limits: at most `maxQueuedTasks` are held (more
+   fail with `DwiUnsupportedException`) and each waits at most `queueTimeout`
+   (then `DwiTimeoutException`). After `resume`, the backend's own queue
+   limits apply as usual.
+3. A held `runCancellable` call can be cancelled: `cancel()` returns `true`
+   and the call is never dispatched. Once dispatched, cancellation follows
+   ADR-010 and ADR-027.
+4. `close()` fails held calls with `DwiUnsupportedException` and ends the
+   pause; `close(drain: true)` resumes first, so held calls run and are
+   drained (ADR-024).
+5. Dedicated handles, links and `runStream` are not held: a handle owns its
+   context and its own FIFO queue (ADR-013).
+6. `DwiWorkerHandle.ping({timeout})` / `DwiWorker.ping`: resolves with the
+   round-trip time. The worker answers from its event loop, outside the task
+   queue, so an asynchronous task in progress delays the answer only until
+   its next `await`; a synchronous task makes the ping time out with
+   `DwiTimeoutException`. A missed ping does not fail the handle; the
+   automatic heartbeat (ADR-010 §10.3) remains the failure detector. Default
+   timeout: `heartbeatInterval`. Not-ready handles throw the same state
+   errors as `run`; closing or failing the handle settles pending pings.
+
+**Alternatives rejected.** Pausing inside each backend (two queues with the
+same rules); pausing handles (their single queue already serialises calls and
+the caller controls when to call them); `ping` on the pool (pool workers are
+interchangeable and already supervised by the heartbeat; a pool ping would
+report on an arbitrary worker); failing the handle on a missed ping
+(synchronous work is legitimate, and `taskTimeout` bounds it).
+
+**Acceptance.** Native: held calls start only after resume and in order, a
+running call is unaffected, a held call cancels without starting, hold limits
+and timeouts, close fails and drain runs held calls, idempotence, handles are
+not paused; ping answers while idle and during an asynchronous task, times
+out during synchronous work without failing the handle, settles on close and
+refuses on a closed handle. Web, four host/worker compiler pairs in four
+engines (`browser_dispatch_control_test.dart`): the same pause, cancel, close
+and drain cases through generated proxies, and ping idle, during an
+asynchronous task, timed out during a synchronous one, usable afterwards and
+refused once closed.
+
 ## ADR-027 — Cooperative cancellation (lifecycle, increment 2)
 
 **Status.** Accepted, 2026-11-13. Completion-plan tranche D, second increment

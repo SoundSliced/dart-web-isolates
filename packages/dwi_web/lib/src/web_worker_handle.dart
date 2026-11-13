@@ -166,6 +166,57 @@ class WebWorkerHandle implements DwiWorkerHandle {
     return handle;
   }
 
+  /// Pings waiting for an answer, by nonce (ADR-028).
+  final Map<String, Completer<void>> _pings = <String, Completer<void>>{};
+  int _nextPing = 1;
+
+  @override
+  Future<Duration> ping({Duration? timeout}) async {
+    final limit = timeout ?? _config.heartbeatInterval;
+    if (limit <= Duration.zero) {
+      throw ArgumentError.value(timeout, 'timeout', 'must be positive');
+    }
+    if (_state != DwiWorkerState.ready) throw _stateError();
+    final nonce = 'ping-${_nextPing++}';
+    final pong = Completer<void>();
+    _pings[nonce] = pong;
+    final watch = Stopwatch()..start();
+    try {
+      _postPing(nonce);
+      await pong.future.timeout(limit);
+      return watch.elapsed;
+    } on TimeoutException {
+      throw DwiTimeoutException(
+        'worker did not answer a ping within ${limit.inMilliseconds} ms',
+      );
+    } finally {
+      _pings.remove(nonce);
+    }
+  }
+
+  void _answerPing(Object? nonce) {
+    if (nonce is! String) return;
+    final pong = _pings[nonce];
+    if (pong != null && !pong.isCompleted) pong.complete();
+  }
+
+  void _settlePings(DwiException error) {
+    final pending = List<Completer<void>>.of(_pings.values);
+    _pings.clear();
+    for (final pong in pending) {
+      if (!pong.isCompleted) pong.completeError(error);
+    }
+  }
+
+  void _postPing(String nonce) {
+    _worker?.postMessage(
+      DwiEnvelope(
+        type: DwiMessageType.heartbeat,
+        meta: <String, Object?>{'nonce': nonce},
+      ).toMap().jsify(),
+    );
+  }
+
   DwiException _stateError() {
     switch (_state) {
       case DwiWorkerState.failed:
@@ -648,6 +699,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
         final ready = _ready;
         if (ready != null && !ready.isCompleted) ready.complete();
       case DwiMessageType.heartbeat:
+        _answerPing(envelope.meta['nonce']);
         return;
       case DwiMessageType.result:
         _onReply(envelope);
@@ -858,6 +910,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
     }
     _state = DwiWorkerState.failed;
     _recordStop(reason);
+    _settlePings(error);
 
     final ready = _ready;
     _ready = null;
@@ -897,6 +950,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
     _state = DwiWorkerState.closing;
     _recordStop(DwiWorkerStop.callerClosed);
     const error = DwiWorkerClosedException('worker handle was closed');
+    _settlePings(error);
 
     final ready = _ready;
     _ready = null;

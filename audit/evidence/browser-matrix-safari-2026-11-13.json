@@ -1,0 +1,652 @@
+{
+  "methodology": "benchmarks/browser_matrix: one page load per run, medians inside a run, three runs aggregated here. Payload sizes are exact byte counts; the transfer path detaches the sender every time.",
+  "engine": "safari",
+  "browserVersion": "26.5",
+  "environment": {
+    "browserVersion": "26.5",
+    "os": "macos Version 26.5.1 (Build 25F80)",
+    "dartVersion": "3.15.0-133.0.dev (dev) (Mon Nov 9 20:02:43 2026 -0800) on \"macos_arm64\"",
+    "machine": "Apple M2, 8.0 GiB RAM",
+    "cpuCount": 8,
+    "timestamp": "2026-11-13T11:56:18.715231Z",
+    "timezone": "GMT"
+  },
+  "runs": [
+    {
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15",
+      "hardwareConcurrency": 8,
+      "baseUri": "http://127.0.0.1:62291/index.html?run=1",
+      "coldStartMs": 44,
+      "warmDispatch": {
+        "samplesMs": [
+          1,
+          1,
+          0,
+          1,
+          1,
+          1,
+          0,
+          1,
+          0,
+          1,
+          2,
+          0,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0,
+          2,
+          0,
+          1,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        "medianMs": 0
+      },
+      "transfer_64KiB": {
+        "bytes": 65536,
+        "copySamplesMs": [
+          4,
+          1,
+          0,
+          1,
+          0,
+          2,
+          4
+        ],
+        "copyMedianMs": 1,
+        "transferSamplesMs": [
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "transferMedianMs": 1
+      },
+      "transfer_1MiB": {
+        "bytes": 1048576,
+        "copySamplesMs": [
+          3,
+          1,
+          0,
+          1,
+          1,
+          2,
+          1
+        ],
+        "copyMedianMs": 1,
+        "transferSamplesMs": [
+          1,
+          0,
+          1,
+          1,
+          0,
+          1,
+          1
+        ],
+        "transferMedianMs": 1
+      },
+      "transfer_8MiB": {
+        "bytes": 8388608,
+        "copySamplesMs": [
+          10,
+          7,
+          6,
+          6,
+          7,
+          6,
+          5
+        ],
+        "copyMedianMs": 6,
+        "transferSamplesMs": [
+          3,
+          4,
+          4,
+          4,
+          3,
+          4,
+          4
+        ],
+        "transferMedianMs": 4
+      },
+      "cancelQueued": {
+        "samplesMs": [
+          3,
+          0,
+          0,
+          0,
+          0
+        ],
+        "medianMs": 0
+      },
+      "cancelRunning": {
+        "samplesMs": [
+          1,
+          0,
+          0,
+          1,
+          0
+        ],
+        "medianMs": 0
+      },
+      "sustained": {
+        "tasks": 100,
+        "settled": 100,
+        "totalMs": 40,
+        "workers": 4,
+        "correct": true
+      },
+      "crashFirst": "alive",
+      "crashNext": "next",
+      "crashNextMs": 27,
+      "crashWorkers": 1,
+      "uiTicksDuringWorkerCpu": 25,
+      "uiTicksDuringLocalCpu": 0,
+      "status": "ok"
+    },
+    {
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15",
+      "hardwareConcurrency": 8,
+      "baseUri": "http://127.0.0.1:62291/index.html?run=2",
+      "coldStartMs": 29,
+      "warmDispatch": {
+        "samplesMs": [
+          1,
+          0,
+          1,
+          0,
+          2,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        "medianMs": 0
+      },
+      "transfer_64KiB": {
+        "bytes": 65536,
+        "copySamplesMs": [
+          2,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        "copyMedianMs": 0,
+        "transferSamplesMs": [
+          0,
+          0,
+          1,
+          1,
+          0,
+          0,
+          1
+        ],
+        "transferMedianMs": 0
+      },
+      "transfer_1MiB": {
+        "bytes": 1048576,
+        "copySamplesMs": [
+          1,
+          3,
+          1,
+          1,
+          1,
+          3,
+          1
+        ],
+        "copyMedianMs": 1,
+        "transferSamplesMs": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "transferMedianMs": 1
+      },
+      "transfer_8MiB": {
+        "bytes": 8388608,
+        "copySamplesMs": [
+          9,
+          6,
+          6,
+          6,
+          4,
+          10,
+          5
+        ],
+        "copyMedianMs": 6,
+        "transferSamplesMs": [
+          4,
+          4,
+          3,
+          8,
+          5,
+          4,
+          4
+        ],
+        "transferMedianMs": 4
+      },
+      "cancelQueued": {
+        "samplesMs": [
+          1,
+          0,
+          0,
+          1,
+          0
+        ],
+        "medianMs": 0
+      },
+      "cancelRunning": {
+        "samplesMs": [
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        "medianMs": 0
+      },
+      "sustained": {
+        "tasks": 100,
+        "settled": 100,
+        "totalMs": 29,
+        "workers": 4,
+        "correct": true
+      },
+      "crashFirst": "alive",
+      "crashNext": "next",
+      "crashNextMs": 26,
+      "crashWorkers": 1,
+      "uiTicksDuringWorkerCpu": 25,
+      "uiTicksDuringLocalCpu": 0,
+      "status": "ok"
+    },
+    {
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15",
+      "hardwareConcurrency": 8,
+      "baseUri": "http://127.0.0.1:62291/index.html?run=3",
+      "coldStartMs": 37,
+      "warmDispatch": {
+        "samplesMs": [
+          0,
+          1,
+          2,
+          3,
+          1,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        "medianMs": 0
+      },
+      "transfer_64KiB": {
+        "bytes": 65536,
+        "copySamplesMs": [
+          12,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1
+        ],
+        "copyMedianMs": 0,
+        "transferSamplesMs": [
+          2,
+          6,
+          0,
+          1,
+          0,
+          2,
+          0
+        ],
+        "transferMedianMs": 1
+      },
+      "transfer_1MiB": {
+        "bytes": 1048576,
+        "copySamplesMs": [
+          1,
+          2,
+          1,
+          1,
+          1,
+          2,
+          1
+        ],
+        "copyMedianMs": 1,
+        "transferSamplesMs": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0
+        ],
+        "transferMedianMs": 1
+      },
+      "transfer_8MiB": {
+        "bytes": 8388608,
+        "copySamplesMs": [
+          11,
+          6,
+          6,
+          7,
+          6,
+          7,
+          5
+        ],
+        "copyMedianMs": 6,
+        "transferSamplesMs": [
+          4,
+          4,
+          7,
+          4,
+          4,
+          4,
+          4
+        ],
+        "transferMedianMs": 4
+      },
+      "cancelQueued": {
+        "samplesMs": [
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        "medianMs": 0
+      },
+      "cancelRunning": {
+        "samplesMs": [
+          1,
+          0,
+          1,
+          0,
+          1
+        ],
+        "medianMs": 1
+      },
+      "sustained": {
+        "tasks": 100,
+        "settled": 100,
+        "totalMs": 43,
+        "workers": 4,
+        "correct": true
+      },
+      "crashFirst": "alive",
+      "crashNext": "next",
+      "crashNextMs": 35,
+      "crashWorkers": 1,
+      "uiTicksDuringWorkerCpu": 25,
+      "uiTicksDuringLocalCpu": 0,
+      "status": "ok"
+    }
+  ],
+  "summary": {
+    "runs": 3,
+    "coldStartMs": {
+      "values": [
+        44.0,
+        29.0,
+        37.0
+      ],
+      "median": 37.0,
+      "min": 29.0,
+      "max": 44.0
+    },
+    "warmDispatch.medianMs": {
+      "values": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "median": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "transfer_64KiB.copyMedianMs": {
+      "values": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "median": 0.0,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "transfer_64KiB.transferMedianMs": {
+      "values": [
+        1.0,
+        0.0,
+        1.0
+      ],
+      "median": 1.0,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "transfer_1MiB.copyMedianMs": {
+      "values": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "median": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "transfer_1MiB.transferMedianMs": {
+      "values": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "median": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "transfer_8MiB.copyMedianMs": {
+      "values": [
+        6.0,
+        6.0,
+        6.0
+      ],
+      "median": 6.0,
+      "min": 6.0,
+      "max": 6.0
+    },
+    "transfer_8MiB.transferMedianMs": {
+      "values": [
+        4.0,
+        4.0,
+        4.0
+      ],
+      "median": 4.0,
+      "min": 4.0,
+      "max": 4.0
+    },
+    "cancelQueued.medianMs": {
+      "values": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "median": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "cancelRunning.medianMs": {
+      "values": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "median": 0.0,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "sustained.totalMs": {
+      "values": [
+        40.0,
+        29.0,
+        43.0
+      ],
+      "median": 40.0,
+      "min": 29.0,
+      "max": 43.0
+    },
+    "crashNextMs": {
+      "values": [
+        27.0,
+        26.0,
+        35.0
+      ],
+      "median": 27.0,
+      "min": 26.0,
+      "max": 35.0
+    },
+    "uiTicksDuringWorkerCpu": {
+      "values": [
+        25.0,
+        25.0,
+        25.0
+      ],
+      "median": 25.0,
+      "min": 25.0,
+      "max": 25.0
+    },
+    "uiTicksDuringLocalCpu": {
+      "values": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "median": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "failedRuns": 0
+  }
+}

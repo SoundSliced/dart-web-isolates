@@ -363,6 +363,14 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
     reused, so the period only gives the task time to clean up. Measured in
     all sixteen host/worker/engine cells (2026-11-13,
     `audit/evidence/cooperative-cancel-acceptance-2026-11-13T113102.json`).
+55. **Pause holds calls, not work (ADR-028, checkout only).** `Dwi.pause()`
+    holds new pooled and fresh calls; running calls continue, and handles,
+    links and `runStream` are never held. Held calls count against
+    `maxQueuedTasks` and `queueTimeout`. `DwiWorker.ping` reports event-loop
+    responsiveness only: it cannot tell a long synchronous task from a hung
+    one, and pool workers have no public ping (the heartbeat supervises them).
+    Browser evidence: all sixteen host/worker/engine cells pass
+    (2026-11-13, `audit/evidence/dispatch-control-acceptance-2026-11-13T140346.json`).
 
 ## Research debt (unresolved, tracked)
 

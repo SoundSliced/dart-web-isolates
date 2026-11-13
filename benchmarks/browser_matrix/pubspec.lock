@@ -63,49 +63,49 @@ packages:
       path: "../../packages/dwi"
       relative: true
     source: path
-    version: "0.8.1"
+    version: "0.9.0"
   dwi_annotations:
     dependency: "direct main"
     description:
       path: "../../packages/dwi_annotations"
       relative: true
     source: path
-    version: "0.8.1"
+    version: "0.9.0"
   dwi_builder:
     dependency: "direct main"
     description:
       path: "../../packages/dwi_builder"
       relative: true
     source: path
-    version: "0.8.1"
+    version: "0.9.0"
   dwi_core:
     dependency: "direct overridden"
     description:
       path: "../../packages/dwi_core"
       relative: true
     source: path
-    version: "0.8.1"
+    version: "0.9.0"
   dwi_native:
     dependency: "direct overridden"
     description:
       path: "../../packages/dwi_native"
       relative: true
     source: path
-    version: "0.8.1"
+    version: "0.9.0"
   dwi_protocol:
     dependency: "direct overridden"
     description:
       path: "../../packages/dwi_protocol"
       relative: true
     source: path
-    version: "0.8.1"
+    version: "0.9.0"
   dwi_web:
     dependency: "direct overridden"
     description:
       path: "../../packages/dwi_web"
       relative: true
     source: path
-    version: "0.8.1"
+    version: "0.9.0"
   file:
     dependency: transitive
     description:

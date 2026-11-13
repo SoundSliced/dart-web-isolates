@@ -9,6 +9,13 @@ Environment: Dart 3.13.5 (stable, 2026-09-29) shipped with Flutter
 arm64. Evidence base: `dart-lang/sdk` @ `e21f9245`, MDN/WHATWG pages fetched
 2026-11-03, local probes in `.research/probes/`.
 
+**That environment is the recording stamp for the answers below, not the
+current toolchain.** Since 2026-11-13 the project uses a single SDK for research
+and implementation — Dart 3.15.0-133.0.dev at `.research/dart-sdk-dev/dart-sdk`
+(see `docs/benchmarks.md` § Project toolchain). Anything in this document or in
+`research/` that cites 3.13.5/3.13.7 stays valid for the version it names and is
+not restated as a 3.15 result.
+
 Release status: **0.8.0 is published on pub.dev** (2026-11-10, all seven
 packages; `dwi_builder` and `dwi` carry the opt-in dart2wasm worker backend,
 ADR-018). The dart2js worker is still the default; the Wasm worker is opt-in and

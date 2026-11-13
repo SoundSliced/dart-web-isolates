@@ -1,0 +1,11 @@
+name: dwi_dispatch_control_example
+description: Pausing and resuming dispatch, and pinging a worker (ADR-028).
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  dwi:
+    path: ../../packages/dwi

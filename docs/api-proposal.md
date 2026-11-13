@@ -131,6 +131,24 @@ There is no function overload for `Dwi.run`/`Dwi.runFresh`, fresh-function API,
 capture introspection or compatibility-level raise. Use the existing explicit
 pre-build workflow on released SDKs.
 
+### Pausing dispatch and ping (ADR-028, checkout only)
+
+```dart
+abstract final class Dwi {
+  static void pause();
+  static void resume();
+  static bool get isPaused;
+}
+final class DwiWorker {
+  Future<Duration> ping({Duration? timeout});
+}
+```
+
+While paused, new pooled and fresh calls are held (bounded by
+`maxQueuedTasks` and `queueTimeout`) and dispatched in order on `resume`.
+`ping` measures a round trip to a handle's event loop and times out while a
+synchronous task holds it.
+
 ### Cooperative cancellation (ADR-027, checkout only)
 
 ```dart

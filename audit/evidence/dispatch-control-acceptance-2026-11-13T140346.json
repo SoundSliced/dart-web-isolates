@@ -1,0 +1,628 @@
+{
+  "sdk": "3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"macos_arm64\"",
+  "revision": "7ca355b2ffbcc6d8f952b06425bfb719fee0cbf5",
+  "sourceState": "local ADR-028 implementation, uncommitted",
+  "sourceDigests": {
+    "../dwi/lib/dwi.dart": "c178d9a45da5e45d8d23f51fc3814da2c579b0c686acb762a3e3051a0c510cca",
+    "../dwi_core/lib/src/worker_handle.dart": "fac4dafc72b649b824875c27cfefbd368c6ec70d6b34b1993465a0af3eee4dc1",
+    "../dwi_web/lib/src/web_worker_handle.dart": "ede6674e0abc72a98ddbd34d4945e5689e51c9c966166583febc076b9f180375",
+    "../dwi_web/lib/src/worker_dispatcher.dart": "f6cf7690dd96922fedc3ca54b9c34c0e8a309d2a5c139430a257d827e7c53b46",
+    "test/browser_dispatch_control_test.dart": "b33feeee47629feecbbe3f62f356137065e891adaeb19b52b664488f5faea4fc",
+    "test/support/browser_engines.dart": "f9a966c5ef5e5dc1549e6571e27fe3791aa421f5895cc1ec1ca53409f0b51744",
+    "test/support/browser_probe.dart": "bd47500f59a49a366b99d69d27c7a07e62b77d691933cad19553c16da6871109",
+    "test/support/fixture.dart": "fc51a81a45180802e4cf4b78a246b8af32d66cad8d32d881edd4bd9a4d43f380"
+  },
+  "fixture": "packages/dwi_builder/test/browser_dispatch_control_test.dart",
+  "command": "dart test test/browser_dispatch_control_test.dart -r expanded",
+  "runs": [
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "heldBeforeResume": 0,
+        "paused": true,
+        "heldCancel": true,
+        "heldResult": "DwiCancelledException",
+        "order": [
+          "a",
+          "b"
+        ],
+        "afterResume": "d",
+        "observedWorkerBackend": "dart2js",
+        "running": 300,
+        "closedHeld": "DwiUnsupportedException",
+        "drainedHeld": "y",
+        "pausedAfterClose": false,
+        "idlePing": true,
+        "asyncBusyPing": true,
+        "asyncCall": 600,
+        "syncBusyPing": "DwiTimeoutException",
+        "syncCall": 1000,
+        "usableAfter": true,
+        "pingAfter": true,
+        "closedPing": "DwiWorkerClosedException",
+        "backend": "worker",
+        "workerBackend": null,
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "heldBeforeResume": 0,
+        "paused": true,
+        "heldCancel": true,
+        "heldResult": "DwiCancelledException",
+        "order": [
+          "a",
+          "b"
+        ],
+        "afterResume": "d",
+        "observedWorkerBackend": "dart2js",
+        "running": 300,
+        "closedHeld": "DwiUnsupportedException",
+        "drainedHeld": "y",
+        "pausedAfterClose": false,
+        "idlePing": true,
+        "asyncBusyPing": true,
+        "asyncCall": 600,
+        "syncBusyPing": "DwiTimeoutException",
+        "syncCall": 1000,
+        "usableAfter": true,
+        "pingAfter": true,
+        "closedPing": "DwiWorkerClosedException",
+        "backend": "worker",
+        "workerBackend": null,
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 160.0",
+      "result": {
+        "heldBeforeResume": 0,
+        "paused": true,
+        "heldCancel": true,
+        "heldResult": "DwiCancelledException",
+        "order": [
+          "a",
+          "b"
+        ],
+        "afterResume": "d",
+        "observedWorkerBackend": "dart2js",
+        "running": 300,
+        "closedHeld": "DwiUnsupportedException",
+        "drainedHeld": "y",
+        "pausedAfterClose": false,
+        "idlePing": true,
+        "asyncBusyPing": true,
+        "asyncCall": 600,
+        "syncBusyPing": "DwiTimeoutException",
+        "syncCall": 1000,
+        "usableAfter": true,
+        "pingAfter": true,
+        "closedPing": "DwiWorkerClosedException",
+        "backend": "worker",
+        "workerBackend": null,
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "heldBeforeResume": 0,
+        "paused": true,
+        "heldCancel": true,
+        "heldResult": "DwiCancelledException",
+        "order": [
+          "a",
+          "b"
+        ],
+        "afterResume": "d",
+        "observedWorkerBackend": "dart2js",
+        "running": 300,
+        "closedHeld": "DwiUnsupportedException",
+        "drainedHeld": "y",
+        "pausedAfterClose": false,
+        "idlePing": true,
+        "asyncBusyPing": true,
+        "asyncCall": 600,
+        "syncBusyPing": "DwiTimeoutException",
+        "syncCall": 1000,
+        "usableAfter": true,
+        "pingAfter": true,
+        "closedPing": "DwiWorkerClosedException",
+        "backend": "worker",
+        "workerBackend": null,
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "heldBeforeResume": 0,
+        "paused": true,
+        "heldCancel": true,
+        "heldResult": "DwiCancelledException",
+        "order": [
+          "a",
+          "b"
+        ],
+        "afterResume": "d",
+        "observedWorkerBackend": "dart2js",
+        "running": 300,
+        "closedHeld": "DwiUnsupportedException",
+        "drainedHeld": "y",
+        "pausedAfterClose": false,
+        "idlePing": true,
+        "asyncBusyPing": true,
+        "asyncCall": 600.0,
+        "syncBusyPing": "DwiTimeoutException",
+        "syncCall": 1000.0,
+        "usableAfter": true,
+        "pingAfter": true,
+        "closedPing": "DwiWorkerClosedException",
+        "backend": "worker",
+        "workerBackend": null,
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "heldBeforeResume": 0,
+        "paused": true,
+        "heldCancel": true,
+        "heldResult": "DwiCancelledException",
+        "order": [
+          "a",
+          "b"
+        ],
+        "afterResume": "d",
+        "observedWorkerBackend": "dart2js",
+        "running": 300,
+        "closedHeld": "DwiUnsupportedException",
+        "drainedHeld": "y",
+        "pausedAfterClose": false,
+        "idlePing": true,
+        "asyncBusyPing": true,
+        "asyncCall": 600.0,
+        "syncBusyPing": "DwiTimeoutException",
+        "syncCall": 1000.0,
+        "usableAfter": true,
+        "pingAfter": true,
+        "closedPing": "DwiWorkerClosedException",
+        "backend": "worker",
+        "workerBackend": null,
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 160.0",
+      "result": {
+        "heldBeforeResume": 0,
+        "paused": true,
+        "heldCancel": true,
+        "heldResult": "DwiCancelledException",
+        "order": [
+          "a",
+          "b"
+        ],
+        "afterResume": "d",
+        "observedWorkerBackend": "dart2js",
+        "running": 300,
+        "closedHeld": "DwiUnsupportedException",
+        "drainedHeld": "y",
+        "pausedAfterClose": false,
+        "idlePing": true,
+        "asyncBusyPing": true,
+        "asyncCall": 600.0,
+        "syncBusyPing": "DwiTimeoutException",
+        "syncCall": 1000.0,
+        "usableAfter": true,
+        "pingAfter": true,
+        "closedPing": "DwiWorkerClosedException",
+        "backend": "worker",
+        "workerBackend": null,
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "heldBeforeResume": 0,
+        "paused": true,
+        "heldCancel": true,
+        "heldResult": "DwiCancelledException",
+        "order": [
+          "a",
+          "b"
+        ],
+        "afterResume": "d",
+        "observedWorkerBackend": "dart2js",
+        "running": 300,
+        "closedHeld": "DwiUnsupportedException",
+        "drainedHeld": "y",
+        "pausedAfterClose": false,
+        "idlePing": true,
+        "asyncBusyPing": true,
+        "asyncCall": 600.0,
+        "syncBusyPing": "DwiTimeoutException",
+        "syncCall": 1000.0,
+        "usableAfter": true,
+        "pingAfter": true,
+        "closedPing": "DwiWorkerClosedException",
+        "backend": "worker",
+        "workerBackend": null,
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "heldBeforeResume": 0,
+        "paused": true,
+        "heldCancel": true,
+        "heldResult": "DwiCancelledException",
+        "order": [
+          "a",
+          "b"
+        ],
+        "afterResume": "d",
+        "observedWorkerBackend": "dart2wasm",
+        "running": 300,
+        "closedHeld": "DwiUnsupportedException",
+        "drainedHeld": "y",
+        "pausedAfterClose": false,
+        "idlePing": true,
+        "asyncBusyPing": true,
+        "asyncCall": 600,
+        "syncBusyPing": "DwiTimeoutException",
+        "syncCall": 1000,
+        "usableAfter": true,
+        "pingAfter": true,
+        "closedPing": "DwiWorkerClosedException",
+        "backend": "worker",
+        "workerBackend": null,
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "heldBeforeResume": 0,
+        "paused": true,
+        "heldCancel": true,
+        "heldResult": "DwiCancelledException",
+        "order": [
+          "a",
+          "b"
+        ],
+        "afterResume": "d",
+        "observedWorkerBackend": "dart2wasm",
+        "running": 300,
+        "closedHeld": "DwiUnsupportedException",
+        "drainedHeld": "y",
+        "pausedAfterClose": false,
+        "idlePing": true,
+        "asyncBusyPing": true,
+        "asyncCall": 600,
+        "syncBusyPing": "DwiTimeoutException",
+        "syncCall": 1000,
+        "usableAfter": true,
+        "pingAfter": true,
+        "closedPing": "DwiWorkerClosedException",
+        "backend": "worker",
+        "workerBackend": null,
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 160.0",
+      "result": {
+        "heldBeforeResume": 0,
+        "paused": true,
+        "heldCancel": true,
+        "heldResult": "DwiCancelledException",
+        "order": [
+          "a",
+          "b"
+        ],
+        "afterResume": "d",
+        "observedWorkerBackend": "dart2wasm",
+        "running": 300,
+        "closedHeld": "DwiUnsupportedException",
+        "drainedHeld": "y",
+        "pausedAfterClose": false,
+        "idlePing": true,
+        "asyncBusyPing": true,
+        "asyncCall": 600,
+        "syncBusyPing": "DwiTimeoutException",
+        "syncCall": 1000,
+        "usableAfter": true,
+        "pingAfter": true,
+        "closedPing": "DwiWorkerClosedException",
+        "backend": "worker",
+        "workerBackend": null,
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "heldBeforeResume": 0,
+        "paused": true,
+        "heldCancel": true,
+        "heldResult": "DwiCancelledException",
+        "order": [
+          "a",
+          "b"
+        ],
+        "afterResume": "d",
+        "observedWorkerBackend": "dart2wasm",
+        "running": 300,
+        "closedHeld": "DwiUnsupportedException",
+        "drainedHeld": "y",
+        "pausedAfterClose": false,
+        "idlePing": true,
+        "asyncBusyPing": true,
+        "asyncCall": 600,
+        "syncBusyPing": "DwiTimeoutException",
+        "syncCall": 1000,
+        "usableAfter": true,
+        "pingAfter": true,
+        "closedPing": "DwiWorkerClosedException",
+        "backend": "worker",
+        "workerBackend": null,
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "heldBeforeResume": 0,
+        "paused": true,
+        "heldCancel": true,
+        "heldResult": "DwiCancelledException",
+        "order": [
+          "a",
+          "b"
+        ],
+        "afterResume": "d",
+        "observedWorkerBackend": "dart2wasm",
+        "running": 300,
+        "closedHeld": "DwiUnsupportedException",
+        "drainedHeld": "y",
+        "pausedAfterClose": false,
+        "idlePing": true,
+        "asyncBusyPing": true,
+        "asyncCall": 600.0,
+        "syncBusyPing": "DwiTimeoutException",
+        "syncCall": 1000.0,
+        "usableAfter": true,
+        "pingAfter": true,
+        "closedPing": "DwiWorkerClosedException",
+        "backend": "worker",
+        "workerBackend": null,
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "heldBeforeResume": 0,
+        "paused": true,
+        "heldCancel": true,
+        "heldResult": "DwiCancelledException",
+        "order": [
+          "a",
+          "b"
+        ],
+        "afterResume": "d",
+        "observedWorkerBackend": "dart2wasm",
+        "running": 300,
+        "closedHeld": "DwiUnsupportedException",
+        "drainedHeld": "y",
+        "pausedAfterClose": false,
+        "idlePing": true,
+        "asyncBusyPing": true,
+        "asyncCall": 600.0,
+        "syncBusyPing": "DwiTimeoutException",
+        "syncCall": 1000.0,
+        "usableAfter": true,
+        "pingAfter": true,
+        "closedPing": "DwiWorkerClosedException",
+        "backend": "worker",
+        "workerBackend": null,
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 160.0",
+      "result": {
+        "heldBeforeResume": 0,
+        "paused": true,
+        "heldCancel": true,
+        "heldResult": "DwiCancelledException",
+        "order": [
+          "a",
+          "b"
+        ],
+        "afterResume": "d",
+        "observedWorkerBackend": "dart2wasm",
+        "running": 300,
+        "closedHeld": "DwiUnsupportedException",
+        "drainedHeld": "y",
+        "pausedAfterClose": false,
+        "idlePing": true,
+        "asyncBusyPing": true,
+        "asyncCall": 600.0,
+        "syncBusyPing": "DwiTimeoutException",
+        "syncCall": 1000.0,
+        "usableAfter": true,
+        "pingAfter": true,
+        "closedPing": "DwiWorkerClosedException",
+        "backend": "worker",
+        "workerBackend": null,
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "heldBeforeResume": 0,
+        "paused": true,
+        "heldCancel": true,
+        "heldResult": "DwiCancelledException",
+        "order": [
+          "a",
+          "b"
+        ],
+        "afterResume": "d",
+        "observedWorkerBackend": "dart2wasm",
+        "running": 300,
+        "closedHeld": "DwiUnsupportedException",
+        "drainedHeld": "y",
+        "pausedAfterClose": false,
+        "idlePing": true,
+        "asyncBusyPing": true,
+        "asyncCall": 600.0,
+        "syncBusyPing": "DwiTimeoutException",
+        "syncCall": 1000.0,
+        "usableAfter": true,
+        "pingAfter": true,
+        "closedPing": "DwiWorkerClosedException",
+        "backend": "worker",
+        "workerBackend": null,
+        "ok": true,
+        "workers": [
+          4,
+          4
+        ]
+      },
+      "status": "pass"
+    }
+  ],
+  "complete": true
+}

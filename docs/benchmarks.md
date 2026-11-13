@@ -3,6 +3,20 @@
 Methodology and recorded results. A benchmark without a machine, browser and
 commit is not a result.
 
+## Project toolchain
+
+The project standardised on one Dart SDK on 2026-11-13: **Dart
+3.15.0-133.0.dev (dev, 2026-11-09, revision `1bb89a8872`)**, installed from the
+dart-archive dev channel into `.research/dart-sdk-dev/dart-sdk`. Research and
+implementation share it; there is no separate SDK for research. The SDK source
+checkout in `.research/dart-sdk` is a read-only reference, not a toolchain.
+
+What this does not change: every result dated before 2026-11-13 was measured on
+Dart 3.13.5 or 3.13.7 and keeps its own stamp. Those rows are historical
+records, not current numbers, and are not rewritten. Re-runs on the project
+toolchain are added as new dated sections and never replace an older one,
+because machine, browser and Dart versions move independently (rules 2 and 5).
+
 ## Recorded so far
 
 ### M001 — main thread vs worker (Chrome 156 headless, macOS arm64, 8 cores)
@@ -66,6 +80,36 @@ Safari 26.5 was measured with the same harness; its numbers are in
 `docs/browser-matrix.md` §2 and are never copied into this Chrome table.
 Firefox and Edge were not measured for this benchmark and stay **unverified**
 (`docs/browser-matrix.md` records the exact status of each).
+
+### v0.4 runtime suite — re-run on the project toolchain (2026-11-13)
+
+Same harness, same machine, re-run end to end on Dart 3.15.0-133.0.dev.
+Environment: macOS arm64 26.5.1, Apple M2, 8 GiB RAM, **Chrome 157.0.8103.78**
+headless. Three runs, each run's medians taken inside the page, zero failed
+runs.
+
+| Measurement | Median (min–max) |
+| --- | --- |
+| Cold start (first call after configure) | 71 ms (62–110) |
+| Warm dispatch round trip | 0.101 ms (0.1005–0.199) |
+| 64 KiB copy / transfer | 0.799 ms (0.3–0.799) / 0.699 ms (0.601–1.1) |
+| 1 MiB copy / transfer | 3.601 ms (1.9–5.2) / 0.901 ms (0.801–1.699) |
+| 8 MiB copy / transfer | 10.3 ms (9.101–14.9) / 7.0 ms (6.5–9.3) |
+| Queued cancellation | 0.1 ms (0.1–0.199) |
+| Running cancellation | 0.1 ms (0.1–0.199) |
+| 100 tasks / 4 workers, bounded queue | 130 ms (106–135), 100/100 settled |
+| Dead idle worker → next call succeeds | 26 ms (15–35) |
+| UI ticks during 300 ms worker CPU / same work on main thread | 29 / 0 |
+
+Reading this against the 2026-11-04 table above: cold start rose from 33 ms to
+71 ms and the 100-task burst from 66 ms to 130 ms, while the 8 MiB transfer
+figure held (6.399 ms → 7.0 ms). **Those deltas are not attributable to Dart
+alone** — the browser also moved 156.0.8078.80 → 157.0.8103.78 between the two
+recordings. Separating the two would need a 3.13.5 run against Chrome 157,
+which has not been done. The transfer-beats-copy conclusion, the cancellation
+floor and the UI-responsiveness control all reproduce.
+
+Full data: `../audit/evidence/browser-matrix-chrome-2026-11-13.json`.
 
 ### v0.5 handle lifecycle matrix (2026-11-05)
 
@@ -194,3 +238,45 @@ Interpretation:
 
 Not measured: Firefox, Safari and Edge benchmarks; startup percentiles above
 p95; long soak; Wasm host + Wasm worker separately (the host here is dart2js).
+
+### JS vs Wasm worker — re-run on the project toolchain (2026-11-13)
+
+Same harness and machine, re-run on Dart 3.15.0-133.0.dev. Environment: macOS
+arm64 26.5.1, Apple M2 (8 cores), **Chrome 157.0.8103.78** headless. Full data:
+`../audit/evidence/wasm-worker-benchmark-2026-11-13.json`.
+
+| Measurement (median, p95) | dart2js worker | dart2wasm worker |
+| --- | --- | --- |
+| Build (in-process) | 3,711 ms | 3,475 ms |
+| Worker artefact bytes | 325,778 | 101,817 |
+| Cold start | 12.3 ms, 207.7 | 16.6 ms, 56.5 |
+| Warm dispatch | 0.1 ms, 0.5 | 0.099 ms, 0.301 |
+| Sieve 2,000,000 | 54.2 ms, 103.9 | 7.1 ms, 19.6 |
+| Sieve 10,000,000 in worker | 183.6 ms, 505.5 | 63.8 ms, 78.7 |
+| Main thread, same 10,000,000 sieve | 165.5 ms, 176.6 | 165.2 ms, 166.4 |
+| UI ticks during worker sieve | 10 | 3 |
+| UI ticks during main-thread sieve | 0 | 0 |
+| 1 KiB copy | 0.1 ms, 4.6 | 0.1 ms, 1.7 |
+| 1 MiB copy | 0.7 ms, 1.1 | 0.7 ms, 1.1 |
+| 1 MiB transfer | 0.6 ms, 23.1 | 0.1 ms, 6.399 |
+
+The host bundle was identical for both backends this run: 146,839 bytes,
+2,152 ms to compile. The harness reported no heap figure for this run, so the
+`performance.memory` row in the 2026-11-10 table above has no counterpart here.
+
+Interpretation:
+
+- The Wasm artefact is still roughly 3× smaller (101,817 vs 325,778 bytes).
+  Both grew ~4% and ~2% respectively against 2026-11-10, consistent with the
+  compiler change; neither is a regression claim.
+- The Wasm CPU advantage reproduced and widened on the 2,000,000 sieve (7.1 vs
+  54.2 ms median) and on the 10,000,000 sieve (63.8 vs 183.6 ms). The dart2js
+  median for the 2,000,000 sieve moved from 29.4 ms to 54.2 ms while Wasm stayed
+  flat (7.5 → 7.1 ms). Only one workload and one engine were measured, so this
+  is not a general dart2js-regression claim; the browser also moved
+  157.0.8103.50 → 157.0.8103.78.
+- Cold start now carries a 207.7 ms p95 outlier for the JS backend (the 2026-11-10
+  run had its outlier on Wasm at 104.6 ms). Medians stay in the low tens of
+  milliseconds. Reported, not smoothed.
+- The UI control held: the worker run left the 16 ms timer ticking (3–10 ticks)
+  while the same sieve on the main thread produced zero.

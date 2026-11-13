@@ -4,6 +4,16 @@ Evidence base for DWI. Every claim in these reports must cite a repository,
 file, symbol and version (or commit), or a reproducible probe committed to the
 repository. Research agents do not modify the Dart or Flutter SDKs.
 
+## Toolchain
+
+There is no research-only SDK. Since 2026-11-13 research runs on the same
+project toolchain as implementation: Dart 3.15.0-133.0.dev at
+`.research/dart-sdk-dev/dart-sdk` (`docs/benchmarks.md` § Project toolchain).
+Reports keep the version they were measured or read against — several cite
+3.13.5/3.13.7 and stay valid for that version. The SDK source checkout
+`.research/dart-sdk` is read-only reference material; its line-pinned citations
+stay pinned to `e21f9245` and are not tracked to newer revisions.
+
 ## Reports
 
 | ID | Report | Subject |

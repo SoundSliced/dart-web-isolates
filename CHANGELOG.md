@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Toolchain
+
+- The project uses one Dart SDK for research and implementation: Dart
+  3.15.0-133.0.dev at `.research/dart-sdk-dev/dart-sdk`. No separate research
+  toolchain. The `tooling/dwi5_probe` scripts default to it instead of the
+  Flutter-bundled Dart 3.13.7. Package constraints stay `^3.13.0`, which already
+  admits 3.13.x, 3.14.0 and 3.15.0-dev, so published consumers are unaffected.
+- Benchmarks re-run on the new toolchain (browser matrix Chrome 157.0.8103.78
+  and Safari 26.5, JS-vs-Wasm worker); results are new dated sections in
+  `docs/benchmarks.md` and `docs/browser-matrix.md`. Earlier numbers are kept
+  with their own version stamps.
+
+### Pausing dispatch and ping (ADR-028)
+
+- `Dwi.pause()`, `Dwi.resume()` and `Dwi.isPaused`: hold new pooled and fresh
+  calls (generated proxies included) and dispatch them in order on resume.
+  Held calls obey `maxQueuedTasks` and `queueTimeout`, can be cancelled, are
+  failed by `close()` and run by `close(drain: true)`.
+- `DwiWorker.ping({timeout})` / `DwiWorkerHandle.ping`: round-trip time to a
+  dedicated worker's event loop; `DwiTimeoutException` while a synchronous
+  task holds it, without failing the handle.
+
 ### Cooperative cancellation (ADR-027)
 
 - `DwiConfig.cancelGracePeriod`: cancelling a running pooled call signals

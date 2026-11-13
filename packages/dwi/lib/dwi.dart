@@ -73,17 +73,103 @@ abstract final class Dwi {
   /// Records [call] until it settles and returns it unchanged.
   static Future<T> _track<T>(Future<T> call) {
     _inFlight.add(call);
-    call.then<void>((_) {}, onError: (Object _) {}).whenComplete(
-      () => _inFlight.remove(call),
-    );
+    call
+        .then<void>((_) {}, onError: (Object _) {})
+        .whenComplete(() => _inFlight.remove(call));
     return call;
+  }
+
+  /// Calls held while dispatch is paused (ADR-028); `null` when not paused.
+  static List<_HeldCall>? _held;
+
+  /// Holds [task] while paused, then runs [start]; runs it at once otherwise.
+  static Future<T> _dispatch<T>(String task, Future<T> Function() start) {
+    if (_held == null) return start();
+    final gate = Completer<void>.sync();
+    _hold(task, gate.complete, gate.completeError);
+    return gate.future.then((_) => start());
+  }
+
+  /// Queues a held call, or fails it at once when the hold is full.
+  static _HeldCall? _hold(
+    String task,
+    void Function() release,
+    void Function(Object error) fail,
+  ) {
+    final held = _held!;
+    if (held.length >= _config.maxQueuedTasks) {
+      final error = DwiUnsupportedException(
+        'task "$task" was refused: ${_config.maxQueuedTasks} calls are '
+        'already held while dispatch is paused',
+      );
+      // Fail after the caller has subscribed to the returned future.
+      scheduleMicrotask(() => fail(error));
+      return null;
+    }
+    late final _HeldCall call;
+    call = _HeldCall(release, fail)
+      ..timer = Timer(_config.queueTimeout, () {
+        if (_held?.remove(call) ?? false) {
+          fail(
+            DwiTimeoutException(
+              'task "$task" was held more than '
+              '${_config.queueTimeout.inMilliseconds} ms while dispatch was '
+              'paused',
+            ),
+          );
+        }
+      });
+    held.add(call);
+    return call;
+  }
+
+  /// Whether [pause] is in effect.
+  static bool get isPaused => _held != null;
+
+  /// Stops dispatching new [run], [runCancellable] and [runFresh] calls
+  /// (ADR-028).
+  ///
+  /// Calls already dispatched keep running. New calls, generated proxies
+  /// included, are held in order until [resume]: at most
+  /// [DwiConfig.maxQueuedTasks] of them (more fail with
+  /// [DwiUnsupportedException]), each for at most [DwiConfig.queueTimeout]
+  /// (then [DwiTimeoutException]). A held [runCancellable] call can be
+  /// cancelled. [close] fails held calls with [DwiUnsupportedException];
+  /// `close(drain: true)` resumes dispatch first. Dedicated [DwiWorker]
+  /// handles and [runStream] are not affected. Repeated calls are ignored.
+  static void pause() {
+    _held ??= <_HeldCall>[];
+  }
+
+  /// Dispatches the held calls in the order they were made and stops
+  /// holding new ones. Ignored when not paused.
+  static void resume() {
+    final held = _held;
+    _held = null;
+    if (held == null) return;
+    for (final call in held) {
+      call.timer?.cancel();
+      call.release();
+    }
+  }
+
+  static void _failHeld() {
+    final held = _held;
+    _held = null;
+    if (held == null) return;
+    for (final call in held) {
+      call.timer?.cancel();
+      call.fail(
+        const DwiUnsupportedException(
+          'call was not dispatched: DWI was closed while paused',
+        ),
+      );
+    }
   }
 
   static void _refuseWhileClosing(String task) {
     if (_closing) {
-      throw DwiUnsupportedException(
-        'task "$task" was refused: DWI is closing',
-      );
+      throw DwiUnsupportedException('task "$task" was refused: DWI is closing');
     }
   }
 
@@ -111,7 +197,9 @@ abstract final class Dwi {
   /// on failure. There is no main-thread fallback.
   static Future<R> run<R>(String task, [Object? input]) async {
     _refuseWhileClosing(task);
-    final result = await _track(_active.run(task, input));
+    final result = await _track(
+      _dispatch(task, () => _active.run(task, input)),
+    );
     if (result is R) return result;
     throw DwiResultTypeException(
       'task "$task" returned ${result.runtimeType}, expected $R',
@@ -137,7 +225,10 @@ abstract final class Dwi {
   static Future<R> runFresh<R>(String task, [Object? input]) async {
     _refuseWhileClosing(task);
     return _track(
-      DwiWorker.using<R>((worker) => worker.run<R>(task, input)),
+      _dispatch(
+        task,
+        () => DwiWorker.using<R>((worker) => worker.run<R>(task, input)),
+      ),
     );
   }
 
@@ -239,10 +330,52 @@ abstract final class Dwi {
       );
       return refused;
     }
+    if (_held != null) return _runCancellableHeld<R>(task, input);
     final inner = _active.start(task, input);
     _track(inner.result);
     final outer = DwiCancellableTask<R>(cancel: inner.cancel);
     outer.result.ignore();
+    _pipe<R>(task, inner, outer);
+    return outer;
+  }
+
+  /// [runCancellable] while paused: cancelling a held call settles it
+  /// without dispatching it.
+  static DwiCancellableTask<R> _runCancellableHeld<R>(
+    String task,
+    Object? input,
+  ) {
+    DwiCancellableTask<Object?>? inner;
+    _HeldCall? held;
+    late final DwiCancellableTask<R> outer;
+    outer = DwiCancellableTask<R>(
+      cancel: () async {
+        final started = inner;
+        if (started != null) return started.cancel();
+        if (outer.isDone) return false;
+        _held?.remove(held);
+        held?.timer?.cancel();
+        outer.completeError(
+          DwiCancelledException('task "$task" was cancelled while held'),
+        );
+        return true;
+      },
+    );
+    outer.result.ignore();
+    _track(outer.result);
+    held = _hold(task, () {
+      final started = _active.start(task, input);
+      inner = started;
+      _pipe<R>(task, started, outer);
+    }, (error) => outer.completeError(error));
+    return outer;
+  }
+
+  static void _pipe<R>(
+    String task,
+    DwiCancellableTask<Object?> inner,
+    DwiCancellableTask<R> outer,
+  ) {
     unawaited(
       inner.result.then<void>(
         (value) {
@@ -261,7 +394,6 @@ abstract final class Dwi {
         },
       ),
     );
-    return outer;
   }
 
   /// Reports what the selected backend can actually do here.
@@ -284,6 +416,11 @@ abstract final class Dwi {
   /// their calls, links and [runStream] streams are not waited for: close them
   /// first if they must finish.
   static Future<void> close({bool drain = false}) async {
+    if (drain) {
+      resume();
+    } else {
+      _failHeld();
+    }
     if (drain && !_closing) {
       _closing = true;
       try {
@@ -306,6 +443,15 @@ abstract final class Dwi {
     await next.configure(_config);
     _backend = next;
   }
+}
+
+/// One call held by [Dwi.pause].
+final class _HeldCall {
+  _HeldCall(this.release, this.fail);
+
+  final void Function() release;
+  final void Function(Object error) fail;
+  Timer? timer;
 }
 
 /// A handle to one dedicated worker or isolate (ADR-013).
@@ -464,6 +610,19 @@ final class DwiWorker {
   /// fresh local state and never receives work that failed with the old one.
   /// Throws [DwiWorkerStateException] in any other state.
   Future<void> restart() => _handle.restart();
+
+  /// Measures a round trip to this worker's message loop (ADR-028).
+  ///
+  /// ```dart
+  /// final latency = await worker.ping(timeout: const Duration(seconds: 1));
+  /// ```
+  ///
+  /// Throws [DwiTimeoutException] when the worker does not answer within
+  /// [timeout] (default [DwiConfig.heartbeatInterval]), for example while a
+  /// synchronous task holds its event loop; a missed ping does not fail the
+  /// handle. Throws the same state errors as [run] when the handle is not
+  /// ready.
+  Future<Duration> ping({Duration? timeout}) => _handle.ping(timeout: timeout);
 
   /// Opens a named duplex channel on this handle (ADR-014).
   ///

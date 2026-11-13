@@ -6,7 +6,7 @@
   "command": "dart test test/browser_handle_test.dart --plain-name \"handle lifecycle contract in chrome\"",
   "environment": {
     "os": "Version 26.5.1 (Build 25F80)",
-    "dartVersion": "3.13.7 (stable) (Thu Oct 22 14:28:57 2026 -0700) on \"macos_arm64\"",
+    "dartVersion": "3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"macos_arm64\"",
     "cpuCount": 8
   },
   "runs": [

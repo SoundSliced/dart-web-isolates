@@ -169,6 +169,20 @@ void main() {
       expect(response.error!.remoteType, 'DwiCancelledException');
     });
 
+    test('a heartbeat echoes a string nonce (ADR-028 ping)', () async {
+      final dispatcher = DwiWorkerDispatcher(<String, DwiWorkerTask>{});
+
+      final reply = await dispatcher.handle(
+        const DwiEnvelope(
+          type: DwiMessageType.heartbeat,
+          meta: <String, Object?>{'nonce': 'ping-7'},
+        ),
+      );
+
+      expect(reply!.type, DwiMessageType.heartbeat);
+      expect(reply.meta['nonce'], 'ping-7');
+    });
+
     test('cancel for an unknown or finished id is ignored', () async {
       final dispatcher = DwiWorkerDispatcher(<String, DwiWorkerTask>{
         'token': (Object? input) => DwiCancelToken.current.isCancelled,

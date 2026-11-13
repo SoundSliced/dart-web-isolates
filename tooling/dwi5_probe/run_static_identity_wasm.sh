@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Reproduces registered static-function identity on a dart2wasm host in Chrome.
 #
-# Prerequisites: the repo's .research/flutter-sdk, Node is not used, Chrome and
-# python3 (for a loopback static server).
+# Prerequisites: the project toolchain at .research/dart-sdk-dev/dart-sdk, Node
+# is not used, Chrome and python3 (for a loopback static server).
 #
 # Inputs:
-#   DART    dart launcher (default: repo .research/flutter-sdk/bin/cache/dart-sdk/bin/dart)
+#   DART    dart launcher (default: repo .research/dart-sdk-dev/dart-sdk/bin/dart)
 #   CHROME  Chrome binary (default: the macOS application path)
 #   PORT    loopback port (default: 8765)
 #
@@ -15,7 +15,7 @@ set -eu
 
 here="$(cd "$(dirname "$0")" && pwd -P)"
 repo="$(cd "$here/../.." && pwd -P)"
-dart="${DART:-$repo/.research/flutter-sdk/bin/cache/dart-sdk/bin/dart}"
+dart="${DART:-$repo/.research/dart-sdk-dev/dart-sdk/bin/dart}"
 chrome="${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
 port="${PORT:-8765}"
 

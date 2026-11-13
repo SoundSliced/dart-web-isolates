@@ -15,7 +15,11 @@
 #
 # Inputs:
 #   FLUTTER     flutter launcher (default: `flutter` from PATH)
-#   DART        dart launcher (default: the sibling `dart` of $FLUTTER)
+#   DART        dart launcher (default: the sibling `dart` of $FLUTTER).
+#               This fixture builds a Flutter app, so it stays on the Dart
+#               bundled with that Flutter checkout rather than the project
+#               toolchain in .research/dart-sdk-dev/dart-sdk; Flutter does not
+#               accept an external Dart SDK.
 #   WORK_DIR    scratch root (default: a new temp directory)
 #   PUB_CACHE   isolated pub cache (default: $WORK_DIR/pub-cache)
 #   ENGINES     comma-separated engines (default: chrome,safari,firefox,edge)
