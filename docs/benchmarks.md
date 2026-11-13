@@ -5,17 +5,53 @@ commit is not a result.
 
 ## Project toolchain
 
-The project standardised on one Dart SDK on 2026-11-13: **Dart
-3.15.0-133.0.dev (dev, 2026-11-09, revision `1bb89a8872`)**, installed from the
-dart-archive dev channel into `.research/dart-sdk-dev/dart-sdk`. Research and
-implementation share it; there is no separate SDK for research. The SDK source
-checkout in `.research/dart-sdk` is a read-only reference, not a toolchain.
+The project uses the Dart SDK embedded in the Flutter SDK at
+`~/Development/flutter` (`bin/cache/dart-sdk/bin/dart`, **Dart 3.13.5 stable**,
+macOS arm64), with the pub cache at `~/.pub-cache`. On 2026-11-13 the separate
+Dart dev-channel SDK and the other Flutter/Dart SDK and pub-cache copies on this
+machine were removed. The `.research/` folder holds old results and probes only,
+not an SDK.
 
 What this does not change: every result dated before 2026-11-13 was measured on
-Dart 3.13.5 or 3.13.7 and keeps its own stamp. Those rows are historical
+Dart 3.13.5 or 3.13.7 (or a dev-channel build, where its row says so) and keeps
+its own stamp. Those rows are historical
 records, not current numbers, and are not rewritten. Re-runs on the project
 toolchain are added as new dated sections and never replace an older one,
 because machine, browser and Dart versions move independently (rules 2 and 5).
+
+## Scheduling policies (tranche D, 2026-11-13)
+
+`benchmarks/scheduling_policies/web/index.html` (plain JavaScript, no Dart)
+compares four dispatch policies over a pool of four dedicated Web Workers in
+each engine. It measures the policies on their own, not through DWI's internals.
+Workload: a burst of 200 synchronous busy-loop tasks of 2, 10 or 50 ms (70/25/5
+%, seed 42); 2 ms tasks carry priority 1. Five repetitions per policy after one
+warm-up; the table shows medians of each run's metrics. Times are in
+milliseconds from burst submission.
+
+| Policy | Chrome 157 makespan / p50 / p95 | Safari 26.5 | Firefox 160 | Edge 157 |
+| --- | --- | --- | --- | --- |
+| FIFO (shared queue, pull) | 307.0 / 124.3 / 251.0 | 310.0 / 125.0 / 254.0 | 306.0 / 123.0 / 249.0 | 307.9 / 125.5 / 251.9 |
+| Least-loaded (per-worker queues, push by count) | 329.3 / 139.1 / 251.4 | 328.0 / 136.0 / 251.0 | 327.0 / 136.0 / 250.0 | 330.1 / 139.0 / 252.1 |
+| Round-robin (per-worker queues, push) | 330.1 / 138.7 / 252.1 | 335.0 / 139.0 / 255.0 | 328.0 / 137.0 / 252.0 | 330.4 / 138.9 / 252.4 |
+| Priority (shared queue, pull, priority first) | 308.2 / 54.9 / 237.1 | 309.0 / 54.0 / 239.0 | 306.0 / 53.0 / 236.0 | 309.2 / 55.9 / 238.5 |
+
+Reading: the two push policies lose about 6 % makespan to pull FIFO, because
+they commit tasks to a worker's queue before knowing task durations. Count-based
+least-loaded cannot see that cost either. Priority cuts p50 by more than half
+because the 2 ms tasks run first; that is a property of this workload, not a
+general speed-up, and its p95 is no better than FIFO's. p95 is nearly identical
+across all four policies.
+
+Decision: none of these policies is added to the public API by this result.
+FIFO stays the default. A priority option would need its own ADR and API
+proposal. Least-loaded and round-robin are not recommended on these numbers.
+
+Limits: one browser session per engine, burst arrival only, a single pool size
+(4), and the synchronous busy loop as the task. Evidence:
+`audit/evidence/scheduling-policies-2026-11-13.json`. Reproduce with
+`dart run bin/probe.dart --root <repo>/benchmarks/scheduling_policies/web --engines chrome,safari,firefox,edge`
+from `tooling/hosted_consumer/probe`, using the Dart SDK described above.
 
 ## Recorded so far
 

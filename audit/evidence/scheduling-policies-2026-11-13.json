@@ -1,0 +1,586 @@
+[
+  {
+    "engine": "chrome",
+    "version": "Google Chrome 157.0.8103.78",
+    "url": "http://127.0.0.1:57991/",
+    "status": "ok",
+    "data": {
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+      "hardwareConcurrency": 8,
+      "workers": 4,
+      "tasks": 200,
+      "reps": 5,
+      "workload": "burst of 200 busy-loop tasks, 2/10/50 ms at 70/25/5 %, seed 42",
+      "arrival": "all tasks submitted at t0",
+      "policies": {
+        "fifo": {
+          "makespanMedianMs": 307,
+          "p50MedianMs": 124.29999995231628,
+          "p95MedianMs": 251,
+          "samples": [
+            {
+              "makespanMs": 306.5,
+              "p50Ms": 124.5,
+              "p95Ms": 250.5
+            },
+            {
+              "makespanMs": 307,
+              "p50Ms": 124.29999995231628,
+              "p95Ms": 251
+            },
+            {
+              "makespanMs": 307.39999997615814,
+              "p50Ms": 124.89999997615814,
+              "p95Ms": 251.39999997615814
+            },
+            {
+              "makespanMs": 306.2000000476837,
+              "p50Ms": 124.10000002384186,
+              "p95Ms": 250.20000004768372
+            },
+            {
+              "makespanMs": 307.39999997615814,
+              "p50Ms": 124.29999995231628,
+              "p95Ms": 251.19999992847443
+            }
+          ]
+        },
+        "least-loaded": {
+          "makespanMedianMs": 329.3000000715256,
+          "p50MedianMs": 139.10000002384186,
+          "p95MedianMs": 251.39999997615814,
+          "samples": [
+            {
+              "makespanMs": 331.8000000715256,
+              "p50Ms": 141.10000002384186,
+              "p95Ms": 253.80000007152557
+            },
+            {
+              "makespanMs": 337.2000000476837,
+              "p50Ms": 147.20000004768372,
+              "p95Ms": 259.2000000476837
+            },
+            {
+              "makespanMs": 328.5,
+              "p50Ms": 137.69999992847443,
+              "p95Ms": 250.5
+            },
+            {
+              "makespanMs": 329.3000000715256,
+              "p50Ms": 138.10000002384186,
+              "p95Ms": 251.30000007152557
+            },
+            {
+              "makespanMs": 329.10000002384186,
+              "p50Ms": 139.10000002384186,
+              "p95Ms": 251.39999997615814
+            }
+          ]
+        },
+        "round-robin": {
+          "makespanMedianMs": 330.10000002384186,
+          "p50MedianMs": 138.70000004768372,
+          "p95MedianMs": 252.10000002384186,
+          "samples": [
+            {
+              "makespanMs": 331.8000000715256,
+              "p50Ms": 141.60000002384186,
+              "p95Ms": 253.60000002384186
+            },
+            {
+              "makespanMs": 328.7000000476837,
+              "p50Ms": 138.70000004768372,
+              "p95Ms": 250.70000004768372
+            },
+            {
+              "makespanMs": 328.5,
+              "p50Ms": 138.39999997615814,
+              "p95Ms": 250.5
+            },
+            {
+              "makespanMs": 330.10000002384186,
+              "p50Ms": 138.30000007152557,
+              "p95Ms": 252.10000002384186
+            },
+            {
+              "makespanMs": 333,
+              "p50Ms": 142.89999997615814,
+              "p95Ms": 255
+            }
+          ]
+        },
+        "priority": {
+          "makespanMedianMs": 308.2000000476837,
+          "p50MedianMs": 54.90000009536743,
+          "p95MedianMs": 237.10000002384186,
+          "samples": [
+            {
+              "makespanMs": 309.2000000476837,
+              "p50Ms": 56.60000002384186,
+              "p95Ms": 239.20000004768372
+            },
+            {
+              "makespanMs": 307.89999997615814,
+              "p50Ms": 54.39999997615814,
+              "p95Ms": 236.39999997615814
+            },
+            {
+              "makespanMs": 308.2000000476837,
+              "p50Ms": 54.10000002384186,
+              "p95Ms": 236.39999997615814
+            },
+            {
+              "makespanMs": 307.90000009536743,
+              "p50Ms": 54.90000009536743,
+              "p95Ms": 237.10000002384186
+            },
+            {
+              "makespanMs": 308.8000000715256,
+              "p50Ms": 55,
+              "p95Ms": 237.10000002384186
+            }
+          ]
+        }
+      },
+      "ok": true
+    }
+  },
+  {
+    "engine": "safari",
+    "version": "26.5",
+    "url": "http://127.0.0.1:57991/",
+    "status": "ok",
+    "data": {
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15",
+      "hardwareConcurrency": 8,
+      "workers": 4,
+      "tasks": 200,
+      "reps": 5,
+      "workload": "burst of 200 busy-loop tasks, 2/10/50 ms at 70/25/5 %, seed 42",
+      "arrival": "all tasks submitted at t0",
+      "policies": {
+        "fifo": {
+          "makespanMedianMs": 310,
+          "p50MedianMs": 125,
+          "p95MedianMs": 254,
+          "samples": [
+            {
+              "makespanMs": 345,
+              "p50Ms": 147,
+              "p95Ms": 279.0000000000002
+            },
+            {
+              "makespanMs": 310,
+              "p50Ms": 125,
+              "p95Ms": 254
+            },
+            {
+              "makespanMs": 309,
+              "p50Ms": 124,
+              "p95Ms": 253
+            },
+            {
+              "makespanMs": 310,
+              "p50Ms": 125,
+              "p95Ms": 254
+            },
+            {
+              "makespanMs": 309,
+              "p50Ms": 124.00000000000091,
+              "p95Ms": 253
+            }
+          ]
+        },
+        "least-loaded": {
+          "makespanMedianMs": 328,
+          "p50MedianMs": 136,
+          "p95MedianMs": 251.0000000000009,
+          "samples": [
+            {
+              "makespanMs": 343,
+              "p50Ms": 150,
+              "p95Ms": 265
+            },
+            {
+              "makespanMs": 339,
+              "p50Ms": 136,
+              "p95Ms": 254
+            },
+            {
+              "makespanMs": 328,
+              "p50Ms": 136,
+              "p95Ms": 251
+            },
+            {
+              "makespanMs": 328,
+              "p50Ms": 136,
+              "p95Ms": 251
+            },
+            {
+              "makespanMs": 328,
+              "p50Ms": 136,
+              "p95Ms": 251.0000000000009
+            }
+          ]
+        },
+        "round-robin": {
+          "makespanMedianMs": 335.0000000000009,
+          "p50MedianMs": 139,
+          "p95MedianMs": 255,
+          "samples": [
+            {
+              "makespanMs": 370.00000000000045,
+              "p50Ms": 153,
+              "p95Ms": 291
+            },
+            {
+              "makespanMs": 362,
+              "p50Ms": 139,
+              "p95Ms": 255
+            },
+            {
+              "makespanMs": 328,
+              "p50Ms": 136,
+              "p95Ms": 252.0000000000009
+            },
+            {
+              "makespanMs": 335.0000000000009,
+              "p50Ms": 140,
+              "p95Ms": 256
+            },
+            {
+              "makespanMs": 328,
+              "p50Ms": 136.0000000000009,
+              "p95Ms": 251
+            }
+          ]
+        },
+        "priority": {
+          "makespanMedianMs": 309,
+          "p50MedianMs": 54.00000000000091,
+          "p95MedianMs": 239,
+          "samples": [
+            {
+              "makespanMs": 311,
+              "p50Ms": 56,
+              "p95Ms": 239
+            },
+            {
+              "makespanMs": 309,
+              "p50Ms": 56,
+              "p95Ms": 239
+            },
+            {
+              "makespanMs": 308.9999999999991,
+              "p50Ms": 53.99999999999909,
+              "p95Ms": 238.9999999999991
+            },
+            {
+              "makespanMs": 309,
+              "p50Ms": 54.00000000000091,
+              "p95Ms": 239
+            },
+            {
+              "makespanMs": 309.0000000000009,
+              "p50Ms": 54,
+              "p95Ms": 239
+            }
+          ]
+        }
+      },
+      "ok": true
+    }
+  },
+  {
+    "engine": "firefox",
+    "version": "Mozilla Firefox 160.0",
+    "url": "http://127.0.0.1:57991/",
+    "status": "ok",
+    "data": {
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:160.0) Gecko/20100101 Firefox/160.0",
+      "hardwareConcurrency": 8,
+      "workers": 4,
+      "tasks": 200,
+      "reps": 5,
+      "workload": "burst of 200 busy-loop tasks, 2/10/50 ms at 70/25/5 %, seed 42",
+      "arrival": "all tasks submitted at t0",
+      "policies": {
+        "fifo": {
+          "makespanMedianMs": 306,
+          "p50MedianMs": 123,
+          "p95MedianMs": 249,
+          "samples": [
+            {
+              "makespanMs": 307,
+              "p50Ms": 125,
+              "p95Ms": 251
+            },
+            {
+              "makespanMs": 307,
+              "p50Ms": 123,
+              "p95Ms": 250
+            },
+            {
+              "makespanMs": 306,
+              "p50Ms": 122,
+              "p95Ms": 249
+            },
+            {
+              "makespanMs": 305,
+              "p50Ms": 123,
+              "p95Ms": 249
+            },
+            {
+              "makespanMs": 304,
+              "p50Ms": 121,
+              "p95Ms": 248
+            }
+          ]
+        },
+        "least-loaded": {
+          "makespanMedianMs": 327,
+          "p50MedianMs": 136,
+          "p95MedianMs": 250,
+          "samples": [
+            {
+              "makespanMs": 327,
+              "p50Ms": 138,
+              "p95Ms": 251
+            },
+            {
+              "makespanMs": 327,
+              "p50Ms": 136,
+              "p95Ms": 250
+            },
+            {
+              "makespanMs": 327,
+              "p50Ms": 138,
+              "p95Ms": 250
+            },
+            {
+              "makespanMs": 326,
+              "p50Ms": 136,
+              "p95Ms": 248
+            },
+            {
+              "makespanMs": 324,
+              "p50Ms": 135,
+              "p95Ms": 247
+            }
+          ]
+        },
+        "round-robin": {
+          "makespanMedianMs": 328,
+          "p50MedianMs": 137,
+          "p95MedianMs": 252,
+          "samples": [
+            {
+              "makespanMs": 330,
+              "p50Ms": 139,
+              "p95Ms": 252
+            },
+            {
+              "makespanMs": 330,
+              "p50Ms": 141,
+              "p95Ms": 253
+            },
+            {
+              "makespanMs": 326,
+              "p50Ms": 136,
+              "p95Ms": 248
+            },
+            {
+              "makespanMs": 328,
+              "p50Ms": 136,
+              "p95Ms": 252
+            },
+            {
+              "makespanMs": 327,
+              "p50Ms": 137,
+              "p95Ms": 249
+            }
+          ]
+        },
+        "priority": {
+          "makespanMedianMs": 306,
+          "p50MedianMs": 53,
+          "p95MedianMs": 236,
+          "samples": [
+            {
+              "makespanMs": 306,
+              "p50Ms": 53,
+              "p95Ms": 236
+            },
+            {
+              "makespanMs": 305,
+              "p50Ms": 52,
+              "p95Ms": 234
+            },
+            {
+              "makespanMs": 307,
+              "p50Ms": 54,
+              "p95Ms": 237
+            },
+            {
+              "makespanMs": 306,
+              "p50Ms": 53,
+              "p95Ms": 236
+            },
+            {
+              "makespanMs": 307,
+              "p50Ms": 53,
+              "p95Ms": 235
+            }
+          ]
+        }
+      },
+      "ok": true
+    }
+  },
+  {
+    "engine": "edge",
+    "version": "Microsoft Edge 157.0.4341.46",
+    "url": "http://127.0.0.1:57991/",
+    "status": "ok",
+    "data": {
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
+      "hardwareConcurrency": 8,
+      "workers": 4,
+      "tasks": 200,
+      "reps": 5,
+      "workload": "burst of 200 busy-loop tasks, 2/10/50 ms at 70/25/5 %, seed 42",
+      "arrival": "all tasks submitted at t0",
+      "policies": {
+        "fifo": {
+          "makespanMedianMs": 307.89999997615814,
+          "p50MedianMs": 125.5,
+          "p95MedianMs": 251.89999997615814,
+          "samples": [
+            {
+              "makespanMs": 308.90000009536743,
+              "p50Ms": 126.80000007152557,
+              "p95Ms": 252.90000009536743
+            },
+            {
+              "makespanMs": 307.8000000715256,
+              "p50Ms": 124.89999997615814,
+              "p95Ms": 251.70000004768372
+            },
+            {
+              "makespanMs": 307.5,
+              "p50Ms": 124.89999997615814,
+              "p95Ms": 251.5
+            },
+            {
+              "makespanMs": 307.89999997615814,
+              "p50Ms": 125.5,
+              "p95Ms": 251.89999997615814
+            },
+            {
+              "makespanMs": 311.5,
+              "p50Ms": 129.40000009536743,
+              "p95Ms": 255.40000009536743
+            }
+          ]
+        },
+        "least-loaded": {
+          "makespanMedianMs": 330.10000002384186,
+          "p50MedianMs": 139,
+          "p95MedianMs": 252.10000002384186,
+          "samples": [
+            {
+              "makespanMs": 332,
+              "p50Ms": 141.39999997615814,
+              "p95Ms": 254
+            },
+            {
+              "makespanMs": 331.2999999523163,
+              "p50Ms": 139.39999997615814,
+              "p95Ms": 252.70000004768372
+            },
+            {
+              "makespanMs": 329.2999999523163,
+              "p50Ms": 138.5,
+              "p95Ms": 251.29999995231628
+            },
+            {
+              "makespanMs": 330.10000002384186,
+              "p50Ms": 139,
+              "p95Ms": 252.10000002384186
+            },
+            {
+              "makespanMs": 329.39999997615814,
+              "p50Ms": 138.89999997615814,
+              "p95Ms": 251.29999995231628
+            }
+          ]
+        },
+        "round-robin": {
+          "makespanMedianMs": 330.39999997615814,
+          "p50MedianMs": 138.89999997615814,
+          "p95MedianMs": 252.40000009536743,
+          "samples": [
+            {
+              "makespanMs": 330.39999997615814,
+              "p50Ms": 138.89999997615814,
+              "p95Ms": 252.39999997615814
+            },
+            {
+              "makespanMs": 337.39999997615814,
+              "p50Ms": 147,
+              "p95Ms": 259.39999997615814
+            },
+            {
+              "makespanMs": 329.2000000476837,
+              "p50Ms": 138.89999997615814,
+              "p95Ms": 251.20000004768372
+            },
+            {
+              "makespanMs": 329.60000002384186,
+              "p50Ms": 138.80000007152557,
+              "p95Ms": 252.40000009536743
+            },
+            {
+              "makespanMs": 330.90000009536743,
+              "p50Ms": 140.60000002384186,
+              "p95Ms": 253
+            }
+          ]
+        },
+        "priority": {
+          "makespanMedianMs": 309.2000000476837,
+          "p50MedianMs": 55.89999997615814,
+          "p95MedianMs": 238.5,
+          "samples": [
+            {
+              "makespanMs": 326.8000000715256,
+              "p50Ms": 73.5,
+              "p95Ms": 256.5
+            },
+            {
+              "makespanMs": 309.60000002384186,
+              "p50Ms": 55.89999997615814,
+              "p95Ms": 238.29999995231628
+            },
+            {
+              "makespanMs": 309.10000002384186,
+              "p50Ms": 55.10000002384186,
+              "p95Ms": 239
+            },
+            {
+              "makespanMs": 309.10000002384186,
+              "p50Ms": 56.40000009536743,
+              "p95Ms": 238.5
+            },
+            {
+              "makespanMs": 309.2000000476837,
+              "p50Ms": 55.39999997615814,
+              "p95Ms": 238
+            }
+          ]
+        }
+      },
+      "ok": true
+    }
+  }
+]
