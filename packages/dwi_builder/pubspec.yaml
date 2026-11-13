@@ -1,6 +1,6 @@
 name: dwi_builder
 description: Build-time discovery, generation and compilation of DWI worker entrypoints.
-version: 0.8.1
+version: 0.9.0
 repository: https://github.com/SoundSliced/dart-web-isolates
 topics:
   - isolate
@@ -15,7 +15,7 @@ dependencies:
   analyzer: ^14.0.0
   args: ^2.7.0
   crypto: ^3.0.8
-  dwi_annotations: ^0.8.1
+  dwi_annotations: ^0.9.0
   hooks: ^2.2.0
   path: ^1.9.1
   yaml: ^3.1.3

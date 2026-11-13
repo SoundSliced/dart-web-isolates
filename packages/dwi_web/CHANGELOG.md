@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0
+
+- Fix: cancelling a pooled call while its worker is still starting now
+  cancels it (`DwiCancelledException`) instead of returning `false` and
+  letting the task run.
+
 ## 0.8.1
 
 - Report missing JS or Wasm worker assets as typed startup failures for pooled

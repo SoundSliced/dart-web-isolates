@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0
+
+- Add `Dwi.runStream` for tasks that return `Stream<T>` (ADR-022) and
+  re-export `DwiStreamTask`.
+- Pick up the `dwi_web` fix for cancelling a pooled call while its worker is
+  still starting.
+
 ## 0.8.1
 
 - Pick up `dwi_web` 0.8.1: a missing worker asset now settles `Dwi.run` and

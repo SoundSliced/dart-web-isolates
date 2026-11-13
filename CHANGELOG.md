@@ -5,6 +5,74 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-11-13
+
+Minor release. New public API: registered static function selection
+(`DwiFunctions`), generated payload types (`@DwiPayload`, enums, `DateTime`,
+`Duration`, `BigInt`, `Uri`, records) and tasks returning `Stream<T>`
+(`Dwi.runStream`, `DwiStreamTask`). Existing APIs, the protocol (v2) and
+generated code for previously supported types are unchanged; rebuild workers
+with `dart run dwi_builder:dwi build`. Release review:
+`docs/release-notes-0.9.0.md`.
+
+### Stream tasks (ADR-022)
+
+- A `@DwiTask` may return `Stream<T>`. `DwiTasks.task(input)` returns a typed
+  stream; `Dwi.runStream(name, input)` is the name-based form, and
+  `DwiFunctions.stream`/`stream0` select by function.
+- Each listen runs in a fresh worker or isolate; a slow listener pauses the
+  producer through credit-based flow control; cancelling terminates the
+  context; a task error arrives after the items sent before it.
+- ADR-014 corrected: a full channel buffer rejects the send instead of
+  delaying its acknowledgement, as the code always did.
+
+### Payload types (ADR-021)
+
+- Task inputs and results may be public enums, `DateTime`, `Duration`,
+  `BigInt`, `Uri`, records and classes annotated with the new `@DwiPayload()`,
+  alone or inside typed collections. The generator emits the encoders and
+  decoders; existing types produce the same generated code as before.
+- A record input passes several values to a task in one typed call, which is
+  the supported replacement for capturing them in a closure.
+- Invalid payload classes, private or non-`lib/` enums and the bare `Record`
+  and `Enum` types are `DWI001` build errors with a source location.
+
+### Registered static functions (ADR-020) and audit corrections
+
+- Generated `DwiFunctions.run` / `run0` select registered static tear-offs
+  through existing typed proxies; named APIs and transports are unchanged.
+- Annotated public class static methods are supported with qualified task IDs
+  and collision-checked `Class$method` proxy names.
+- Native and 16 browser/compiler combinations verified, including typed result
+  decoding on Wasm hosts, unknown-function rejection, remote errors, timeouts
+  and startup failure. Earlier prototype coverage claims are corrected.
+- Arbitrary closures remain unsupported. DWI-5 and DWI-6 are not raised.
+- Annotated static methods of public non-generic enums are supported on the
+  same terms as class static methods (`Enum.method`, proxy `Enum$method`).
+- Audit corrections (2026-11-11): discovery now reports `DWI003` for every
+  unsupported `@DwiTask` placement that was previously ignored without a
+  diagnostic — extension and extension-type members, enum instance methods,
+  constructors, fields, local functions, parameters and annotated type
+  declarations — and rejects `external` top-level and static functions.
+- Acceptance now covers `DwiUnsupportedException` for incompatible caller
+  signatures on dart2js and dart2wasm hosts, `run0` rejection, `FutureOr`
+  results, async/void/zero-input/nullable/renamed static methods, enum static
+  methods, the protocol
+  version and worker termination. Evidence stamps the annotation package and
+  the whole acceptance suite; native acceptance writes its own stamped record.
+- README status corrected from 0.7.0 to the published 0.8.1.
+- The pool lifecycle contract test (timeout, overflow, close, startup failure,
+  cancellation, transfer, heartbeat) now runs in Chrome, Safari, Firefox and
+  Edge instead of Chrome only, and can write stamped evidence.
+- Added a measured host-bundle-cost test for the generated registry.
+- Fixed: on web, cancelling a pooled call while its worker was still starting
+  returned `false` and the task then ran to completion. The call is now
+  cancelled (`DwiCancelledException`), nothing is sent, and the started worker
+  is kept for the next caller. Found by running the lifecycle contract in
+  Safari, where startup outlasted the test's 200 ms wait; reproduced in Chrome.
+- Added `docs/completion-plan.md`; stale "not in 0.7.0" wording for the Wasm
+  worker backend now says it shipped in 0.8.0.
+
 ## [0.8.1] - 2026-11-10
 
 Published to pub.dev on 2026-11-10 from `main` at `406a750`, in dependency order

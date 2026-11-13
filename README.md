@@ -9,7 +9,12 @@ Dart web applications have no `dart:isolate`. `Isolate.run`, `Isolate.spawn`,
 DWI investigates closing that gap with browser Web Workers, a versioned message
 protocol, and — where it is honest to do so — an isolate-shaped API.
 
-> **Status: all seven packages are published at 0.7.0 (2026-11-09).** It adds
+> **Status: 0.9.0 is prepared for publication (2026-11-13).** It adds
+> registered static functions (`DwiFunctions`, ADR-020), generated payload
+> types (`@DwiPayload`, enums, `DateTime`, records…, ADR-021) and tasks that
+> return `Stream<T>` (ADR-022). The previous release, 0.8.1 (2026-11-10). v0.8
+> adds the opt-in dart2wasm worker backend (ADR-018); 0.8.1 settles missing
+> worker assets as typed startup failures. v0.7 adds
 > handle termination observation (`DwiWorker.stopReason`, `stops`, ADR-017),
 > the scoped lifetime helper (`DwiWorker.using`, ADR-015) and the first DWI-4
 > increment (`Dwi.runFresh`, ADR-016). v0.5 adds long-lived worker handles
@@ -40,7 +45,8 @@ Chrome-only: see [`docs/browser-matrix.md`](docs/browser-matrix.md).
 
 ## Packages
 
-All seven packages are published on pub.dev at **0.7.0** (2026-11-09).
+All seven packages are published on pub.dev at **0.8.1** (2026-11-10); 0.9.0
+is prepared for publication (2026-11-13).
 
 | Package | What it does | Status |
 | --- | --- | --- |
@@ -54,7 +60,7 @@ All seven packages are published on pub.dev at **0.7.0** (2026-11-09).
 
 ## Zero-boilerplate workers (v0.3)
 
-Annotate a top-level function; DWI discovers it, generates the worker entrypoint
+Annotate a top-level function or public class static method; DWI discovers it, generates the worker entrypoint
 and typed proxy, compiles the worker, and writes the manifest:
 
 ```dart
@@ -93,9 +99,25 @@ Dwi.registerTask('primes', (input) => countPrimes(input! as int));
 final count = await Dwi.run<int>('primes', 5000000);
 ```
 
-On native both shapes run on an isolate. On web there is no main-thread
-fallback. Function values and closures are still unsupported: the annotation or
-generated proxy selects a precompiled task (see
+Registered static tear-offs can also select the existing typed proxy (ADR-020,
+since 0.9.0):
+
+```dart
+import 'tasks.dart';
+import 'dwi_tasks.g.dart';
+
+final count = await DwiFunctions.run(calculatePrimes, 5000000);
+```
+
+`DwiFunctions.run0(task)` accepts registered zero-input tasks. Unknown
+functions, closures and instance tear-offs fail with `DwiUnknownTaskException`;
+a registered task called through an incompatible caller signature fails with
+`DwiUnsupportedException`. [`examples/automatic_worker`](examples/automatic_worker)
+shows the call.
+no function is transported or executed locally. Direct static-method proxies
+are named `DwiTasks.Class$method`. On native these calls run on an isolate;
+on web there is no main-thread fallback. Arbitrary functions and closures
+remain unsupported (see
 [`docs/compiler-strategy.md`](docs/compiler-strategy.md) and
 [`research/R013_RUNTIME_WORKER_COMPILATION.md`](research/R013_RUNTIME_WORKER_COMPILATION.md)).
 The measured DWI-5 feasibility decision is in

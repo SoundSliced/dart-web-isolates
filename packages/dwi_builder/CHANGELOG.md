@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.0
+
+- Registered static functions: `DwiFunctions.run`/`run0` select annotated
+  top-level, class-static and enum-static tasks by tear-off (ADR-020).
+- Generated encoders and decoders for enums, `DateTime`, `Duration`, `BigInt`,
+  `Uri`, records and `@DwiPayload` classes (ADR-021).
+- Tasks may return `Stream<T>`; the generated proxy returns a typed stream and
+  `DwiFunctions.stream`/`stream0` select stream tasks (ADR-022).
+- Every unsupported `@DwiTask` placement and every `external` task is now a
+  `DWI003` error instead of being ignored.
+
 ## 0.8.1
 
 - Detect a `dwi.yaml` created after an earlier Flutter build by declaring the

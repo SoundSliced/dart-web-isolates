@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.0
+
+- Add `DwiStreamTask`, the worker-side half of stream tasks (ADR-022).
+
 ## 0.8.1
 
 - Synchronised release with `dwi` 0.8.1. No API change.

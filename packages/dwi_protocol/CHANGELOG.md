@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.0
+
+- Synchronised release with `dwi` 0.9.0. No protocol change (still v2).
+
 ## 0.8.1
 
 - Synchronised release with `dwi` 0.8.1. No API change.
