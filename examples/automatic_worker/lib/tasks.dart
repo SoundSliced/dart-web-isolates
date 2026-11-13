@@ -22,3 +22,41 @@ int calculatePrimes(int limit) {
 /// A second task showing a renamed task and a String payload.
 @DwiTask(name: 'greeting')
 String describe(String name) => 'Hello, $name!';
+
+/// How much [summarise] reports. Enums cross the worker boundary (ADR-021).
+enum Detail {
+  /// The count only.
+  brief,
+
+  /// The count and the limit it was computed for.
+  full,
+}
+
+/// Takes several values as one record: the typed way to hand a task what a
+/// closure would have captured (ADR-021).
+@DwiTask()
+String summarise((int limit, Detail detail) request) {
+  final count = calculatePrimes(request.$1);
+  return switch (request.$2) {
+    Detail.brief => '$count primes',
+    Detail.full => '$count primes up to ${request.$1}',
+  };
+}
+
+/// Reports progress while counting primes in chunks (ADR-022).
+///
+/// Each item is the number of primes found so far; the last one is the total.
+@DwiTask()
+Stream<int> primeProgress(int limit) async* {
+  const steps = 4;
+  for (var step = 1; step <= steps; step++) {
+    yield calculatePrimes(limit * step ~/ steps);
+  }
+}
+
+/// A directly discoverable class static task (ADR-020).
+abstract final class Greetings {
+  /// Builds a greeting in the worker.
+  @DwiTask()
+  static String describe(String name) => 'Hello, $name!';
+}

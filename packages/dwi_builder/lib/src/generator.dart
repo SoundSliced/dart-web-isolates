@@ -63,9 +63,7 @@ abstract final class DwiGenerator {
       ..writeln("import 'package:dwi_core/dwi_core.dart';")
       ..writeln("import 'package:dwi_web/dwi_worker.dart';");
     for (final entry in taskPrefixes.entries) {
-      buffer.writeln(
-        "import '${_dartString(entry.key)}' as ${entry.value};",
-      );
+      buffer.writeln("import '${_dartString(entry.key)}' as ${entry.value};");
     }
     buffer
       ..writeln()
@@ -86,13 +84,12 @@ abstract final class DwiGenerator {
       ..writeln('  DwiWorkerRuntime.start(')
       ..writeln('    _tasks,')
       ..writeln("    workerId: '${_dartString(workerId)}',")
-      ..writeln(
-        "    backend: '${target == 'wasm' ? 'dart2wasm' : 'dart2js'}',",
-      )
+      ..writeln("    backend: '${target == 'wasm' ? 'dart2wasm' : 'dart2js'}',")
       ..writeln('  );')
       ..writeln('}')
       ..writeln();
     _writeDecoders(buffer, codecs, ids, typePrefixes);
+    _writeEncoders(buffer, codecs, ids, typePrefixes);
     return buffer.toString();
   }
 
@@ -112,15 +109,14 @@ abstract final class DwiGenerator {
       ..writeln('// Import this file to call discovered tasks through DWI.')
       ..writeln()
       ..writeln('// ignore_for_file: type=lint')
+      ..writeln("import 'dart:async';")
       ..writeln();
     for (final import in _typeImports(typePrefixes)) {
       buffer.writeln(import);
     }
     buffer.writeln("import 'package:dwi/dwi.dart';");
     for (final entry in taskPrefixes.entries) {
-      buffer.writeln(
-        "import '${_dartString(entry.key)}' as ${entry.value};",
-      );
+      buffer.writeln("import '${_dartString(entry.key)}' as ${entry.value};");
     }
     buffer
       ..writeln()
@@ -131,7 +127,7 @@ abstract final class DwiGenerator {
       );
     for (final task in tasks) {
       buffer.writeln(
-        "  '${_dartString(task.name)}': '${_dartString(task.functionName)}',",
+        "  '${_dartString(task.name)}': '${_dartString(task.qualifiedName)}',",
       );
     }
     buffer
@@ -174,15 +170,35 @@ abstract final class DwiGenerator {
     for (var index = 0; index < tasks.length; index++) {
       final task = tasks[index];
       if (index > 0) buffer.writeln();
+      if (task.returnsStream) {
+        final call = task.takesInput
+            ? "Dwi.runStream('${_dartString(task.name)}', "
+                  "${_encodeCall(task.input!, 'input', ids)})"
+            : "Dwi.runStream('${_dartString(task.name)}')";
+        buffer
+          ..writeln(
+            '  /// Streams the items of `${task.qualifiedName}` from a fresh '
+            'DWI worker or isolate.',
+          )
+          ..writeln('  static ${_proxySignature(task, typePrefixes)} {')
+          ..writeln('    _dwiRegisterGeneratedTasks();')
+          ..writeln(
+            '    return $call.map((Object? item) => '
+            "${_decodeCall(task.output, 'item', "'item'", ids)});",
+          )
+          ..writeln('  }');
+        continue;
+      }
       buffer
         ..writeln(
-          '  /// Runs `${task.functionName}` in a DWI worker or '
+          '  /// Runs `${task.qualifiedName}` in a DWI worker or '
           'isolate.',
         )
         ..writeln('  static ${_proxySignature(task, typePrefixes)} async {')
         ..writeln('    _dwiRegisterGeneratedTasks();');
       final call = task.takesInput
-          ? "Dwi.run<Object?>('${_dartString(task.name)}', input)"
+          ? "Dwi.run<Object?>('${_dartString(task.name)}', "
+                "${_encodeCall(task.input!, 'input', ids)})"
           : "Dwi.run<Object?>('${_dartString(task.name)}')";
       if (task.returnsVoid) {
         buffer
@@ -200,7 +216,76 @@ abstract final class DwiGenerator {
     buffer
       ..writeln('}')
       ..writeln();
+    buffer..writeln(
+      'final Map<Function, Object> _dwiFunctionAdapters = <Function, Object>{',
+    );
+    for (final task in tasks) {
+      buffer.writeln(
+        '  ${taskPrefixes[task.importUri]}.${task.qualifiedName}: '
+        'DwiTasks.${task.proxyName},',
+      );
+    }
+    buffer
+      ..writeln('};')
+      ..writeln()
+      ..writeln(
+        '/// Selects registered static tasks without transporting functions.',
+      )
+      ..writeln('abstract final class DwiFunctions {')
+      ..writeln(
+        '  /// Runs a registered one-input task through its typed proxy.',
+      )
+      ..writeln(
+        '  static Future<R> run<I, R>(FutureOr<R> Function(I) function, I input) async {',
+      )
+      ..writeln('    final invoke = _lookup<Future<R> Function(I)>(function);')
+      ..writeln('    return invoke(input);')
+      ..writeln('  }')
+      ..writeln()
+      ..writeln(
+        '  /// Runs a registered zero-input task through its typed proxy.',
+      )
+      ..writeln(
+        '  static Future<R> run0<R>(FutureOr<R> Function() function) async {',
+      )
+      ..writeln('    final invoke = _lookup<Future<R> Function()>(function);')
+      ..writeln('    return invoke();')
+      ..writeln('  }')
+      ..writeln()
+      ..writeln(
+        '  /// Streams a registered one-input stream task through its typed '
+        'proxy.',
+      )
+      ..writeln(
+        '  static Stream<T> stream<I, T>(Stream<T> Function(I) function, I input) =>',
+      )
+      ..writeln('      _lookup<Stream<T> Function(I)>(function)(input);')
+      ..writeln()
+      ..writeln(
+        '  /// Streams a registered zero-input stream task through its typed '
+        'proxy.',
+      )
+      ..writeln(
+        '  static Stream<T> stream0<T>(Stream<T> Function() function) =>',
+      )
+      ..writeln('      _lookup<Stream<T> Function()>(function)();')
+      ..writeln()
+      ..writeln('  static T _lookup<T extends Function>(Function function) {')
+      ..writeln('    final adapter = _dwiFunctionAdapters[function];')
+      ..writeln('    if (adapter == null) {')
+      ..writeln(
+        "      throw DwiUnknownTaskException('function is not a registered static task');",
+      )
+      ..writeln('    }')
+      ..writeln('    if (adapter is T) return adapter;')
+      ..writeln(
+        "    throw DwiUnsupportedException('registered function has an incompatible caller signature');",
+      )
+      ..writeln('  }')
+      ..writeln('}')
+      ..writeln();
     _writeDecoders(buffer, codecs, ids, typePrefixes);
+    _writeEncoders(buffer, codecs, ids, typePrefixes);
     return buffer.toString();
   }
 
@@ -212,7 +297,8 @@ abstract final class DwiGenerator {
         ? '${task.input!.render(prefixes)} input'
         : '';
     final output = task.returnsVoid ? 'void' : task.output.render(prefixes);
-    return 'Future<$output> ${task.functionName}($parameter)';
+    final wrapper = task.returnsStream ? 'Stream' : 'Future';
+    return '$wrapper<$output> ${task.proxyName}($parameter)';
   }
 
   static Map<String, String> _taskPrefixes(List<DwiTaskDescriptor> tasks) {
@@ -226,12 +312,14 @@ abstract final class DwiGenerator {
 
   static Map<String, String> _typePrefixes(List<DwiTaskDescriptor> tasks) {
     final uris = <String>{};
+    final seen = <String>{};
     void visit(DwiTypeDescriptor? type) {
       if (type == null || type.isDynamic || type.isVoid) return;
+      if (!seen.add(type.codecKey)) return;
       final library = type.libraryUri;
       if (library != null && !type.isCore) uris.add(library);
-      for (final argument in type.arguments) {
-        visit(argument);
+      for (final nested in _nestedTypes(type)) {
+        visit(nested);
       }
     }
 
@@ -253,17 +341,17 @@ abstract final class DwiGenerator {
 
   /// Every non-void, non-dynamic type that needs a decoder, including nested
   /// arguments and the non-nullable form of nullable types.
-  static List<DwiTypeDescriptor> _codecTypes(
-    List<DwiTaskDescriptor> tasks,
-  ) {
+  static List<DwiTypeDescriptor> _codecTypes(List<DwiTaskDescriptor> tasks) {
     final byKey = <String, DwiTypeDescriptor>{};
     void add(DwiTypeDescriptor? type) {
       if (type == null || type.isDynamic || type.isVoid) return;
-      if (byKey.containsKey(type.canonical)) return;
-      byKey[type.canonical] = type;
-      for (final argument in type.arguments) {
-        add(argument);
+      if (byKey.containsKey(type.codecKey)) return;
+      byKey[type.codecKey] = type;
+      for (final nested in _nestedTypes(type)) {
+        add(nested);
       }
+      // DateTime and Duration travel as integers and reuse the int decoder.
+      if (type.isDateTime || type.isDuration) add(_intType);
       if (type.nullable) add(type.nonNullable);
     }
 
@@ -272,13 +360,28 @@ abstract final class DwiGenerator {
       if (!task.returnsVoid) add(task.output);
     }
     final types = byKey.values.toList(growable: false)
-      ..sort((a, b) => a.canonical.compareTo(b.canonical));
+      ..sort((a, b) => a.codecKey.compareTo(b.codecKey));
     return types;
   }
 
+  static const DwiTypeDescriptor _intType = DwiTypeDescriptor(
+    name: 'int',
+    libraryUri: 'dart:core',
+  );
+
+  /// Types a codec for [type] refers to: type arguments, record fields and
+  /// the constructor parameters of a payload class.
+  static Iterable<DwiTypeDescriptor> _nestedTypes(DwiTypeDescriptor type) =>
+      <DwiTypeDescriptor>[
+        ...type.arguments,
+        ...type.positional,
+        ...type.named.values,
+        ...?type.shape?.fields.map((field) => field.type),
+      ];
+
   static Map<String, int> _codecIds(List<DwiTypeDescriptor> types) => {
     for (var index = 0; index < types.length; index++)
-      types[index].canonical: index,
+      types[index].codecKey: index,
   };
 
   static String _decodeCall(
@@ -288,7 +391,17 @@ abstract final class DwiGenerator {
     Map<String, int> ids,
   ) {
     if (type.isDynamic) return value;
-    return '_dwiDecode${ids[type.canonical]}($value, $path)';
+    return '_dwiDecode${ids[type.codecKey]}($value, $path)';
+  }
+
+  /// [value] converted for sending; unchanged for types sent as-is.
+  static String _encodeCall(
+    DwiTypeDescriptor type,
+    String value,
+    Map<String, int> ids,
+  ) {
+    if (type.isDynamic || !type.needsEncoding) return value;
+    return '_dwiEncode${ids[type.codecKey]}($value)';
   }
 
   static String _lambda(
@@ -299,9 +412,21 @@ abstract final class DwiGenerator {
     final input = task.takesInput
         ? _decodeCall(task.input!, 'input', "'input'", ids)
         : '';
-    final call = '$prefix.${task.functionName}($input)';
+    final call = '$prefix.${task.qualifiedName}($input)';
+    if (task.returnsStream) {
+      // ADR-022: items go over the call's channel; the call returns null.
+      final items = task.output.needsEncoding
+          ? "$call.map((item) => ${_encodeCall(task.output, 'item', ids)})"
+          : call;
+      return '(Object? request) => DwiStreamTask.serve(request, '
+          '(Object? input) => $items)';
+    }
     if (!task.returnsVoid) {
-      return '(Object? input) => $call';
+      if (!task.output.needsEncoding) return '(Object? input) => $call';
+      return task.returnsFuture
+          ? '(Object? input) async => '
+                '${_encodeCall(task.output, 'await $call', ids)}'
+          : '(Object? input) => ${_encodeCall(task.output, call, ids)}';
     }
     if (task.returnsFuture) {
       return '(Object? input) async { await $call; return null; }';
@@ -320,7 +445,7 @@ abstract final class DwiGenerator {
     buffer.writeln();
     for (final type in types) {
       buffer.writeln(
-        '${type.render(prefixes)} _dwiDecode${ids[type.canonical]}('
+        '${type.render(prefixes)} _dwiDecode${ids[type.codecKey]}('
         'Object? value, String path) {',
       );
       for (final line in _decoderBody(type, ids, prefixes)) {
@@ -347,9 +472,85 @@ abstract final class DwiGenerator {
       return <String>[
         '  if (value == null) {',
         "    throw DwiSerializationException("
-        "'\$path: expected Object, got Null');",
+            "'\$path: expected Object, got Null');",
         '  }',
         '  return value;',
+      ];
+    }
+
+    final rendered = type.render(prefixes);
+    String fail(String expected) =>
+        "  throw DwiSerializationException("
+        "'\$path: expected $expected, got \${value.runtimeType}');";
+    switch (type.kind) {
+      case DwiTypeKind.enumeration:
+        return <String>[
+          '  if (value is String) {',
+          '    for (final item in $rendered.values) {',
+          '      if (item.name == value) return item;',
+          '    }',
+          '  }',
+          "  throw DwiSerializationException("
+              "'\$path: expected a ${_dartLiteral(type.name)} name, got \$value');",
+        ];
+      case DwiTypeKind.record:
+        final fields = <String>[
+          for (var index = 0; index < type.positional.length; index++)
+            _decodeCall(
+              type.positional[index],
+              'value[$index]',
+              "'\$path[$index]'",
+              ids,
+            ),
+          for (final (index, entry) in type.named.entries.indexed)
+            '${entry.key}: ${_decodeCall(entry.value, 'value[${type.positional.length + index}]', "'\$path.${_dartLiteral(entry.key)}'", ids)}',
+        ];
+        final length = type.positional.length + type.named.length;
+        final single = type.positional.length == 1 && type.named.isEmpty;
+        return <String>[
+          '  if (value is! List || value.length != $length) {',
+          '  ${fail(_dartLiteral(type.canonical))}',
+          '  }',
+          '  return (${fields.join(', ')}${single ? ',' : ''});',
+        ];
+      case DwiTypeKind.payload:
+        final arguments = <String>[
+          for (final field in type.shape!.fields)
+            '${field.isNamed ? '${field.name}: ' : ''}'
+                "${_decodeCall(field.type, "value['${_dartLiteral(field.name)}']", "'\$path.${_dartLiteral(field.name)}'", ids)}",
+        ];
+        return <String>[
+          '  if (value is! Map) {',
+          '  ${fail(_dartLiteral(type.name))}',
+          '  }',
+          '  return $rendered(${arguments.join(', ')});',
+        ];
+      case DwiTypeKind.value:
+        break;
+    }
+    if (type.isDateTime) {
+      return <String>[
+        '  if (value is! List || value.length != 2) {',
+        '  ${fail('DateTime')}',
+        '  }',
+        '  return DateTime.fromMicrosecondsSinceEpoch(',
+        "    ${_decodeCall(_intType, 'value[0]', 'path', ids)},",
+        '    isUtc: value[1] == true,',
+        '  );',
+      ];
+    }
+    if (type.isDuration) {
+      return <String>[
+        "  return Duration(microseconds: ${_decodeCall(_intType, 'value', 'path', ids)});",
+      ];
+    }
+    if (type.isBigInt || type.isUri) {
+      return <String>[
+        '  if (value is String) {',
+        '    final parsed = ${type.name}.tryParse(value);',
+        '    if (parsed != null) return parsed;',
+        '  }',
+        fail(type.name),
       ];
     }
 
@@ -364,31 +565,31 @@ abstract final class DwiGenerator {
           '    return value.toInt();',
           '  }',
           "  throw DwiSerializationException("
-          "'\$path: expected int, got \${value.runtimeType}');",
+              "'\$path: expected int, got \${value.runtimeType}');",
         ];
       case 'double':
         return <String>[
           '  if (value is num) return value.toDouble();',
           "  throw DwiSerializationException("
-          "'\$path: expected double, got \${value.runtimeType}');",
+              "'\$path: expected double, got \${value.runtimeType}');",
         ];
       case 'num':
         return <String>[
           '  if (value is num) return value;',
           "  throw DwiSerializationException("
-          "'\$path: expected num, got \${value.runtimeType}');",
+              "'\$path: expected num, got \${value.runtimeType}');",
         ];
       case 'String':
         return <String>[
           '  if (value is String) return value;',
           "  throw DwiSerializationException("
-          "'\$path: expected String, got \${value.runtimeType}');",
+              "'\$path: expected String, got \${value.runtimeType}');",
         ];
       case 'bool':
         return <String>[
           '  if (value is bool) return value;',
           "  throw DwiSerializationException("
-          "'\$path: expected bool, got \${value.runtimeType}');",
+              "'\$path: expected bool, got \${value.runtimeType}');",
         ];
       case 'List':
         return _collectionBody(type, ids, prefixes, isSet: false);
@@ -419,15 +620,82 @@ abstract final class DwiGenerator {
       return <String>[
         '  if (value is $name) return value;',
         "  throw DwiSerializationException("
-        "'\$path: expected DwiTransferableBytes, got \${value.runtimeType}');",
+            "'\$path: expected DwiTransferableBytes, got \${value.runtimeType}');",
       ];
     }
 
     return <String>[
       '  if (value is ${type.render(prefixes)}) return value;',
       "  throw DwiSerializationException("
-      "'\$path: expected ${type.canonical}, got \${value.runtimeType}');",
+          "'\$path: expected ${type.canonical}, got \${value.runtimeType}');",
     ];
+  }
+
+  static void _writeEncoders(
+    StringBuffer buffer,
+    List<DwiTypeDescriptor> types,
+    Map<String, int> ids,
+    Map<String, String> prefixes,
+  ) {
+    final encoded = types.where((type) => type.needsEncoding).toList();
+    if (encoded.isEmpty) return;
+    buffer.writeln('// --- Generated payload encoders ---');
+    buffer.writeln();
+    for (final type in encoded) {
+      buffer
+        ..writeln(
+          'Object? _dwiEncode${ids[type.codecKey]}('
+          '${type.render(prefixes)} value) =>',
+        )
+        ..writeln('    ${_encoderBody(type, ids)};')
+        ..writeln();
+    }
+  }
+
+  static String _encoderBody(DwiTypeDescriptor type, Map<String, int> ids) {
+    if (type.nullable) {
+      return 'value == null ? null : '
+          '${_encodeCall(type.nonNullable, 'value', ids)}';
+    }
+    switch (type.kind) {
+      case DwiTypeKind.enumeration:
+        return 'value.name';
+      case DwiTypeKind.record:
+        final fields = <String>[
+          for (var index = 0; index < type.positional.length; index++)
+            _encodeCall(type.positional[index], 'value.\$${index + 1}', ids),
+          for (final entry in type.named.entries)
+            _encodeCall(entry.value, 'value.${entry.key}', ids),
+        ];
+        return '<Object?>[${fields.join(', ')}]';
+      case DwiTypeKind.payload:
+        final entries = <String>[
+          for (final field in type.shape!.fields)
+            "'${_dartLiteral(field.name)}': "
+                "${_encodeCall(field.type, 'value.${field.name}', ids)}",
+        ];
+        return '<String, Object?>{${entries.join(', ')}}';
+      case DwiTypeKind.value:
+        break;
+    }
+    if (type.isDateTime) {
+      return '<Object?>[value.microsecondsSinceEpoch, value.isUtc]';
+    }
+    if (type.isDuration) return 'value.inMicroseconds';
+    if (type.isBigInt || type.isUri) return 'value.toString()';
+    if (type.name == 'Map') {
+      final valueType = type.arguments.length > 1
+          ? type.arguments[1]
+          : DwiTypeDescriptor.dynamicType;
+      return '<String, Object?>{for (final entry in value.entries) '
+          "entry.key as String: ${_encodeCall(valueType, 'entry.value', ids)}}";
+    }
+    // List and Set: a Set is sent as a list of its encoded elements.
+    final element = type.arguments.isEmpty
+        ? DwiTypeDescriptor.dynamicType
+        : type.arguments.first;
+    return '<Object?>[for (final item in value) '
+        "${_encodeCall(element, 'item', ids)}]";
   }
 
   static List<String> _collectionBody(
@@ -442,19 +710,22 @@ abstract final class DwiGenerator {
     final rendered = type.render(prefixes);
     final elementRendered = elementType.render(prefixes);
     final lines = <String>[
-      if (isSet)
-        '  if (value is! Iterable) {'
-      else
-        '  if (value is! List) {',
+      if (isSet) '  if (value is! Iterable) {' else '  if (value is! List) {',
       "    throw DwiSerializationException("
-      "'\$path: expected $rendered, got \${value.runtimeType}');",
+          "'\$path: expected $rendered, got \${value.runtimeType}');",
       '  }',
       if (isSet)
         '  final result = <$elementRendered>{};'
       else
         '  final result = <$elementRendered>[];',
-      if (isSet) '  var index = 0;' else '  for (var index = 0; index < value.length; index++) {',
-      if (isSet) '  for (final item in value) {' else '    final item = value[index];',
+      if (isSet)
+        '  var index = 0;'
+      else
+        '  for (var index = 0; index < value.length; index++) {',
+      if (isSet)
+        '  for (final item in value) {'
+      else
+        '    final item = value[index];',
     ];
     if (isSet) {
       lines.add(
@@ -488,7 +759,7 @@ abstract final class DwiGenerator {
     return <String>[
       '  if (value is! Map) {',
       "    throw DwiSerializationException("
-      "'\$path: expected $rendered, got \${value.runtimeType}');",
+          "'\$path: expected $rendered, got \${value.runtimeType}');",
       '  }',
       '  final result = <${key.render(prefixes)}, ${value.render(prefixes)}>{};',
       '  for (final entry in value.entries) {',
@@ -513,10 +784,7 @@ abstract final class DwiGenerator {
       '    final result = <$elementType>[];',
       '    for (var index = 0; index < value.length; index++) {',
       '      final item = value[index];',
-      if (isDouble)
-        '      if (item is num) {'
-      else
-        '      if (item is int) {',
+      if (isDouble) '      if (item is num) {' else '      if (item is int) {',
       if (isDouble)
         '        result.add(item.toDouble());'
       else
@@ -529,7 +797,7 @@ abstract final class DwiGenerator {
       '    return $rendered.fromList(result);',
       '  }',
       "  throw DwiSerializationException("
-      "'\$path: expected $rendered, got \${value.runtimeType}');",
+          "'\$path: expected $rendered, got \${value.runtimeType}');",
     ];
   }
 
@@ -556,7 +824,7 @@ abstract final class DwiGenerator {
       '    return $typedData.ByteData.sublistView($typedData.Uint8List.fromList(result));',
       '  }',
       "  throw DwiSerializationException("
-      "'\$path: expected ByteData, got \${value.runtimeType}');",
+          "'\$path: expected ByteData, got \${value.runtimeType}');",
     ];
   }
 
@@ -583,25 +851,29 @@ abstract final class DwiGenerator {
       '    return $typedData.Uint8List.fromList(result).buffer;',
       '  }',
       "  throw DwiSerializationException("
-      "'\$path: expected ByteBuffer, got \${value.runtimeType}');",
+          "'\$path: expected ByteBuffer, got \${value.runtimeType}');",
     ];
   }
 
-  static const Map<String, String> _typedDataElementType =
-      <String, String>{
-        'Int8List': 'int',
-        'Uint8List': 'int',
-        'Uint8ClampedList': 'int',
-        'Int16List': 'int',
-        'Uint16List': 'int',
-        'Int32List': 'int',
-        'Uint32List': 'int',
-        'Int64List': 'int',
-        'Uint64List': 'int',
-        'Float32List': 'double',
-        'Float64List': 'double',
-      };
+  static const Map<String, String> _typedDataElementType = <String, String>{
+    'Int8List': 'int',
+    'Uint8List': 'int',
+    'Uint8ClampedList': 'int',
+    'Int16List': 'int',
+    'Uint16List': 'int',
+    'Int32List': 'int',
+    'Uint32List': 'int',
+    'Int64List': 'int',
+    'Uint64List': 'int',
+    'Float32List': 'double',
+    'Float64List': 'double',
+  };
 
   static String _dartString(String value) =>
       value.replaceAll(r'\', r'\\').replaceAll("'", r"\'");
+
+  /// [value] as the content of a generated single-quoted string. Identifiers
+  /// may contain `$`, which would otherwise start an interpolation.
+  static String _dartLiteral(String value) =>
+      _dartString(value).replaceAll(r'$', r'\$');
 }

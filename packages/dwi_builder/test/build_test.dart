@@ -61,6 +61,38 @@ void main() {
   });
 
   test(
+    'static task edits invalidate compiled registries and cached sources',
+    () async {
+      const source = r'''
+import 'package:dwi_annotations/dwi_annotations.dart';
+class Ops {
+  @DwiTask()
+  static int twice(int value) => value * 2;
+}
+''';
+      project.write('lib/tasks.dart', source);
+      final config = project.config(compile: true);
+      final first = await DwiBuilder(config).build();
+      final second = await DwiBuilder(config).build();
+      expect(second.cacheHit, isTrue);
+      expect(
+        project.read('lib/dwi_tasks.g.dart'),
+        contains(r'task0.Ops.twice: DwiTasks.Ops$twice'),
+      );
+      project.write(
+        'lib/tasks.dart',
+        source.replaceFirst('value * 2', 'value * 3'),
+      );
+      final changed = await DwiBuilder(config).build();
+      expect(changed.cacheHit, isFalse);
+      expect(changed.hash, isNot(first.hash));
+      final checked = await DwiBuilder(config).check();
+      expect(checked.ok, isTrue, reason: checked.issues.join('\n'));
+    },
+    timeout: const Timeout(Duration(minutes: 3)),
+  );
+
+  test(
     'builds, checks and cleans a content-addressed wasm generation',
     () async {
       project.write('lib/tasks.dart', simpleTasks);

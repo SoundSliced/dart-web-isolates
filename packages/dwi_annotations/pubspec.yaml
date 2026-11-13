@@ -1,6 +1,6 @@
 name: dwi_annotations
 description: Annotations for declaring Dart Web Isolates worker tasks.
-version: 0.8.1
+version: 0.9.0
 repository: https://github.com/SoundSliced/dart-web-isolates
 topics:
   - isolate

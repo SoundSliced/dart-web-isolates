@@ -11,6 +11,29 @@ int calculatePrimes(int limit) { ... }
 final count = await DwiTasks.calculatePrimes(2000000);
 ```
 
+It also selects a registered task at run time by its tear-off (ADR-020,
+since 0.9.0):
+
+```dart
+final greeting = await DwiFunctions.run(Greetings.describe, 'DWI');
+```
+
+and passes several typed values, including an enum, as one record (ADR-021,
+since 0.9.0):
+
+```dart
+final summary = await DwiFunctions.run(summarise, (100000, Detail.full));
+```
+
+and streams progress from a task that returns `Stream<int>` (ADR-022, checkout
+only):
+
+```dart
+await for (final found in DwiTasks.primeProgress(100000)) {
+  print(found);
+}
+```
+
 There is no `worker.dart`, no manual registry, no manifest to maintain and no
 `Dwi.configure(workerScript: ...)` call. `dwi_builder` discovers the annotation,
 generates `.dwi/generated_worker.dart` with static references, generates

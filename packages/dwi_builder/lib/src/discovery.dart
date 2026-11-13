@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -218,16 +219,57 @@ Future<void> _scanFile({
     } else if (declaration is ClassDeclaration) {
       final body = declaration.body;
       if (body is BlockClassBody) {
-        _scanMembers(
-          body.members,
-          lineInfo: result.lineInfo,
-          display: display,
-          diagnostics: diagnostics,
-        );
+        foundTask =
+            _scanMembers(
+              body.members,
+              declaringType: declaration.declaredFragment?.element.name,
+              genericClass:
+                  declaration
+                      .declaredFragment
+                      ?.element
+                      .typeParameters
+                      .isNotEmpty ??
+                  false,
+              library: library,
+              file: file,
+              root: root,
+              packageName: packageName,
+              config: config,
+              tasks: tasks,
+              lineInfo: result.lineInfo,
+              display: display,
+              diagnostics: diagnostics,
+            ) ||
+            foundTask;
       }
+    } else if (declaration is EnumDeclaration) {
+      final element = declaration.declaredFragment?.element;
+      foundTask =
+          _scanMembers(
+            declaration.body.members,
+            declaringType: element?.name,
+            declaringKind: 'enum',
+            genericClass: element?.typeParameters.isNotEmpty ?? false,
+            library: library,
+            file: file,
+            root: root,
+            packageName: packageName,
+            config: config,
+            tasks: tasks,
+            lineInfo: result.lineInfo,
+            display: display,
+            diagnostics: diagnostics,
+          ) ||
+          foundTask;
     } else if (declaration is MixinDeclaration) {
       _scanMembers(
         declaration.body.members,
+        library: library,
+        file: file,
+        root: root,
+        packageName: packageName,
+        config: config,
+        tasks: tasks,
         lineInfo: result.lineInfo,
         display: display,
         diagnostics: diagnostics,
@@ -246,6 +288,30 @@ Future<void> _scanFile({
         ),
       );
     }
+  }
+
+  // Every other placement of the marker is unsupported. Report it instead of
+  // dropping it silently: the task would otherwise simply not exist.
+  final unsupported = _UnsupportedTaskVisitor();
+  result.unit.accept(unsupported);
+  for (final annotation in unsupported.annotations) {
+    final location = result.lineInfo.getLocation(annotation.offset);
+    diagnostics.add(
+      DwiDiagnostic(
+        code: 'DWI003',
+        severity: DwiDiagnosticSeverity.error,
+        message:
+            '@DwiTask cannot annotate ${_unsupportedTarget(annotation)}; it '
+            'must annotate a top-level function or a public class or enum '
+            'static method.',
+        file: display,
+        line: location.lineNumber,
+        column: location.columnNumber,
+        hint:
+            'Use a public top-level function or a static method of a '
+            'non-generic class or enum.',
+      ),
+    );
   }
 
   if (errors.isNotEmpty) {
@@ -282,31 +348,129 @@ Future<void> _scanFile({
   }
 }
 
-void _scanMembers(
+/// Collects `@DwiTask` annotations on declarations that [_scanFile] does not
+/// already accept or reject: anything other than a top-level function, a
+/// top-level variable, or a method declared directly in a class, enum or
+/// mixin.
+class _UnsupportedTaskVisitor extends RecursiveAstVisitor<void> {
+  final List<Annotation> annotations = <Annotation>[];
+
+  @override
+  void visitAnnotation(Annotation node) {
+    if (_isDwiTaskAnnotation(node) && !_isScannedTarget(node.parent)) {
+      annotations.add(node);
+    }
+    super.visitAnnotation(node);
+  }
+
+  static bool _isScannedTarget(AstNode? target) {
+    if (target is FunctionDeclaration) return target.parent is CompilationUnit;
+    if (target is TopLevelVariableDeclaration) return true;
+    if (target is MethodDeclaration) {
+      final owner = target.thisOrAncestorOfType<CompilationUnitMember>();
+      return owner is ClassDeclaration ||
+          owner is EnumDeclaration ||
+          owner is MixinDeclaration;
+    }
+    return false;
+  }
+}
+
+/// Describes the declaration an unsupported [annotation] is attached to.
+String _unsupportedTarget(Annotation annotation) {
+  final target = annotation.parent;
+  final owner = target.thisOrAncestorOfType<CompilationUnitMember>();
+  final ownerKind = switch (owner) {
+    EnumDeclaration() => 'an enum',
+    ExtensionDeclaration() => 'an extension',
+    ExtensionTypeDeclaration() => 'an extension type',
+    _ => 'a class',
+  };
+  return switch (target) {
+    FunctionDeclaration() => 'a local function',
+    MethodDeclaration() => 'a member of $ownerKind',
+    ConstructorDeclaration() => 'a constructor',
+    FieldDeclaration() => 'a field',
+    EnumConstantDeclaration() => 'an enum constant',
+    FormalParameter() => 'a parameter',
+    VariableDeclarationList() ||
+    VariableDeclarationStatement() => 'a local variable',
+    ClassDeclaration() => 'a class',
+    MixinDeclaration() => 'a mixin',
+    EnumDeclaration() => 'an enum',
+    ExtensionDeclaration() => 'an extension',
+    ExtensionTypeDeclaration() => 'an extension type',
+    TypeAlias() => 'a typedef',
+    Directive() => 'a directive',
+    _ => 'this declaration',
+  };
+}
+
+bool _scanMembers(
   List<ClassMember> members, {
+  String? declaringType,
+  String declaringKind = 'class',
+  bool genericClass = false,
+  required LibraryElement library,
+  required String file,
+  required String root,
+  required String packageName,
+  required DwiBuildConfig config,
+  required List<DwiTaskDescriptor> tasks,
   required LineInfo lineInfo,
   required String display,
   required List<DwiDiagnostic> diagnostics,
 }) {
+  var foundTask = false;
   for (final member in members) {
     if (member is MethodDeclaration && _hasDwiTask(member.metadata)) {
+      foundTask = true;
+      if (declaringType != null &&
+          !declaringType.startsWith('_') &&
+          !genericClass &&
+          member.isStatic) {
+        final descriptor = _readFunction(
+          declaration: member,
+          declaringType: declaringType,
+          library: library,
+          file: file,
+          display: display,
+          root: root,
+          packageName: packageName,
+          config: config,
+          lineInfo: lineInfo,
+          diagnostics: diagnostics,
+        );
+        if (descriptor != null) tasks.add(descriptor);
+        continue;
+      }
       diagnostics.add(
         DwiDiagnostic(
           code: 'DWI003',
           severity: DwiDiagnosticSeverity.error,
-          message: '@DwiTask must annotate a top-level function, not a method.',
+          message: genericClass
+              ? '@DwiTask cannot annotate a method in a generic $declaringKind.'
+              : declaringType?.startsWith('_') == true
+              ? '@DwiTask cannot annotate a method in a private $declaringKind.'
+              : '@DwiTask must annotate a top-level function or public class '
+                    'or enum static method, not a method with a receiver or '
+                    'in a mixin.',
           file: display,
           line: lineInfo.getLocation(member.name.offset).lineNumber,
           column: lineInfo.getLocation(member.name.offset).columnNumber,
-          hint: 'Move the function to the top level of a library.',
+          hint:
+              'Use a public top-level function or a static method of a '
+              'non-generic class or enum.',
         ),
       );
     }
   }
+  return foundTask;
 }
 
 DwiTaskDescriptor? _readFunction({
-  required FunctionDeclaration declaration,
+  required AnnotatedNode declaration,
+  String? declaringType,
   required LibraryElement library,
   required String file,
   required String display,
@@ -316,8 +480,17 @@ DwiTaskDescriptor? _readFunction({
   required LineInfo lineInfo,
   required List<DwiDiagnostic> diagnostics,
 }) {
-  final functionName = declaration.name.lexeme;
-  final location = lineInfo.getLocation(declaration.name.offset);
+  final name = switch (declaration) {
+    FunctionDeclaration() => declaration.name,
+    MethodDeclaration() => declaration.name,
+    _ => throw ArgumentError('Expected a function or method declaration.'),
+  };
+  final expression = declaration is FunctionDeclaration
+      ? declaration.functionExpression
+      : null;
+  final method = declaration is MethodDeclaration ? declaration : null;
+  final functionName = name.lexeme;
+  final location = lineInfo.getLocation(name.offset);
   final line = location.lineNumber;
   final column = location.columnNumber;
 
@@ -335,7 +508,7 @@ DwiTaskDescriptor? _readFunction({
     );
   }
 
-  if (functionName == 'main') {
+  if (declaringType == null && functionName == 'main') {
     error('DWI003', '@DwiTask cannot annotate `main`.');
     return null;
   }
@@ -347,11 +520,23 @@ DwiTaskDescriptor? _readFunction({
     );
     return null;
   }
-  if (declaration.propertyKeyword != null) {
+  if ((declaration is FunctionDeclaration &&
+          declaration.propertyKeyword != null) ||
+      method?.propertyKeyword != null) {
     error('DWI003', '@DwiTask cannot annotate a getter or setter.');
     return null;
   }
-  if (declaration.functionExpression.typeParameters != null) {
+  if ((declaration is FunctionDeclaration &&
+          declaration.externalKeyword != null) ||
+      method?.externalKeyword != null) {
+    error(
+      'DWI003',
+      '@DwiTask function `$functionName` is external.',
+      hint: 'A task needs a Dart body that the generated worker can call.',
+    );
+    return null;
+  }
+  if ((expression?.typeParameters ?? method?.typeParameters) != null) {
     error(
       'DWI003',
       '@DwiTask function `$functionName` is generic.',
@@ -362,7 +547,7 @@ DwiTaskDescriptor? _readFunction({
   }
 
   final parameters =
-      declaration.functionExpression.parameters?.parameters ??
+      (expression?.parameters ?? method?.parameters)?.parameters ??
       const <FormalParameter>[];
   if (parameters.length > 1) {
     error(
@@ -400,7 +585,9 @@ DwiTaskDescriptor? _readFunction({
     diagnostics,
   );
   if (overrideName == _invalidTaskName) return null;
-  final taskName = overrideName ?? functionName;
+  final taskName =
+      overrideName ??
+      (declaringType == null ? functionName : '$declaringType.$functionName');
   if (taskName.trim().isEmpty || taskName.contains(RegExp(r'\s'))) {
     error(
       'DWI004',
@@ -409,7 +596,11 @@ DwiTaskDescriptor? _readFunction({
     return null;
   }
 
-  final element = declaration.declaredFragment?.element;
+  final element = switch (declaration) {
+    FunctionDeclaration() => declaration.declaredFragment?.element,
+    MethodDeclaration() => declaration.declaredFragment?.element,
+    _ => null,
+  };
   if (element == null) {
     error(
       'DWI005',
@@ -424,11 +615,20 @@ DwiTaskDescriptor? _readFunction({
   final input = parameterElement == null
       ? null
       : _describeType(parameterElement.type);
+  final returnsStream = element.returnType.isDartAsyncStream;
   final returnType = _unwrapReturnType(element.returnType);
   final output = _describeType(returnType);
   final returnsFuture =
       element.returnType.isDartAsyncFuture ||
       element.returnType.isDartAsyncFutureOr;
+  if (returnsStream && (returnType is VoidType || returnType is DynamicType)) {
+    error(
+      'DWI001',
+      'Task `$taskName` result cannot cross the worker boundary: a stream task '
+          'must declare its item type.',
+      hint: 'Return `Stream<T>` with a concrete `T`.',
+    );
+  }
 
   if (parameterElement != null) {
     final issues = <_TypeIssue>[];
@@ -484,6 +684,7 @@ DwiTaskDescriptor? _readFunction({
   return DwiTaskDescriptor(
     name: taskName,
     functionName: functionName,
+    declaringType: declaringType,
     importUri: importUri,
     sourcePath: file,
     line: line,
@@ -491,6 +692,7 @@ DwiTaskDescriptor? _readFunction({
     input: input,
     output: output,
     returnsFuture: returnsFuture,
+    returnsStream: returnsStream,
   );
 }
 
@@ -502,23 +704,188 @@ DwiTaskDescriptor? _readFunction({
 DwiTypeDescriptor _describeType(DartType type) {
   if (type is DynamicType) return DwiTypeDescriptor.dynamicType;
   if (type is VoidType) return const DwiTypeDescriptor(name: 'void');
-  if (type is InterfaceType) {
+  final nullable = type.nullabilitySuffix == NullabilitySuffix.question;
+  if (type is RecordType) {
+    final named = type.namedFields.toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
     return DwiTypeDescriptor(
-      name: type.element.name ?? 'Object',
-      libraryUri: type.element.library.uri.toString(),
-      nullable: type.nullabilitySuffix == NullabilitySuffix.question,
-      arguments: type.typeArguments
-          .map(_describeType)
-          .toList(growable: false),
+      name: 'Record',
+      kind: DwiTypeKind.record,
+      nullable: nullable,
+      positional: <DwiTypeDescriptor>[
+        for (final field in type.positionalFields) _describeType(field.type),
+      ],
+      named: <String, DwiTypeDescriptor>{
+        for (final field in named) field.name: _describeType(field.type),
+      },
+    );
+  }
+  if (type is InterfaceType) {
+    final element = type.element;
+    final name = element.name ?? 'Object';
+    final libraryUri = element.library.uri.toString();
+    if (element is EnumElement) {
+      return DwiTypeDescriptor(
+        name: name,
+        libraryUri: libraryUri,
+        nullable: nullable,
+        kind: DwiTypeKind.enumeration,
+      );
+    }
+    if (element is ClassElement && _isDwiPayload(element)) {
+      // The shape is registered before its fields are described, so a class
+      // that refers to itself resolves to the same shape instead of recursing.
+      var shape = _payloadShapes[element];
+      if (shape == null) {
+        shape = DwiPayloadShape();
+        _payloadShapes[element] = shape;
+        for (final parameter
+            in element.unnamedConstructor?.formalParameters ??
+                const <FormalParameterElement>[]) {
+          shape.fields.add(
+            DwiPayloadField(
+              name: parameter.name ?? '',
+              type: _describeType(parameter.type),
+              isNamed: parameter.isNamed,
+            ),
+          );
+        }
+      }
+      return DwiTypeDescriptor(
+        name: name,
+        libraryUri: libraryUri,
+        nullable: nullable,
+        kind: DwiTypeKind.payload,
+        shape: shape,
+      );
+    }
+    return DwiTypeDescriptor(
+      name: name,
+      libraryUri: libraryUri,
+      nullable: nullable,
+      arguments: type.typeArguments.map(_describeType).toList(growable: false),
     );
   }
   return DwiTypeDescriptor.dynamicType;
 }
 
+/// Shapes of `@DwiPayload` classes, one per resolved class element.
+final Expando<DwiPayloadShape> _payloadShapes = Expando<DwiPayloadShape>();
+
+/// Whether [element] carries `package:dwi_annotations`' `DwiPayload`.
+bool _isDwiPayload(ClassElement element) {
+  for (final annotation in element.metadata.annotations) {
+    final enclosing = annotation.element?.enclosingElement;
+    if (enclosing is InterfaceElement &&
+        enclosing.name == 'DwiPayload' &&
+        enclosing.library.uri.toString() ==
+            'package:dwi_annotations/dwi_annotations.dart') {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Why the generated code cannot name a type declared in [element]'s library,
+/// or `null` when it can.
+_TypeIssue? _unreachableType(InterfaceElement element, String what) {
+  final name = element.name ?? 'value';
+  if (name.startsWith('_')) {
+    return _TypeIssue(
+      '$what `$name` is private and cannot be named by generated code.',
+      hint: 'Make it public.',
+    );
+  }
+  if (!element.library.uri.isScheme('package')) {
+    return _TypeIssue(
+      '$what `$name` is declared outside lib/, where generated code cannot '
+      'import it.',
+      hint: 'Move it to a library under lib/.',
+    );
+  }
+  return null;
+}
+
+/// Checks a `@DwiPayload` class and the types of its constructor parameters.
+void _collectPayloadIssues(
+  ClassElement element, {
+  required bool isReturn,
+  required String label,
+  required List<_TypeIssue> issues,
+  required Set<Element> visiting,
+}) {
+  final name = element.name ?? 'value';
+  final unreachable = _unreachableType(element, 'payload class');
+  if (unreachable != null) {
+    issues.add(unreachable);
+    return;
+  }
+  if (element.typeParameters.isNotEmpty || element.isAbstract) {
+    issues.add(
+      _TypeIssue(
+        'payload class `$name` must be concrete and non-generic.',
+        hint: 'Send a concrete class, or a record of its parts.',
+      ),
+    );
+    return;
+  }
+  final constructor = element.unnamedConstructor;
+  if (constructor == null) {
+    issues.add(
+      _TypeIssue(
+        'payload class `$name` has no public unnamed constructor.',
+        hint: 'Add `$name(...)` taking every value that must be sent.',
+      ),
+    );
+    return;
+  }
+  // A class already being checked higher up refers to itself; its parameters
+  // are checked once.
+  if (!visiting.add(element)) return;
+  for (final parameter in constructor.formalParameters) {
+    final parameterName = parameter.name ?? '';
+    final getter = element.thisType.lookUpGetter(
+      parameterName,
+      element.library,
+    );
+    if (getter == null || getter.isStatic || parameterName.startsWith('_')) {
+      issues.add(
+        _TypeIssue(
+          'payload class `$name` has no public getter or field '
+          '`$parameterName` for its constructor parameter.',
+          hint:
+              'Declare `final ${parameter.type.getDisplayString()} '
+              '$parameterName;` or rename the parameter.',
+        ),
+      );
+      continue;
+    }
+    if (getter.returnType != parameter.type) {
+      issues.add(
+        _TypeIssue(
+          '`$name.$parameterName` is '
+          '`${getter.returnType.getDisplayString()}` but the constructor '
+          'takes `${parameter.type.getDisplayString()}`.',
+          hint: 'Give the field and the parameter the same type.',
+        ),
+      );
+      continue;
+    }
+    _collectTypeIssues(
+      parameter.type,
+      isReturn: isReturn,
+      label: label,
+      issues: issues,
+      visiting: visiting,
+    );
+  }
+  visiting.remove(element);
+}
+
 const _invalidTaskName = '\u0000';
 
 String? _readTaskName(
-  FunctionDeclaration declaration,
+  AnnotatedNode declaration,
   String display,
   int line,
   int column,
@@ -574,7 +941,10 @@ bool _isDwiTaskAnnotation(Annotation annotation) {
 }
 
 DartType _unwrapReturnType(DartType type) {
-  if (type.isDartAsyncFuture || type.isDartAsyncFutureOr) {
+  // ADR-022: a task returning `Stream<T>` delivers items of type `T`.
+  if (type.isDartAsyncFuture ||
+      type.isDartAsyncFutureOr ||
+      type.isDartAsyncStream) {
     if (type is InterfaceType && type.typeArguments.isNotEmpty) {
       return type.typeArguments.first;
     }
@@ -611,7 +981,9 @@ void _collectTypeIssues(
   required bool isReturn,
   required String label,
   required List<_TypeIssue> issues,
+  Set<Element>? visiting,
 }) {
+  visiting ??= <Element>{};
   if (type is DynamicType || type.isDartCoreObject || type.isDartCoreNull) {
     return;
   }
@@ -649,18 +1021,34 @@ void _collectTypeIssues(
   if (type.isDartAsyncStream) {
     issues.add(
       const _TypeIssue(
-        'a Stream cannot be structured-cloned.',
+        'a Stream cannot be sent as a value.',
         hint:
-            'Use a single transferred value; stream ports are a later feature.',
+            'A task may return `Stream<T>`; it cannot take a stream or return '
+            'one nested inside another value.',
       ),
     );
     return;
   }
-  if (type is RecordType || type.isDartCoreRecord) {
+  if (type is RecordType) {
+    for (final field in <RecordTypeField>[
+      ...type.positionalFields,
+      ...type.namedFields,
+    ]) {
+      _collectTypeIssues(
+        field.type,
+        isReturn: isReturn,
+        label: label,
+        issues: issues,
+        visiting: visiting,
+      );
+    }
+    return;
+  }
+  if (type.isDartCoreRecord) {
     issues.add(
       const _TypeIssue(
-        'record types are not supported by DWI serialization yet.',
-        hint: 'Use a List or Map payload.',
+        '`Record` does not say which fields to send.',
+        hint: 'Use a concrete record type such as `(int, String)`.',
       ),
     );
     return;
@@ -688,6 +1076,7 @@ void _collectTypeIssues(
         isReturn: isReturn,
         label: label,
         issues: issues,
+        visiting: visiting,
       );
     }
     return;
@@ -712,6 +1101,7 @@ void _collectTypeIssues(
         isReturn: isReturn,
         label: label,
         issues: issues,
+        visiting: visiting,
       );
     }
     return;
@@ -728,8 +1118,8 @@ void _collectTypeIssues(
   if (type.isDartCoreEnum) {
     issues.add(
       const _TypeIssue(
-        'enum values are objects and are not structured-cloned by DWI.',
-        hint: 'Send the enum index or name as an int/String.',
+        '`Enum` does not say which enum to rebuild in the worker.',
+        hint: 'Use the concrete enum type.',
       ),
     );
     return;
@@ -741,6 +1131,28 @@ void _collectTypeIssues(
   final element = type.element;
   final name = element.name ?? 'value';
   final library = element.library.uri.toString();
+
+  // ADR-021: enums, `@DwiPayload` classes and four dart:core value types are
+  // converted by generated encoders and decoders.
+  if (element is EnumElement) {
+    final unreachable = _unreachableType(element, 'enum');
+    if (unreachable != null) issues.add(unreachable);
+    return;
+  }
+  if (element is ClassElement && _isDwiPayload(element)) {
+    _collectPayloadIssues(
+      element,
+      isReturn: isReturn,
+      label: label,
+      issues: issues,
+      visiting: visiting,
+    );
+    return;
+  }
+  if (library == 'dart:core' &&
+      const <String>{'DateTime', 'Duration', 'BigInt', 'Uri'}.contains(name)) {
+    return;
+  }
 
   // The DWI transferable-bytes wrapper is a plain object whose payload is moved
   // rather than copied; it is not a user class and needs no codec.
@@ -810,34 +1222,23 @@ void _collectTypeIssues(
       return;
     }
     issues.add(
-      _TypeIssue(
-        '`$name` is not a known transferable typed-data type.',
-      ),
+      _TypeIssue('`$name` is not a known transferable typed-data type.'),
     );
     return;
   }
   if (library == 'dart:async') {
     issues.add(
-      _TypeIssue(
-        '`$name` is not a known structured-cloneable value.',
-      ),
+      _TypeIssue('`$name` is not a known structured-cloneable value.'),
     );
     return;
   }
-  if (name == 'DateTime') {
-    issues.add(
-      const _TypeIssue(
-        'DateTime is not converted by DWI serialization yet.',
-        hint: 'Send millisecondsSinceEpoch as an int.',
-      ),
-    );
-    return;
-  }
-
   issues.add(
     _TypeIssue(
-      '`$name` is not a known structured-cloneable type. DWI does not generate '
-      'codecs; use primitives, untyped List/Map/Set or typed data.',
+      '`$name` is not a type DWI can send.',
+      hint: element is ClassElement && element.library.uri.isScheme('package')
+          ? 'Annotate the class with `@DwiPayload()`, or send a record, '
+                'List or Map of its values.'
+          : 'Send a record, List or Map of its values.',
     ),
   );
 }
@@ -1080,14 +1481,14 @@ void _checkDuplicateNames(
       names[task.name] = task;
     }
 
-    final previousFunction = functionNames[task.functionName];
+    final previousFunction = functionNames[task.proxyName];
     if (previousFunction != null) {
       diagnostics.add(
         DwiDiagnostic(
           code: 'DWI004',
           severity: DwiDiagnosticSeverity.error,
           message:
-              'Two tasks use the function name "${task.functionName}", so '
+              'Two tasks use the function name "${task.proxyName}", so '
               'their generated proxies would collide.',
           file: _displayPath(task.sourcePath, root),
           line: task.line,
@@ -1100,7 +1501,7 @@ void _checkDuplicateNames(
         ),
       );
     } else {
-      functionNames[task.functionName] = task;
+      functionNames[task.proxyName] = task;
     }
   }
 }

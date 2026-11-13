@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0
+
+- Add `@DwiPayload()` for classes that may cross the worker boundary
+  (ADR-021).
+- Document that unsupported `@DwiTask` placements are build errors and that
+  static methods of public non-generic enums are tasks.
+
 ## 0.8.1
 
 - Synchronised release with `dwi` 0.8.1. No API change.
