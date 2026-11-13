@@ -12,7 +12,11 @@ analyzer:
     todo: ignore
   exclude:
     - .research/**
+    # Gate fixtures: sources copied into scratch apps, or depending on SDK
+    # prototype packages that are not resolvable from this checkout.
     - tooling/proxy_gate/fixture/**
+    - tooling/hosted_consumer/fixture/**
+    - tooling/data_asset_gate/fixture/**
     - "**/*.g.dart"
     - "**/*.freezed.dart"
     - build/**
