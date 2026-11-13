@@ -1,5 +1,29 @@
 # Browser Matrix
 
+## Pool idle retirement and draining (ADR-024, 2026-11-13, checkout only)
+
+`browser_pool_lifecycle_test.dart` compiles each host and worker separately
+and checks, with `idleTimeout` set: an idle pooled worker is terminated and the
+next call starts a fresh one; a busy worker is never retired; a steady stream
+of calls inside the timeout starts no new worker; `Dwi.close(drain: true)`
+refuses new calls, lets the two started calls finish (400 ms and 250 ms) and
+then closes; a plain `close()` still cuts a running call with a typed error;
+and the page ends with every worker it created terminated. All sixteen
+combinations pass:
+
+| Host / worker | Chrome 157.0.8103.78 | Safari 26.5 | Firefox 160.0 | Edge 157.0.4341.46 |
+| --- | --- | --- | --- | --- |
+| dart2js / dart2js | pass | pass | pass | pass |
+| dart2js / dart2wasm | pass | pass | pass | pass |
+| dart2wasm / dart2js | pass | pass | pass | pass |
+| dart2wasm / dart2wasm | pass | pass | pass | pass |
+
+Native: `packages/dwi/test/close_drain_test.dart`. Evidence:
+`audit/evidence/pool-idle-drain-acceptance-2026-11-13T104143.json`. The
+existing pool contract (`browser_lifecycle_test.dart`) was rerun after the
+change and passes in all four engines
+(`audit/evidence/pool-lifecycle-four-engines-2026-11-13T104143.json`).
+
 ## Worker links (ADR-023, 2026-11-13, checkout only)
 
 `browser_worker_link_test.dart` compiles each host and worker separately and,
@@ -175,7 +199,9 @@ timeout, queue overflow, queue deadline, close, concurrent startup, oversized
 payload, missing worker, queued/running/startup cancellation, transfer and
 dead-worker replacement pass in Chrome 157.0.8103.78, Safari 26.5, Firefox
 159.0.1 and Edge 157.0.4341.46 (2026-11-11,
-`audit/evidence/pool-lifecycle-four-engines-2026-11-11T220557.json`). The run
+`audit/evidence/pool-lifecycle-four-engines-2026-11-11T220557.json`; rerun
+with Firefox 160.0 after ADR-024 on 2026-11-13,
+`…2026-11-13T104143.json`). The run
 before it (`…T214451.json`, incomplete) is the record of the Safari failure that
 exposed the startup-cancellation defect.
 

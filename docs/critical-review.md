@@ -55,7 +55,7 @@ The table above is kept as raised. Current state of the open items:
 | --- | --- | --- |
 | S3 payload and dispatch validation | closed | `packages/dwi_web/test/payload_test.dart`, `worker_dispatcher_test.dart`, lifecycle case `f` |
 | S4 resource exhaustion | closed | `maxPayloadBytes`, `maxQueuedTasks`, `queueTimeout`; lifecycle cases `b`, `c`, `k` in four engines |
-| S5 worker leaks | closed for pool and handles (termination on timeout, close and failed startup, four engines); page unload relies on the browser ending dedicated workers with their document and is not separately measured | `audit/evidence/pool-lifecycle-four-engines-2026-11-11T220557.json` |
+| S5 worker leaks | closed for pool and handles (termination on timeout, close and failed startup, four engines); page unload relies on the browser ending dedicated workers with their document and is not separately measured | `audit/evidence/pool-lifecycle-four-engines-2026-11-13T104143.json`, idle retirement and drain: `pool-idle-drain-acceptance-2026-11-13T104143.json` |
 | Gate 2 browser matrix | closed for desktop engines; mobile unverified | `docs/browser-matrix.md` |
 | Gate 3 cooperative cancellation | open | `docs/completion-plan.md` tranche D |
 | Gate 4 pool-sizing guidance | open | tranche A10 |

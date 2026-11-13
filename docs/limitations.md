@@ -216,7 +216,8 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
 27. **The v0.4 pool contract is measured in all four engines; its benchmark is
     not.** Timeout, overflow, close, startup failure, cancellation, transfer
     and heartbeat pass in Chrome 157.0.8103.78, Safari 26.5, Firefox 159.0.1
-    and Edge 157.0.4341.46 (2026-11-11, `audit/evidence/pool-lifecycle-four-engines-2026-11-11T220557.json`).
+    and Edge 157.0.4341.46 (2026-11-11, `audit/evidence/pool-lifecycle-four-engines-2026-11-11T220557.json`;
+    rerun with Firefox 160.0 on 2026-11-13, `…2026-11-13T104143.json`).
     The timing benchmark in `docs/browser-matrix.md` still covers Chrome and
     Safari only. Cancelling a call whose worker is still starting is supported
     since this run: it was ignored before, which Safari exposed.
@@ -350,7 +351,9 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
     calls already use one isolate per call. `Dwi.close(drain: true)` waits
     only for pooled and fresh calls: handles, links and `runStream` streams
     are closed as before. A drain is as long as the slowest started call,
-    bounded by `taskTimeout` plus `queueTimeout`.
+    bounded by `taskTimeout` plus `queueTimeout`. Measured in all sixteen
+    host/worker/engine cells (2026-11-13,
+    `audit/evidence/pool-idle-drain-acceptance-2026-11-13T104143.json`).
 
 ## Research debt (unresolved, tracked)
 
