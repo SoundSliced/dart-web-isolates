@@ -1,0 +1,1158 @@
+{
+  "sdk": "3.13.7 (stable) (Thu Oct 22 14:28:57 2026 -0700) on \"macos_arm64\"",
+  "revision": "b0bc10390ea6a7a682b2f98d5ad9aebee4fac5b9",
+  "sourceState": "local ADR-021 implementation, uncommitted",
+  "sourceDigests": {
+    "../dwi_annotations/lib/dwi_annotations.dart": "2bd5b1afa587372bf5e5191f5c096add054e5de9f122982c677c549e37a6b0e5",
+    "lib/src/descriptor.dart": "52626861f2097e301955b5162df5f2da1ae7a416f3671c61849aaf62b65835f4",
+    "lib/src/discovery.dart": "89c56a26227c4f1f4937551469653af5fbb0e647d944890d8db0948ca60c8428",
+    "lib/src/generator.dart": "45a9f03fa76aec8a223dc114bd05e72657bab04c0ee1375cbe89e0f5a0fe6b78",
+    "test/browser_payload_types_test.dart": "ecf7370361ea15c368595122a99a7e632360c5e8bb2849e058be87a5d0ee1a0e",
+    "test/native_payload_types_test.dart": "abed7bf1bc869e3bb932cb33eada401487d12310081141c8113964a2c2ca9beb",
+    "test/support/browser_engines.dart": "f9a966c5ef5e5dc1549e6571e27fe3791aa421f5895cc1ec1ca53409f0b51744",
+    "test/support/browser_probe.dart": "bd47500f59a49a366b99d69d27c7a07e62b77d691933cad19553c16da6871109",
+    "test/support/fixture.dart": "fc51a81a45180802e4cf4b78a246b8af32d66cad8d32d881edd4bd9a4d43f380",
+    "test/support/payload_fixture.dart": "c9eb2b96155ff7324a536795d7cdd2220ae5fae85ca656185fe68922c0f0fc17"
+  },
+  "fixture": "packages/dwi_builder/test/browser_payload_types_test.dart",
+  "command": "dart test test/browser_payload_types_test.dart -r expanded",
+  "runs": [
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "enum": "red",
+        "enumByFunction": "green",
+        "enumCollection": [
+          "green",
+          "red",
+          null
+        ],
+        "dateLocal": [
+          true,
+          false,
+          456
+        ],
+        "dateUtc": [
+          true,
+          "2026-03-02T00:00:00.000Z"
+        ],
+        "duration": 2469134,
+        "bigInt": "152415787532388367501905199875019052100",
+        "uri": "https://example.com/worker?q=1#f",
+        "record": [
+          7,
+          "a",
+          false
+        ],
+        "recordOne": 42,
+        "payload": [
+          4,
+          10,
+          "x"
+        ],
+        "payloadNullField": null,
+        "recursive": 10,
+        "recursiveEcho": [
+          false,
+          "red",
+          "blue",
+          "2020-01-01T00:00:00.000Z",
+          4
+        ],
+        "nullable": true,
+        "nested": {
+          "red": [
+            1,
+            3
+          ],
+          "blue": [
+            2
+          ]
+        },
+        "zeroInput": [
+          "2026-11-12T01:02:03.004005Z",
+          "123456789012345678901234567890"
+        ],
+        "badEnum": true,
+        "badRecord": true,
+        "realm": [
+          "DedicatedWorkerGlobalScope",
+          "green"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "enum": "red",
+        "enumByFunction": "green",
+        "enumCollection": [
+          "green",
+          "red",
+          null
+        ],
+        "dateLocal": [
+          true,
+          false,
+          456
+        ],
+        "dateUtc": [
+          true,
+          "2026-03-02T00:00:00.000Z"
+        ],
+        "duration": 2469134,
+        "bigInt": "152415787532388367501905199875019052100",
+        "uri": "https://example.com/worker?q=1#f",
+        "record": [
+          7,
+          "a",
+          false
+        ],
+        "recordOne": 42,
+        "payload": [
+          4,
+          10,
+          "x"
+        ],
+        "payloadNullField": null,
+        "recursive": 10,
+        "recursiveEcho": [
+          false,
+          "red",
+          "blue",
+          "2020-01-01T00:00:00.000Z",
+          4
+        ],
+        "nullable": true,
+        "nested": {
+          "red": [
+            1,
+            3
+          ],
+          "blue": [
+            2
+          ]
+        },
+        "zeroInput": [
+          "2026-11-12T01:02:03.004005Z",
+          "123456789012345678901234567890"
+        ],
+        "badEnum": true,
+        "badRecord": true,
+        "realm": [
+          "DedicatedWorkerGlobalScope",
+          "green"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 159.0.1",
+      "result": {
+        "enum": "red",
+        "enumByFunction": "green",
+        "enumCollection": [
+          "green",
+          "red",
+          null
+        ],
+        "dateLocal": [
+          true,
+          false,
+          456
+        ],
+        "dateUtc": [
+          true,
+          "2026-03-02T00:00:00.000Z"
+        ],
+        "duration": 2469134,
+        "bigInt": "152415787532388367501905199875019052100",
+        "uri": "https://example.com/worker?q=1#f",
+        "record": [
+          7,
+          "a",
+          false
+        ],
+        "recordOne": 42,
+        "payload": [
+          4,
+          10,
+          "x"
+        ],
+        "payloadNullField": null,
+        "recursive": 10,
+        "recursiveEcho": [
+          false,
+          "red",
+          "blue",
+          "2020-01-01T00:00:00.000Z",
+          4
+        ],
+        "nullable": true,
+        "nested": {
+          "red": [
+            1,
+            3
+          ],
+          "blue": [
+            2
+          ]
+        },
+        "zeroInput": [
+          "2026-11-12T01:02:03.004005Z",
+          "123456789012345678901234567890"
+        ],
+        "badEnum": true,
+        "badRecord": true,
+        "realm": [
+          "DedicatedWorkerGlobalScope",
+          "green"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "enum": "red",
+        "enumByFunction": "green",
+        "enumCollection": [
+          "green",
+          "red",
+          null
+        ],
+        "dateLocal": [
+          true,
+          false,
+          456
+        ],
+        "dateUtc": [
+          true,
+          "2026-03-02T00:00:00.000Z"
+        ],
+        "duration": 2469134,
+        "bigInt": "152415787532388367501905199875019052100",
+        "uri": "https://example.com/worker?q=1#f",
+        "record": [
+          7,
+          "a",
+          false
+        ],
+        "recordOne": 42,
+        "payload": [
+          4,
+          10,
+          "x"
+        ],
+        "payloadNullField": null,
+        "recursive": 10,
+        "recursiveEcho": [
+          false,
+          "red",
+          "blue",
+          "2020-01-01T00:00:00.000Z",
+          4
+        ],
+        "nullable": true,
+        "nested": {
+          "red": [
+            1,
+            3
+          ],
+          "blue": [
+            2
+          ]
+        },
+        "zeroInput": [
+          "2026-11-12T01:02:03.004005Z",
+          "123456789012345678901234567890"
+        ],
+        "badEnum": true,
+        "badRecord": true,
+        "realm": [
+          "DedicatedWorkerGlobalScope",
+          "green"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "enum": "red",
+        "enumByFunction": "green",
+        "enumCollection": [
+          "green",
+          "red",
+          null
+        ],
+        "dateLocal": [
+          true,
+          false,
+          456
+        ],
+        "dateUtc": [
+          true,
+          "2026-03-02T00:00:00.000Z"
+        ],
+        "duration": 2469134,
+        "bigInt": "152415787532388367501905199875019052100",
+        "uri": "https://example.com/worker?q=1#f",
+        "record": [
+          7,
+          "a",
+          false
+        ],
+        "recordOne": 42,
+        "payload": [
+          4,
+          10,
+          "x"
+        ],
+        "payloadNullField": null,
+        "recursive": 10,
+        "recursiveEcho": [
+          false,
+          "red",
+          "blue",
+          "2020-01-01T00:00:00.000Z",
+          4
+        ],
+        "nullable": true,
+        "nested": {
+          "red": [
+            1,
+            3
+          ],
+          "blue": [
+            2
+          ]
+        },
+        "zeroInput": [
+          "2026-11-12T01:02:03.004005Z",
+          "123456789012345678901234567890"
+        ],
+        "badEnum": true,
+        "badRecord": true,
+        "realm": [
+          "DedicatedWorkerGlobalScope",
+          "green"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "enum": "red",
+        "enumByFunction": "green",
+        "enumCollection": [
+          "green",
+          "red",
+          null
+        ],
+        "dateLocal": [
+          true,
+          false,
+          456
+        ],
+        "dateUtc": [
+          true,
+          "2026-03-02T00:00:00.000Z"
+        ],
+        "duration": 2469134,
+        "bigInt": "152415787532388367501905199875019052100",
+        "uri": "https://example.com/worker?q=1#f",
+        "record": [
+          7,
+          "a",
+          false
+        ],
+        "recordOne": 42,
+        "payload": [
+          4,
+          10,
+          "x"
+        ],
+        "payloadNullField": null,
+        "recursive": 10,
+        "recursiveEcho": [
+          false,
+          "red",
+          "blue",
+          "2020-01-01T00:00:00.000Z",
+          4
+        ],
+        "nullable": true,
+        "nested": {
+          "red": [
+            1,
+            3
+          ],
+          "blue": [
+            2
+          ]
+        },
+        "zeroInput": [
+          "2026-11-12T01:02:03.004005Z",
+          "123456789012345678901234567890"
+        ],
+        "badEnum": true,
+        "badRecord": true,
+        "realm": [
+          "DedicatedWorkerGlobalScope",
+          "green"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 160.0",
+      "result": {
+        "enum": "red",
+        "enumByFunction": "green",
+        "enumCollection": [
+          "green",
+          "red",
+          null
+        ],
+        "dateLocal": [
+          true,
+          false,
+          456
+        ],
+        "dateUtc": [
+          true,
+          "2026-03-02T00:00:00.000Z"
+        ],
+        "duration": 2469134,
+        "bigInt": "152415787532388367501905199875019052100",
+        "uri": "https://example.com/worker?q=1#f",
+        "record": [
+          7,
+          "a",
+          false
+        ],
+        "recordOne": 42,
+        "payload": [
+          4,
+          10,
+          "x"
+        ],
+        "payloadNullField": null,
+        "recursive": 10,
+        "recursiveEcho": [
+          false,
+          "red",
+          "blue",
+          "2020-01-01T00:00:00.000Z",
+          4
+        ],
+        "nullable": true,
+        "nested": {
+          "red": [
+            1,
+            3
+          ],
+          "blue": [
+            2
+          ]
+        },
+        "zeroInput": [
+          "2026-11-12T01:02:03.004005Z",
+          "123456789012345678901234567890"
+        ],
+        "badEnum": true,
+        "badRecord": true,
+        "realm": [
+          "DedicatedWorkerGlobalScope",
+          "green"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "enum": "red",
+        "enumByFunction": "green",
+        "enumCollection": [
+          "green",
+          "red",
+          null
+        ],
+        "dateLocal": [
+          true,
+          false,
+          456
+        ],
+        "dateUtc": [
+          true,
+          "2026-03-02T00:00:00.000Z"
+        ],
+        "duration": 2469134,
+        "bigInt": "152415787532388367501905199875019052100",
+        "uri": "https://example.com/worker?q=1#f",
+        "record": [
+          7,
+          "a",
+          false
+        ],
+        "recordOne": 42,
+        "payload": [
+          4,
+          10,
+          "x"
+        ],
+        "payloadNullField": null,
+        "recursive": 10,
+        "recursiveEcho": [
+          false,
+          "red",
+          "blue",
+          "2020-01-01T00:00:00.000Z",
+          4
+        ],
+        "nullable": true,
+        "nested": {
+          "red": [
+            1,
+            3
+          ],
+          "blue": [
+            2
+          ]
+        },
+        "zeroInput": [
+          "2026-11-12T01:02:03.004005Z",
+          "123456789012345678901234567890"
+        ],
+        "badEnum": true,
+        "badRecord": true,
+        "realm": [
+          "DedicatedWorkerGlobalScope",
+          "green"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "enum": "red",
+        "enumByFunction": "green",
+        "enumCollection": [
+          "green",
+          "red",
+          null
+        ],
+        "dateLocal": [
+          true,
+          false,
+          456
+        ],
+        "dateUtc": [
+          true,
+          "2026-03-02T00:00:00.000Z"
+        ],
+        "duration": 2469134,
+        "bigInt": "152415787532388367501905199875019052100",
+        "uri": "https://example.com/worker?q=1#f",
+        "record": [
+          7,
+          "a",
+          false
+        ],
+        "recordOne": 42,
+        "payload": [
+          4,
+          10,
+          "x"
+        ],
+        "payloadNullField": null,
+        "recursive": 10,
+        "recursiveEcho": [
+          false,
+          "red",
+          "blue",
+          "2020-01-01T00:00:00.000Z",
+          4
+        ],
+        "nullable": true,
+        "nested": {
+          "red": [
+            1,
+            3
+          ],
+          "blue": [
+            2
+          ]
+        },
+        "zeroInput": [
+          "2026-11-12T01:02:03.004005Z",
+          "123456789012345678901234567890"
+        ],
+        "badEnum": true,
+        "badRecord": true,
+        "realm": [
+          "DedicatedWorkerGlobalScope",
+          "green"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "enum": "red",
+        "enumByFunction": "green",
+        "enumCollection": [
+          "green",
+          "red",
+          null
+        ],
+        "dateLocal": [
+          true,
+          false,
+          456
+        ],
+        "dateUtc": [
+          true,
+          "2026-03-02T00:00:00.000Z"
+        ],
+        "duration": 2469134,
+        "bigInt": "152415787532388367501905199875019052100",
+        "uri": "https://example.com/worker?q=1#f",
+        "record": [
+          7,
+          "a",
+          false
+        ],
+        "recordOne": 42,
+        "payload": [
+          4,
+          10,
+          "x"
+        ],
+        "payloadNullField": null,
+        "recursive": 10,
+        "recursiveEcho": [
+          false,
+          "red",
+          "blue",
+          "2020-01-01T00:00:00.000Z",
+          4
+        ],
+        "nullable": true,
+        "nested": {
+          "red": [
+            1,
+            3
+          ],
+          "blue": [
+            2
+          ]
+        },
+        "zeroInput": [
+          "2026-11-12T01:02:03.004005Z",
+          "123456789012345678901234567890"
+        ],
+        "badEnum": true,
+        "badRecord": true,
+        "realm": [
+          "DedicatedWorkerGlobalScope",
+          "green"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 160.0",
+      "result": {
+        "enum": "red",
+        "enumByFunction": "green",
+        "enumCollection": [
+          "green",
+          "red",
+          null
+        ],
+        "dateLocal": [
+          true,
+          false,
+          456
+        ],
+        "dateUtc": [
+          true,
+          "2026-03-02T00:00:00.000Z"
+        ],
+        "duration": 2469134,
+        "bigInt": "152415787532388367501905199875019052100",
+        "uri": "https://example.com/worker?q=1#f",
+        "record": [
+          7,
+          "a",
+          false
+        ],
+        "recordOne": 42,
+        "payload": [
+          4,
+          10,
+          "x"
+        ],
+        "payloadNullField": null,
+        "recursive": 10,
+        "recursiveEcho": [
+          false,
+          "red",
+          "blue",
+          "2020-01-01T00:00:00.000Z",
+          4
+        ],
+        "nullable": true,
+        "nested": {
+          "red": [
+            1,
+            3
+          ],
+          "blue": [
+            2
+          ]
+        },
+        "zeroInput": [
+          "2026-11-12T01:02:03.004005Z",
+          "123456789012345678901234567890"
+        ],
+        "badEnum": true,
+        "badRecord": true,
+        "realm": [
+          "DedicatedWorkerGlobalScope",
+          "green"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "enum": "red",
+        "enumByFunction": "green",
+        "enumCollection": [
+          "green",
+          "red",
+          null
+        ],
+        "dateLocal": [
+          true,
+          false,
+          456
+        ],
+        "dateUtc": [
+          true,
+          "2026-03-02T00:00:00.000Z"
+        ],
+        "duration": 2469134,
+        "bigInt": "152415787532388367501905199875019052100",
+        "uri": "https://example.com/worker?q=1#f",
+        "record": [
+          7,
+          "a",
+          false
+        ],
+        "recordOne": 42,
+        "payload": [
+          4,
+          10,
+          "x"
+        ],
+        "payloadNullField": null,
+        "recursive": 10,
+        "recursiveEcho": [
+          false,
+          "red",
+          "blue",
+          "2020-01-01T00:00:00.000Z",
+          4
+        ],
+        "nullable": true,
+        "nested": {
+          "red": [
+            1,
+            3
+          ],
+          "blue": [
+            2
+          ]
+        },
+        "zeroInput": [
+          "2026-11-12T01:02:03.004005Z",
+          "123456789012345678901234567890"
+        ],
+        "badEnum": true,
+        "badRecord": true,
+        "realm": [
+          "DedicatedWorkerGlobalScope",
+          "green"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "enum": "red",
+        "enumByFunction": "green",
+        "enumCollection": [
+          "green",
+          "red",
+          null
+        ],
+        "dateLocal": [
+          true,
+          false,
+          456
+        ],
+        "dateUtc": [
+          true,
+          "2026-03-02T00:00:00.000Z"
+        ],
+        "duration": 2469134,
+        "bigInt": "152415787532388367501905199875019052100",
+        "uri": "https://example.com/worker?q=1#f",
+        "record": [
+          7,
+          "a",
+          false
+        ],
+        "recordOne": 42,
+        "payload": [
+          4,
+          10,
+          "x"
+        ],
+        "payloadNullField": null,
+        "recursive": 10,
+        "recursiveEcho": [
+          false,
+          "red",
+          "blue",
+          "2020-01-01T00:00:00.000Z",
+          4
+        ],
+        "nullable": true,
+        "nested": {
+          "red": [
+            1,
+            3
+          ],
+          "blue": [
+            2
+          ]
+        },
+        "zeroInput": [
+          "2026-11-12T01:02:03.004005Z",
+          "123456789012345678901234567890"
+        ],
+        "badEnum": true,
+        "badRecord": true,
+        "realm": [
+          "DedicatedWorkerGlobalScope",
+          "green"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "enum": "red",
+        "enumByFunction": "green",
+        "enumCollection": [
+          "green",
+          "red",
+          null
+        ],
+        "dateLocal": [
+          true,
+          false,
+          456
+        ],
+        "dateUtc": [
+          true,
+          "2026-03-02T00:00:00.000Z"
+        ],
+        "duration": 2469134,
+        "bigInt": "152415787532388367501905199875019052100",
+        "uri": "https://example.com/worker?q=1#f",
+        "record": [
+          7,
+          "a",
+          false
+        ],
+        "recordOne": 42,
+        "payload": [
+          4,
+          10,
+          "x"
+        ],
+        "payloadNullField": null,
+        "recursive": 10,
+        "recursiveEcho": [
+          false,
+          "red",
+          "blue",
+          "2020-01-01T00:00:00.000Z",
+          4
+        ],
+        "nullable": true,
+        "nested": {
+          "red": [
+            1,
+            3
+          ],
+          "blue": [
+            2
+          ]
+        },
+        "zeroInput": [
+          "2026-11-12T01:02:03.004005Z",
+          "123456789012345678901234567890"
+        ],
+        "badEnum": true,
+        "badRecord": true,
+        "realm": [
+          "DedicatedWorkerGlobalScope",
+          "green"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 160.0",
+      "result": {
+        "enum": "red",
+        "enumByFunction": "green",
+        "enumCollection": [
+          "green",
+          "red",
+          null
+        ],
+        "dateLocal": [
+          true,
+          false,
+          456
+        ],
+        "dateUtc": [
+          true,
+          "2026-03-02T00:00:00.000Z"
+        ],
+        "duration": 2469134,
+        "bigInt": "152415787532388367501905199875019052100",
+        "uri": "https://example.com/worker?q=1#f",
+        "record": [
+          7,
+          "a",
+          false
+        ],
+        "recordOne": 42,
+        "payload": [
+          4,
+          10,
+          "x"
+        ],
+        "payloadNullField": null,
+        "recursive": 10,
+        "recursiveEcho": [
+          false,
+          "red",
+          "blue",
+          "2020-01-01T00:00:00.000Z",
+          4
+        ],
+        "nullable": true,
+        "nested": {
+          "red": [
+            1,
+            3
+          ],
+          "blue": [
+            2
+          ]
+        },
+        "zeroInput": [
+          "2026-11-12T01:02:03.004005Z",
+          "123456789012345678901234567890"
+        ],
+        "badEnum": true,
+        "badRecord": true,
+        "realm": [
+          "DedicatedWorkerGlobalScope",
+          "green"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "enum": "red",
+        "enumByFunction": "green",
+        "enumCollection": [
+          "green",
+          "red",
+          null
+        ],
+        "dateLocal": [
+          true,
+          false,
+          456
+        ],
+        "dateUtc": [
+          true,
+          "2026-03-02T00:00:00.000Z"
+        ],
+        "duration": 2469134,
+        "bigInt": "152415787532388367501905199875019052100",
+        "uri": "https://example.com/worker?q=1#f",
+        "record": [
+          7,
+          "a",
+          false
+        ],
+        "recordOne": 42,
+        "payload": [
+          4,
+          10,
+          "x"
+        ],
+        "payloadNullField": null,
+        "recursive": 10,
+        "recursiveEcho": [
+          false,
+          "red",
+          "blue",
+          "2020-01-01T00:00:00.000Z",
+          4
+        ],
+        "nullable": true,
+        "nested": {
+          "red": [
+            1,
+            3
+          ],
+          "blue": [
+            2
+          ]
+        },
+        "zeroInput": [
+          "2026-11-12T01:02:03.004005Z",
+          "123456789012345678901234567890"
+        ],
+        "badEnum": true,
+        "badRecord": true,
+        "realm": [
+          "DedicatedWorkerGlobalScope",
+          "green"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true
+      },
+      "status": "pass"
+    }
+  ],
+  "complete": true
+}

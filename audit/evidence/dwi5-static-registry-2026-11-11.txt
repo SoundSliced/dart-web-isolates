@@ -2,6 +2,33 @@ DWI-5 registered-static end-to-end prototype
 Date: 2026-11-11
 Status: prototype evidence. No public API change.
 
+Correction after source inspection and corrected matrix re-run
+------------------------------------------------------------
+The original observations below are retained as historical output, but the
+interpretations overstate coverage:
+- Both original hosts were compiled with dart2js. "Wasm worker" did not mean
+  "Wasm host".
+- twice was a top-level function, not a class static method. Form 2 was not
+  tested by this fixture.
+- Differently prefixed host/worker tokens necessarily differ. They did not
+  prove separate execution realms.
+- Ticks during a deliberate asynchronous delay did not establish main-thread
+  progress during CPU-bound execution.
+- The original test did not assert protocolVersion despite listing it below.
+
+The corrected fixture compiles JS and Wasm hosts separately, exercises both
+registered choices deterministically, observes DedicatedWorkerGlobalScope,
+and verifies worker-local state starts at 0 while host state remains 1000.
+Re-run command: same dart test command below.
+Observed baseline: JS/JS and JS/Wasm pass in Chrome, Safari, Firefox and Edge.
+Wasm/JS and Wasm/Wasm fail in Chrome before later engines run:
+  DwiResultTypeException: task "addOne" returned double, expected int
+This prototype calls raw Dwi.run<int> instead of using generated typed result
+decoders. The production registered-static adapter must reuse typed proxies;
+the failure must not be hidden by weakening type validation.
+No static-method or native end-to-end pass is established by this baseline.
+Later production acceptance evidence supersedes these prototype conclusions.
+
 Environment
 -----------
 OS:       macOS 26.5.1 (25F80), arm64

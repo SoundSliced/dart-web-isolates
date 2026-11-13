@@ -1,0 +1,158 @@
+{
+  "sdk": "3.13.7 (stable) (Thu Oct 22 14:28:57 2026 -0700) on \"macos_arm64\"",
+  "revision": "b0bc10390ea6a7a682b2f98d5ad9aebee4fac5b9",
+  "sourceDigests": {
+    "../dwi_web/lib/src/web_backend.dart": "3ffdbfd31cdd0143154ad654c41e43c66bee0ddb967a60db2023c3c1bc1a6837",
+    "test/browser_lifecycle_test.dart": "2758964011c5d54e7fbe840cbc16c4b6137ee828de3d62888c2b72f497d9daab",
+    "test/support/browser_engines.dart": "f9a966c5ef5e5dc1549e6571e27fe3791aa421f5895cc1ec1ca53409f0b51744",
+    "test/support/browser_probe.dart": "bd47500f59a49a366b99d69d27c7a07e62b77d691933cad19553c16da6871109"
+  },
+  "fixture": "packages/dwi_builder/test/browser_lifecycle_test.dart",
+  "command": "dart test test/browser_lifecycle_test.dart -r expanded",
+  "runs": [
+    {
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.50",
+      "result": {
+        "a": [
+          "DwiTimeoutException",
+          "OK:a",
+          "OK:b"
+        ],
+        "aMs": 568,
+        "aWorkers": 1,
+        "aAfter": "OK:later",
+        "b": [
+          "DwiTimeoutException",
+          "OK:q1",
+          "DwiUnsupportedException"
+        ],
+        "bAfter": "OK:afterB",
+        "cQueued": "DwiTimeoutException",
+        "cQueueMs": 201,
+        "cSlow": "OK:slow",
+        "dSettled": "DwiUnsupportedException",
+        "dCloseMs": 19,
+        "dRepeatedClose": "ok",
+        "dReused": "OK:reused",
+        "e": [
+          "OK:1",
+          "OK:2",
+          "OK:3",
+          "OK:4"
+        ],
+        "eWorkers": 2,
+        "fLarge": "DwiSerializationException",
+        "fAfter": "OK:small",
+        "gMissing": "DwiStartupException",
+        "gReused": "OK:back",
+        "hQueuedCancel": true,
+        "hQueuedResult": "DwiCancelledException",
+        "hRunningCancel": true,
+        "hRunningResult": "DwiCancelledException",
+        "hRunningMs": 0,
+        "hRepeatedCancel": false,
+        "hAfter": "OK:afterCancel",
+        "hDoneValue": "done",
+        "hDoneCancel": false,
+        "hRaceCancel": true,
+        "hRaceResult": "DwiCancelledException",
+        "hCaps": "running",
+        "iEchoLength": 4,
+        "iEchoFirst": 1,
+        "iEchoLast": 4,
+        "iDetached": true,
+        "iSenderRead": "DwiSerializationException",
+        "iRepeat": "DwiSerializationException",
+        "iReturnedLength": 6,
+        "iReturnedAllSeven": true,
+        "iTransferables": true,
+        "jFirst": "OK:alive",
+        "jNext": "OK:next",
+        "jNextMs": 25,
+        "jWorkers": 1,
+        "k": [
+          "DwiStartupException",
+          "DwiStartupException",
+          "DwiStartupException",
+          "DwiStartupException"
+        ],
+        "kWorkers": 0,
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "a": [
+          "DwiTimeoutException",
+          "OK:a",
+          "OK:b"
+        ],
+        "aMs": 1277,
+        "aWorkers": 1,
+        "aAfter": "OK:later",
+        "b": [
+          "DwiTimeoutException",
+          "OK:q1",
+          "DwiUnsupportedException"
+        ],
+        "bAfter": "OK:afterB",
+        "cQueued": "DwiTimeoutException",
+        "cQueueMs": 201,
+        "cSlow": "OK:slow",
+        "dSettled": "DwiUnsupportedException",
+        "dCloseMs": 59,
+        "dRepeatedClose": "ok",
+        "dReused": "OK:reused",
+        "e": [
+          "OK:1",
+          "OK:2",
+          "OK:3",
+          "OK:4"
+        ],
+        "eWorkers": 2,
+        "fLarge": "DwiSerializationException",
+        "fAfter": "OK:small",
+        "gMissing": "DwiStartupException",
+        "gReused": "OK:back",
+        "hQueuedCancel": true,
+        "hQueuedResult": "DwiCancelledException",
+        "hRunningCancel": false,
+        "hRunningResult": "OK:spun",
+        "hRunningMs": 6242,
+        "hRepeatedCancel": false,
+        "hAfter": "OK:afterCancel",
+        "hDoneValue": "done",
+        "hDoneCancel": false,
+        "hRaceCancel": true,
+        "hRaceResult": "DwiCancelledException",
+        "hCaps": "running",
+        "iEchoLength": 4,
+        "iEchoFirst": 1,
+        "iEchoLast": 4,
+        "iDetached": true,
+        "iSenderRead": "DwiSerializationException",
+        "iRepeat": "DwiSerializationException",
+        "iReturnedLength": 6,
+        "iReturnedAllSeven": true,
+        "iTransferables": true,
+        "jFirst": "OK:alive",
+        "jNext": "OK:next",
+        "jNextMs": 86,
+        "jWorkers": 1,
+        "k": [
+          "DwiStartupException",
+          "DwiStartupException",
+          "DwiStartupException",
+          "DwiStartupException"
+        ],
+        "kWorkers": 0,
+        "ok": true
+      }
+    }
+  ],
+  "complete": false
+}

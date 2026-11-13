@@ -99,6 +99,77 @@ await worker.close();
 - This is not `dart:isolate` `onExit`/`onError` parity: DWI's timeout,
   cancellation and restart generation have no `dart:isolate` equivalent.
 
+## Registered static functions (ADR-020)
+
+The generated `dwi_tasks.g.dart` additionally exposes:
+
+```dart
+abstract final class DwiFunctions {
+  static Future<R> run<I, R>(FutureOr<R> Function(I) function, I input);
+  static Future<R> run0<R>(FutureOr<R> Function() function);
+}
+```
+
+These select registered `@DwiTask` top-level functions or public class static
+methods using function equality, then call the existing typed proxy. They do
+not invoke the function locally or send it to the worker. Static method task
+IDs default to `Class.method`; proxies are named `Class$method`. Top-level IDs
+and proxies stay unchanged. Unsupported declarations and collisions fail
+generation: every `@DwiTask` that is not on a concrete (non-`external`) public
+top-level function or a static method of a public non-generic class or enum is
+a `DWI003` error, including extension and extension-type members, enum
+instance methods, constructors, fields, local functions, parameters and type
+declarations. Enum static methods (amended 2026-11-11) follow the class rules:
+ID `Enum.method`, proxy `Enum$method`.
+
+Unknown functions, closures and instance tear-offs fail with
+`DwiUnknownTaskException` before startup; incompatible registered caller
+signatures fail with `DwiUnsupportedException`. Existing proxy codecs, native
+registration, pooling, timeout, remote errors and cleanup remain authoritative.
+Only existing zero/one-required-positional concrete task signatures are accepted.
+There is no function overload for `Dwi.run`/`Dwi.runFresh`, fresh-function API,
+capture introspection or compatibility-level raise. Use the existing explicit
+pre-build workflow on released SDKs.
+
+### Stream tasks (ADR-022, since 0.9.0)
+
+```dart
+abstract final class Dwi {
+  static Stream<Object?> runStream(String task, [Object? input]);
+}
+// generated: DwiTasks.task(input) returns Stream<T>;
+// DwiFunctions.stream<I, T>(fn, input) and DwiFunctions.stream0<T>(fn)
+```
+
+A `@DwiTask` may return `Stream<T>`. Each listen runs the task in a fresh
+context; items arrive in order with credit-based flow control, a task error
+follows the items sent before it, and cancelling the subscription terminates
+the context. A stream task cannot be called through `Dwi.run`.
+
+### Payload types (ADR-021, since 0.9.0)
+
+```dart
+final class DwiPayload { const DwiPayload(); }   // package:dwi_annotations
+```
+
+Task inputs and results may also be public enums, `DateTime`, `Duration`,
+`BigInt`, `Uri`, records, and classes annotated `@DwiPayload()`, alone or
+inside `List`, `Set` and `Map<String, V>`. The generator emits the conversion;
+nothing is written by hand and no task signature changes. A payload class is
+rebuilt in the receiver from its unnamed constructor, so only constructor
+parameters cross, and identity and subtype are not preserved. Everything else,
+including a class without the annotation, remains a `DWI001` build error.
+
+A record input is the supported way to hand a task several values that a
+closure would have captured:
+
+```dart
+@DwiTask()
+int score((List<int> samples, Duration window, Mode mode) input) => ...;
+
+final value = await DwiFunctions.run(score, (samples, window, mode));
+```
+
 ## Level 1.5 — annotated task and generated proxy (v0.3)
 
 A public top-level function is annotated once:

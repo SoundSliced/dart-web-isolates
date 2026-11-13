@@ -1,0 +1,934 @@
+{
+  "sdk": "3.13.7 (stable) (Thu Oct 22 14:28:57 2026 -0700) on \"macos_arm64\"",
+  "revision": "b0bc10390ea6a7a682b2f98d5ad9aebee4fac5b9",
+  "sourceState": "local ADR-022 implementation, uncommitted",
+  "sourceDigests": {
+    "../dwi/lib/dwi.dart": "079d8141cf0978625e29b0800c97682d9c902279557e311ebb6033a173532dc9",
+    "../dwi_core/lib/src/stream_task.dart": "e2786f5ca39eba507e1de2645f28ada620ef628f9ee9ade5e3bf23a7f44ce8ca",
+    "../dwi_core/lib/src/channel_endpoint.dart": "0794dcc5d8976dc5e185531a8a466694346fa7fcdfca15a315f85edd47c03a7a",
+    "lib/src/descriptor.dart": "d77905bd4010dfe0b7c166b46e0ab75054bcf14576c9e6bdd62682cb74c4e733",
+    "lib/src/discovery.dart": "059dbb946eee56011b9d6e072594199c3baeaac542f0d74d1546fa33e2155fdc",
+    "lib/src/generator.dart": "33da3257a11c97e6f3f24079e5bcf335c7162efdf5fc3b587aeea549a408a6d5",
+    "test/browser_stream_tasks_test.dart": "1b2db629e5d25ff61d44c5492ad7618750cfc4fab67bd7a597f1ee81c37f4ef3",
+    "test/native_stream_tasks_test.dart": "2a2f232d11963a341b8d54fdb82806b5b1023f5fcc213ccd4f8008a51074eba0",
+    "test/support/browser_engines.dart": "f9a966c5ef5e5dc1549e6571e27fe3791aa421f5895cc1ec1ca53409f0b51744",
+    "test/support/browser_probe.dart": "bd47500f59a49a366b99d69d27c7a07e62b77d691933cad19553c16da6871109",
+    "test/support/fixture.dart": "fc51a81a45180802e4cf4b78a246b8af32d66cad8d32d881edd4bd9a4d43f380",
+    "test/support/stream_fixture.dart": "4dcce5bfe508bc01591b68edeb304f91d0e9b250debef6a0495651dbbd812f7b"
+  },
+  "fixture": "packages/dwi_builder/test/browser_stream_tasks_test.dart",
+  "command": "dart test test/browser_stream_tasks_test.dart -r expanded",
+  "runs": [
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "ordered": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "backpressure": [
+          300,
+          true
+        ],
+        "converted": [
+          "start:2",
+          "middle:4",
+          "end:6"
+        ],
+        "error": [
+          "one",
+          "two",
+          true
+        ],
+        "cancelled": [
+          0,
+          1,
+          2
+        ],
+        "afterCancel": [
+          1,
+          2
+        ],
+        "zeroInput": [
+          "a",
+          null,
+          "c"
+        ],
+        "byFunction": [
+          1,
+          2,
+          3
+        ],
+        "byFunction0": [
+          "a",
+          null,
+          "c"
+        ],
+        "runOnStream": true,
+        "pooledCall": true,
+        "byName": [
+          1,
+          2
+        ],
+        "realm": [
+          "DedicatedWorkerGlobalScope"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          12,
+          12
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "ordered": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "backpressure": [
+          300,
+          true
+        ],
+        "converted": [
+          "start:2",
+          "middle:4",
+          "end:6"
+        ],
+        "error": [
+          "one",
+          "two",
+          true
+        ],
+        "cancelled": [
+          0,
+          1,
+          2
+        ],
+        "afterCancel": [
+          1,
+          2
+        ],
+        "zeroInput": [
+          "a",
+          null,
+          "c"
+        ],
+        "byFunction": [
+          1,
+          2,
+          3
+        ],
+        "byFunction0": [
+          "a",
+          null,
+          "c"
+        ],
+        "runOnStream": true,
+        "pooledCall": true,
+        "byName": [
+          1,
+          2
+        ],
+        "realm": [
+          "DedicatedWorkerGlobalScope"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          12,
+          12
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 160.0",
+      "result": {
+        "ordered": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "backpressure": [
+          300,
+          true
+        ],
+        "converted": [
+          "start:2",
+          "middle:4",
+          "end:6"
+        ],
+        "error": [
+          "one",
+          "two",
+          true
+        ],
+        "cancelled": [
+          0,
+          1,
+          2
+        ],
+        "afterCancel": [
+          1,
+          2
+        ],
+        "zeroInput": [
+          "a",
+          null,
+          "c"
+        ],
+        "byFunction": [
+          1,
+          2,
+          3
+        ],
+        "byFunction0": [
+          "a",
+          null,
+          "c"
+        ],
+        "runOnStream": true,
+        "pooledCall": true,
+        "byName": [
+          1,
+          2
+        ],
+        "realm": [
+          "DedicatedWorkerGlobalScope"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          12,
+          12
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "ordered": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "backpressure": [
+          300,
+          true
+        ],
+        "converted": [
+          "start:2",
+          "middle:4",
+          "end:6"
+        ],
+        "error": [
+          "one",
+          "two",
+          true
+        ],
+        "cancelled": [
+          0,
+          1,
+          2
+        ],
+        "afterCancel": [
+          1,
+          2
+        ],
+        "zeroInput": [
+          "a",
+          null,
+          "c"
+        ],
+        "byFunction": [
+          1,
+          2,
+          3
+        ],
+        "byFunction0": [
+          "a",
+          null,
+          "c"
+        ],
+        "runOnStream": true,
+        "pooledCall": true,
+        "byName": [
+          1,
+          2
+        ],
+        "realm": [
+          "DedicatedWorkerGlobalScope"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          12,
+          12
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "ordered": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "backpressure": [
+          300,
+          true
+        ],
+        "converted": [
+          "start:2",
+          "middle:4",
+          "end:6"
+        ],
+        "error": [
+          "one",
+          "two",
+          true
+        ],
+        "cancelled": [
+          0,
+          1,
+          2
+        ],
+        "afterCancel": [
+          1,
+          2
+        ],
+        "zeroInput": [
+          "a",
+          null,
+          "c"
+        ],
+        "byFunction": [
+          1,
+          2,
+          3
+        ],
+        "byFunction0": [
+          "a",
+          null,
+          "c"
+        ],
+        "runOnStream": true,
+        "pooledCall": true,
+        "byName": [
+          1.0,
+          2.0
+        ],
+        "realm": [
+          "DedicatedWorkerGlobalScope"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          12,
+          12
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "ordered": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "backpressure": [
+          300,
+          true
+        ],
+        "converted": [
+          "start:2",
+          "middle:4",
+          "end:6"
+        ],
+        "error": [
+          "one",
+          "two",
+          true
+        ],
+        "cancelled": [
+          0,
+          1,
+          2
+        ],
+        "afterCancel": [
+          1,
+          2
+        ],
+        "zeroInput": [
+          "a",
+          null,
+          "c"
+        ],
+        "byFunction": [
+          1,
+          2,
+          3
+        ],
+        "byFunction0": [
+          "a",
+          null,
+          "c"
+        ],
+        "runOnStream": true,
+        "pooledCall": true,
+        "byName": [
+          1.0,
+          2.0
+        ],
+        "realm": [
+          "DedicatedWorkerGlobalScope"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          12,
+          12
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 160.0",
+      "result": {
+        "ordered": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "backpressure": [
+          300,
+          true
+        ],
+        "converted": [
+          "start:2",
+          "middle:4",
+          "end:6"
+        ],
+        "error": [
+          "one",
+          "two",
+          true
+        ],
+        "cancelled": [
+          0,
+          1,
+          2
+        ],
+        "afterCancel": [
+          1,
+          2
+        ],
+        "zeroInput": [
+          "a",
+          null,
+          "c"
+        ],
+        "byFunction": [
+          1,
+          2,
+          3
+        ],
+        "byFunction0": [
+          "a",
+          null,
+          "c"
+        ],
+        "runOnStream": true,
+        "pooledCall": true,
+        "byName": [
+          1.0,
+          2.0
+        ],
+        "realm": [
+          "DedicatedWorkerGlobalScope"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          12,
+          12
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "ordered": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "backpressure": [
+          300,
+          true
+        ],
+        "converted": [
+          "start:2",
+          "middle:4",
+          "end:6"
+        ],
+        "error": [
+          "one",
+          "two",
+          true
+        ],
+        "cancelled": [
+          0,
+          1,
+          2
+        ],
+        "afterCancel": [
+          1,
+          2
+        ],
+        "zeroInput": [
+          "a",
+          null,
+          "c"
+        ],
+        "byFunction": [
+          1,
+          2,
+          3
+        ],
+        "byFunction0": [
+          "a",
+          null,
+          "c"
+        ],
+        "runOnStream": true,
+        "pooledCall": true,
+        "byName": [
+          1.0,
+          2.0
+        ],
+        "realm": [
+          "DedicatedWorkerGlobalScope"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          12,
+          12
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "ordered": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "backpressure": [
+          300,
+          true
+        ],
+        "converted": [
+          "start:2",
+          "middle:4",
+          "end:6"
+        ],
+        "error": [
+          "one",
+          "two",
+          true
+        ],
+        "cancelled": [
+          0,
+          1,
+          2
+        ],
+        "afterCancel": [
+          1,
+          2
+        ],
+        "zeroInput": [
+          "a",
+          null,
+          "c"
+        ],
+        "byFunction": [
+          1,
+          2,
+          3
+        ],
+        "byFunction0": [
+          "a",
+          null,
+          "c"
+        ],
+        "runOnStream": true,
+        "pooledCall": true,
+        "byName": [
+          1,
+          2
+        ],
+        "realm": [
+          "DedicatedWorkerGlobalScope"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          12,
+          12
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "ordered": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "backpressure": [
+          300,
+          true
+        ],
+        "converted": [
+          "start:2",
+          "middle:4",
+          "end:6"
+        ],
+        "error": [
+          "one",
+          "two",
+          true
+        ],
+        "cancelled": [
+          0,
+          1,
+          2
+        ],
+        "afterCancel": [
+          1,
+          2
+        ],
+        "zeroInput": [
+          "a",
+          null,
+          "c"
+        ],
+        "byFunction": [
+          1,
+          2,
+          3
+        ],
+        "byFunction0": [
+          "a",
+          null,
+          "c"
+        ],
+        "runOnStream": true,
+        "pooledCall": true,
+        "byName": [
+          1,
+          2
+        ],
+        "realm": [
+          "DedicatedWorkerGlobalScope"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          12,
+          12
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 160.0",
+      "result": {
+        "ordered": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "backpressure": [
+          300,
+          true
+        ],
+        "converted": [
+          "start:2",
+          "middle:4",
+          "end:6"
+        ],
+        "error": [
+          "one",
+          "two",
+          true
+        ],
+        "cancelled": [
+          0,
+          1,
+          2
+        ],
+        "afterCancel": [
+          1,
+          2
+        ],
+        "zeroInput": [
+          "a",
+          null,
+          "c"
+        ],
+        "byFunction": [
+          1,
+          2,
+          3
+        ],
+        "byFunction0": [
+          "a",
+          null,
+          "c"
+        ],
+        "runOnStream": true,
+        "pooledCall": true,
+        "byName": [
+          1,
+          2
+        ],
+        "realm": [
+          "DedicatedWorkerGlobalScope"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          12,
+          12
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "ordered": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "backpressure": [
+          300,
+          true
+        ],
+        "converted": [
+          "start:2",
+          "middle:4",
+          "end:6"
+        ],
+        "error": [
+          "one",
+          "two",
+          true
+        ],
+        "cancelled": [
+          0,
+          1,
+          2
+        ],
+        "afterCancel": [
+          1,
+          2
+        ],
+        "zeroInput": [
+          "a",
+          null,
+          "c"
+        ],
+        "byFunction": [
+          1,
+          2,
+          3
+        ],
+        "byFunction0": [
+          "a",
+          null,
+          "c"
+        ],
+        "runOnStream": true,
+        "pooledCall": true,
+        "byName": [
+          1,
+          2
+        ],
+        "realm": [
+          "DedicatedWorkerGlobalScope"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          12,
+          12
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "ordered": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "backpressure": [
+          300,
+          true
+        ],
+        "converted": [
+          "start:2",
+          "middle:4",
+          "end:6"
+        ],
+        "error": [
+          "one",
+          "two",
+          true
+        ],
+        "cancelled": [
+          0,
+          1,
+          2
+        ],
+        "afterCancel": [
+          1,
+          2
+        ],
+        "zeroInput": [
+          "a",
+          null,
+          "c"
+        ],
+        "byFunction": [
+          1,
+          2,
+          3
+        ],
+        "byFunction0": [
+          "a",
+          null,
+          "c"
+        ],
+        "runOnStream": true,
+        "pooledCall": true,
+        "byName": [
+          1.0,
+          2.0
+        ],
+        "realm": [
+          "DedicatedWorkerGlobalScope"
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          12,
+          12
+        ]
+      },
+      "status": "pass"
+    }
+  ],
+  "complete": false
+}

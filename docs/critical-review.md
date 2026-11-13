@@ -47,6 +47,20 @@ The reviewer was instructed to behave as a skeptical Dart SDK maintainer.
 5. Decision on whether the generated-registry path survives tree shaking
    (R004 unresolved item).
 
+## Status on 2026-11-11
+
+The table above is kept as raised. Current state of the open items:
+
+| Item | State | Evidence |
+| --- | --- | --- |
+| S3 payload and dispatch validation | closed | `packages/dwi_web/test/payload_test.dart`, `worker_dispatcher_test.dart`, lifecycle case `f` |
+| S4 resource exhaustion | closed | `maxPayloadBytes`, `maxQueuedTasks`, `queueTimeout`; lifecycle cases `b`, `c`, `k` in four engines |
+| S5 worker leaks | closed for pool and handles (termination on timeout, close and failed startup, four engines); page unload relies on the browser ending dedicated workers with their document and is not separately measured | `audit/evidence/pool-lifecycle-four-engines-2026-11-11T220557.json` |
+| Gate 2 browser matrix | closed for desktop engines; mobile unverified | `docs/browser-matrix.md` |
+| Gate 3 cooperative cancellation | open | `docs/completion-plan.md` tranche D |
+| Gate 4 pool-sizing guidance | open | tranche A10 |
+| Gate 5 tree shaking for every shape | open | tranche A8 |
+
 ## What this review changed
 
 - Added mandatory startup/task timeouts and typed startup errors.

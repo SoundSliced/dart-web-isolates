@@ -1,5 +1,88 @@
 # Browser Matrix
 
+## Stream tasks (ADR-022, since 0.9.0, 2026-11-13)
+
+`browser_stream_tasks_test.dart` compiles each host and worker separately and,
+with `channelBufferSize: 4`, checks ordered items, 300 items read slowly,
+converted input and items, an error after two items, cancellation of an
+infinite stream followed by a new one, zero-input nullable items,
+`DwiFunctions.stream`/`stream0`, both misuse errors, items produced in
+`DedicatedWorkerGlobalScope`, and that all 12 workers the page created were
+terminated. All sixteen combinations pass:
+
+| Host / worker | Chrome 157.0.8103.78 | Safari 26.5 | Firefox 160.0 | Edge 157.0.4341.46 |
+| --- | --- | --- | --- | --- |
+| dart2js / dart2js | pass | pass | pass | pass |
+| dart2js / dart2wasm | pass | pass | pass | pass |
+| dart2wasm / dart2js | pass | pass | pass | pass |
+| dart2wasm / dart2wasm | pass | pass | pass | pass |
+
+Native: `native_stream_tasks_test.dart`. Evidence:
+`audit/evidence/stream-tasks-acceptance-2026-11-13T012032.json`. An earlier run
+(`stream-tasks-acceptance-2026-11-13T011146.json`, incomplete) passed fifteen
+cells; in the sixteenth, Safari ended its WebDriver session and then refused new
+ones until Remote Automation was re-enabled — an automation failure, not a DWI
+result, kept as history.
+
+## Payload types (ADR-021, since 0.9.0, rerun 2026-11-13)
+
+`browser_payload_types_test.dart` compiles each host and worker separately and
+round-trips enums, `DateTime` (local and UTC, to the microsecond), `Duration`,
+`BigInt`, `Uri`, records (including a one-field record and named fields), a
+`@DwiPayload` class with a nullable field, a recursive `@DwiPayload` tree,
+nested `Map<String, List<(Color, Duration)>>`, and a zero-input record result.
+It also checks that a wrong enum name and a wrong record arity sent by name
+fail with a typed error, and that a converted value was rebuilt in
+`DedicatedWorkerGlobalScope`. All sixteen combinations pass:
+
+| Host / worker | Chrome 157.0.8103.78 | Safari 26.5 | Firefox 160.0 | Edge 157.0.4341.46 |
+| --- | --- | --- | --- | --- |
+| dart2js / dart2js | pass | pass | pass | pass |
+| dart2js / dart2wasm | pass | pass | pass | pass |
+| dart2wasm / dart2js | pass | pass | pass | pass |
+| dart2wasm / dart2wasm | pass | pass | pass | pass |
+
+Native round trip: `native_payload_types_test.dart`. Evidence:
+`audit/evidence/payload-types-acceptance-2026-11-13T012032.json` (rerun after ADR-022). The
+first run, `payload-types-acceptance-2026-11-13T003805.json`, also passed all
+sixteen cells; Firefox updated itself from 159.0.1 to 160.0 during it.
+
+## Registered-static adapters (ADR-020, since 0.9.0, rerun 2026-11-13)
+
+`browser_static_registry_test.dart` compiles each host and worker separately.
+All sixteen combinations below pass through production generated adapters,
+rerun after the ADR-021 generator change:
+
+| Host / worker | Chrome 157.0.8103.78 | Safari 26.5 | Firefox 160.0 | Edge 157.0.4341.46 |
+| --- | --- | --- | --- | --- |
+| dart2js / dart2js | pass | pass | pass | pass |
+| dart2js / dart2wasm | pass | pass | pass | pass |
+| dart2wasm / dart2js | pass | pass | pass | pass |
+| dart2wasm / dart2wasm | pass | pass | pass | pass |
+
+Evidence: `audit/evidence/dwi5-static-acceptance-2026-11-13T012032.json` (browsers) and
+`audit/evidence/dwi5-static-native-2026-11-13T011146.json` (native), both
+stamped with the hashes of the implementation, annotation and test sources.
+Earlier runs are kept as history: `dwi5-static-acceptance-2026-11-13T003805.json`
+(after ADR-021), `dwi5-static-acceptance-2026-11-11T212830.json`
+(before ADR-021) and `dwi5-static-acceptance-2026-11-11.json` (Edge
+157.0.4341.42, before the ADR-020 audit corrections).
+The fixture observes DedicatedWorkerGlobalScope and independent task state,
+executes real class static methods, repeatedly selects both registered targets,
+checks typed numbers/nullable collections, rejects four unsupported function
+forms, and covers remote errors, timeout and missing-worker startup failure.
+It closes DWI resources on every path. No timer-based responsiveness claim or
+arbitrary-function compatibility claim is made. Native acceptance is separate
+in `native_static_registry_test.dart`. SDK details are in the evidence file.
+
+Reproduce from `packages/dwi_builder`:
+
+```sh
+PUB_CACHE=../../.research/pub-cache ../../.research/flutter-sdk/bin/dart test \
+  test/native_static_registry_test.dart test/browser_static_registry_test.dart \
+  -r expanded
+```
+
 Measured results for the browser capabilities DWI depends on. Every cell is a
 measurement or an explicit `unverified`/`blocked`; nothing is inferred from
 another engine (AGENTS.md rule 8).
@@ -61,6 +144,16 @@ What this establishes (Chrome only):
 
 **Scope of this section: the `Dwi.run` pool in Chrome 156 and Safari 26.5.**
 Firefox and Edge have no cell in this harness.
+
+The pool **contract** (as opposed to these timings) is measured separately in
+all four engines by `packages/dwi_builder/test/browser_lifecycle_test.dart`:
+timeout, queue overflow, queue deadline, close, concurrent startup, oversized
+payload, missing worker, queued/running/startup cancellation, transfer and
+dead-worker replacement pass in Chrome 157.0.8103.78, Safari 26.5, Firefox
+159.0.1 and Edge 157.0.4341.46 (2026-11-11,
+`audit/evidence/pool-lifecycle-four-engines-2026-11-11T220557.json`). The run
+before it (`…T214451.json`, incomplete) is the record of the Safari failure that
+exposed the startup-cancellation defect.
 
 Measured with `benchmarks/browser_matrix` (committed harness, see its README for
 methodology). One page load = one run; medians are inside a run and each cell is

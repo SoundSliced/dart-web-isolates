@@ -23,13 +23,31 @@ as `List<dynamic>` and `Map<String, int>` arrives as `Map<Object?, Object?>`.
 A type-directed collection codec is planned for v0.4; until then use
 `List<dynamic>`/`Map<Object?, Object?>` and decode inside the task.
 
-## Not supported (no codec in v0.3)
+## Converted by generated code (ADR-021, since 0.9.0)
 
-- Custom classes and enums: rejected at build time and by the payload validator.
-  They do not survive `jsify` with their Dart type; a typed proxy would receive
-  an empty or plain JS object.
-- `DateTime`: send `millisecondsSinceEpoch` as an `int`.
-- `BigInt`, records: encode explicitly as primitives or collections.
+These apply to `@DwiTask` signatures, where the generator knows the static
+type. They are converted to the accepted forms above before sending and rebuilt
+on arrival.
+
+| Type | Wire form | Notes |
+| --- | --- | --- |
+| public enum | constant name | an unknown name is a `DwiSerializationException` |
+| `DateTime` | `[microsecondsSinceEpoch, isUtc]` | instant and `isUtc` preserved |
+| `Duration` | microseconds | |
+| `BigInt`, `Uri` | string | |
+| record | list: positional, then named sorted by name | arity is checked |
+| `@DwiPayload` class | map of constructor parameters | rebuilt through the unnamed constructor |
+
+A payload class crosses as its constructor parameters only: no identity, no
+other state, no subtype. Object graphs must be trees; a cycle does not
+terminate. The name-based `Dwi.run('name', value)` API does no conversion and
+still accepts only the forms in the first table.
+
+## Not supported
+
+- Classes without `@DwiPayload`, and generic, abstract or private payload
+  classes: rejected at build time (`DWI001`) and by the payload validator.
+- The bare `Record` and `Enum` types, and maps with non-`String` keys.
 - Functions, closures, tear-offs and `Symbol`.
 
 ## Rejected
@@ -84,5 +102,5 @@ the transfer path in the capability harness: 4 MiB in 0.6 ms round trip).
 ## Non-goals
 
 - Preserving object identity across messages.
-- Automatically discovering custom codecs.
+- Converting classes that do not opt in with `@DwiPayload`.
 - A binary protocol; v1 is structured clone with a JSON-shaped envelope.

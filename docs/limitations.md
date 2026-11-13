@@ -5,8 +5,10 @@ limitation is not here or in `compatibility-matrix.md`, that is a bug.
 
 ## Semantic limitations
 
-1. **No closure or function-value execution.** Work is selected by task name from
-   a precompiled registry. `Dwi.run(() => ...)` does not exist. This is the
+1. **No arbitrary function or closure execution.** Work is selected from
+   a precompiled registry. Generated `DwiFunctions` adapters accept only
+   registered static tear-offs; they do not transport functions.
+   `Dwi.run(() => ...)` does not exist. This is the
    largest difference from `Isolate.run` (R004 §2).
 2. **No shared mutable Dart state, and no shared immutable state either.** Every
    payload is copied or transferred; there is no equivalent of the VM's canonical
@@ -59,18 +61,31 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
    after the worker step for that path. Web build hooks do not expose the target
    OS, so a multi-platform app with `web/index.html` also runs the (cached)
    worker build during native builds.
-8. **Discovery covers annotated top-level functions only.** `Dwi.run(fn)`,
-   function tear-offs, closures and arbitrary expression bodies are not
-   supported; generated typed proxies (`DwiTasks.foo(input)`) are the supported
-   call shape. The annotation cannot be inferred from a call site without
-   compiler cooperation (R013 §4.4). Measured feasibility, transport and
-   tree-shaking evidence are in
-   [`R016`](../research/R016_DWI5_FUNCTION_FEASIBILITY.md); the proposed
-   decision is [`ADR-019`](adr-019-dwi5-function-execution.md). A registered
-   static-tear-off subset has a measured identity mapping on the VM, dart2js and
-   a dart2wasm host, and a test-only end-to-end prototype on dart2js + JS and
-   dart2wasm + Wasm workers; it is not a public function API and closures remain
-   unsupported.
+8. **Discovery requires explicit annotations.** Public top-level functions and
+   static methods of public non-generic classes and enums are supported.
+   Nothing else is: static methods of extensions and extension types,
+   `external` functions, constructors, fields, local functions and annotated
+   type declarations are build errors (`DWI003`), not tasks, and are never
+   skipped silently. Generated
+   `DwiFunctions.run(task, input)` / `run0(task)` select their existing typed
+   proxies (ADR-020, since 0.9.0). Unregistered functions,
+   closures and instance tear-offs fail with `DwiUnknownTaskException` before
+   startup; this cannot inspect captures or give capture-specific diagnostics.
+   `Dwi.run(fn)` and arbitrary body lifting remain unsupported.
+   Native execution and all four JS/Wasm host-worker pairs pass in Chrome,
+   Safari, Firefox and Edge; evidence is
+   `audit/evidence/dwi5-static-acceptance-2026-11-13T012032.json`.
+   The host retains task-library references, so a host that imports the
+   generated file carries a copy of the task code the worker also contains;
+   a host that only calls `Dwi.run` by name carries none. Measured on a
+   one-task fixture (Dart 3.13.7, `-O2`): typed proxy +906 B JS / +869 B Wasm
+   and `DwiFunctions` +1532 B JS / +1837 B Wasm over the name-only host. The
+   duplicated part grows with the task library; only the fixed adapter part is
+   bounded (`host_bundle_cost_test.dart`,
+   `audit/evidence/dwi5-host-bundle-cost-2026-11-11T214451.json`).
+   [`R016`](../research/R016_DWI5_FUNCTION_FEASIBILITY.md) and
+   [`ADR-019`](adr-019-dwi5-function-execution.md) retain the separate
+   arbitrary-function research decision. DWI-5/DWI-6 are not raised.
 9. **Generated proxies require one generated import.** Application code imports
    `lib/dwi_tasks.g.dart`; task libraries import
    `package:dwi_annotations/dwi_annotations.dart` rather than the host facade,
@@ -85,8 +100,14 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
     (`Uint8List`, other typed lists, `ByteData`, `ByteBuffer`) round-trip.
     Generated codecs validate decoded values on both sides and fail with
     `DwiSerializationException` naming the path; they never silently coerce.
-    Custom classes, enums, records, functions, streams, `DateTime` and
-    non-String map keys are build errors (`DWI001`).
+    Public enums, `DateTime`, `Duration`, `BigInt`, `Uri`, records and
+    `@DwiPayload` classes are converted by generated code (ADR-021, since
+    0.9.0; native and all sixteen browser cells,
+    `audit/evidence/payload-types-acceptance-2026-11-13T012032.json`). A payload class is rebuilt from its constructor
+    parameters: identity, other state and the runtime subtype are not
+    preserved, and a cyclic object graph is not supported. Classes without
+    `@DwiPayload`, functions, streams and non-String map keys are build errors
+    (`DWI001`). The name-based `Dwi.run` does no conversion.
 12. **Payload size is enforced approximately.** `DwiConfig.maxPayloadBytes` is
     checked by the host before send and by the worker for results (the limit is
     sent in request metadata). The estimate counts strings by UTF-16 code units,
@@ -94,7 +115,7 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
 13. **Generated-registry tree shaking is verified for tested shapes.** The
     generated worker uses static references, and v0.3 compiles and runs in
     Chrome. A universal proof for every library shape is not claimed.
-14. **Wasm worker generation is supported as an opt-in backend (not in 0.7.0).** `dwi build --target=wasm`
+14. **Wasm worker generation is supported as an opt-in backend (since 0.8.0).** `dwi build --target=wasm`
     publishes a content-addressed `gen-<generation>/` directory (module and
     loader) plus a small `worker.boot.mjs` entry that is switched atomically;
     the host must opt in with
@@ -192,10 +213,13 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
 26. **The heartbeat is a liveness probe, not a health check.** It detects a
     worker that can no longer reply (closed, crashed without an `error` event).
     It does not detect a worker that answers but computes wrongly.
-27. **v0.4 is measured in Chrome and Safari.** Cancellation, transfer and
-    heartbeat behaviour in Firefox and Edge is **unverified** for this level;
-    Safari automation needs "Allow remote automation", and Edge could not be
-    installed on the measurement machine (`docs/browser-matrix.md`).
+27. **The v0.4 pool contract is measured in all four engines; its benchmark is
+    not.** Timeout, overflow, close, startup failure, cancellation, transfer
+    and heartbeat pass in Chrome 157.0.8103.78, Safari 26.5, Firefox 159.0.1
+    and Edge 157.0.4341.46 (2026-11-11, `audit/evidence/pool-lifecycle-four-engines-2026-11-11T220557.json`).
+    The timing benchmark in `docs/browser-matrix.md` still covers Chrome and
+    Safari only. Cancelling a call whose worker is still starting is supported
+    since this run: it was ignored before, which Safari exposed.
 ## v0.5 limitations (dedicated handles)
 
 28. **One handle runs one task at a time.** Extra calls queue in FIFO order up to
@@ -226,9 +250,12 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
 35. **Handle memory is reported coarsely.** Only process RSS is observable in
     the benchmark, with ~16 KiB granularity; no per-handle memory figure is
     claimed (`docs/benchmarks.md`).
-36. **No port-like messaging or streams.** The handle exposes `run`,
-    `runCancellable`, `restart` and `close` only. `SendPort`/`ReceivePort`
-    emulation remains a separate, later ADR.
+36. **Streams are per-call contexts; there are no port objects.** A task may
+    return `Stream<T>` (ADR-022, since 0.9.0): each listen spawns a fresh
+    context, cancelling terminates it and discards undelivered items, and
+    `taskTimeout` bounds the whole stream. A stream task cannot run on the
+    pool. Native and all sixteen browser cells pass
+    (`audit/evidence/stream-tasks-acceptance-2026-11-13T012032.json`). `SendPort`/`ReceivePort` emulation remains a separate, later ADR.
 29. **dart2wasm host support is measured in all four engines.** A dart2wasm
     application (`flutter build web --wasm`) can host DWI since the 2026-11-05
     integral-double fix. A 2026-11-10 Flutter 3.47.6 matrix measured, at `/`:

@@ -22,8 +22,9 @@ v0.3 unless marked proposed.** No cell claims parity.
 | Detect a dead idle worker | port error / explicit state | heartbeat envelope | heartbeat pings idle workers only | ADR-010 §10.3 |
 | Observe why a handle stopped (`stopReason`, `stops`) | yes | yes | observation only, one broadcast event per generation; no `onExit`/`onError` parity, no replay | ADR-017 |
 | dart2wasm host + dart2js worker | n/a | **supported** | no Wasm worker; measured at `/` in Chrome 157, Edge 157, Firefox 159 and Safari 26.5 (control build) | `audit/evidence/flutter-wasm-worker-matrix-2026-11-10.txt` |
-| dart2wasm host + dart2wasm worker | n/a | **supported, opt-in** from the next release (not in 0.7.0) | full contract passed at `/` and `/sub/app/` in all four engines; opt-in `dwi.yaml`, content-addressed generation, no fallback; MIME/CSP/same-origin constraints in limitations §14 | `audit/evidence/flutter-wasm-worker-matrix-2026-11-10.txt` |
-| dart2js host + dart2wasm worker | n/a | **supported, opt-in** from the next release (not in 0.7.0) | same contract at `/` and `/sub/app/` in all four engines; generation retention is a deployment rule (ADR-018) | `audit/evidence/dart2wasm-worker-acceptance-2026-11-10.txt` |
+| dart2wasm host + dart2wasm worker | n/a | **supported, opt-in** since 0.8.0 | full contract passed at `/` and `/sub/app/` in all four engines; opt-in `dwi.yaml`, content-addressed generation, no fallback; MIME/CSP/same-origin constraints in limitations §14 | `audit/evidence/flutter-wasm-worker-matrix-2026-11-10.txt` |
+| dart2js host + dart2wasm worker | n/a | **supported, opt-in** since 0.8.0 | same contract at `/` and `/sub/app/` in all four engines; generation retention is a deployment rule (ADR-018) | `audit/evidence/dart2wasm-worker-acceptance-2026-11-10.txt` |
+| Streamed results (`Stream<T>` task) | via `ReceivePort` | `Dwi.runStream` / generated proxy | fresh context per listen; credit flow control; cancel terminates the context; whole stream under `taskTimeout` | ADR-022 |
 | Pause / resume / ping | yes | **no** | no browser equivalent | R003 §1 |
 | `onExit` / `onError` listeners | yes | envelope events | `error` events are coarse; promises rejections vanish | R003 §6 |
 | `RemoteError` + stack | yes | `DwiRemoteException` | stack captured by the worker, not the host | R001 §5 |
@@ -38,11 +39,11 @@ v0.3 unless marked proposed.** No cell claims parity.
 | DWI-0 | background worker, ad-hoc messaging | demonstrated by M001 |
 | DWI-1 | typed named tasks, correlated, typed errors, timeouts | shipped in v0.2 |
 | DWI-1.5 | annotation-driven worker generation, typed proxies, automatic compilation, typed payload codecs | shipped in v0.3.1 |
-| DWI-1.6 | cancellation, transferable bytes, heartbeat crash detection | shipped in v0.4 (Chrome and Safari measured; Firefox/Edge unverified for this level) |
+| DWI-1.6 | cancellation, transferable bytes, heartbeat crash detection | shipped in v0.4; contract verified in Chrome, Safari, Firefox and Edge on 2026-11-11 (benchmark numbers: Chrome and Safari only) |
 | DWI-2 | long-lived workers, pooled scheduling | handles shipped for native and web JS (Chrome, Safari, Firefox and Edge verified); `Dwi.run` pool unchanged from v0.3 |
 | DWI-3 | port-like messaging | implemented under ADR-014: single-subscriber, named, bounded channels per handle; Chrome, Safari, Firefox and Edge verified |
-| DWI-4 | high `dart:isolate` API similarity | research; increment 1 implemented under ADR-016 (`Dwi.runFresh`, fresh context per call) and increment 2 implemented under ADR-017 (`stopReason`/`stops`, no parity claim) |
-| DWI-5 | compiler-supported arbitrary functions | research; registered static-function subset has an end-to-end prototype on a dart2js host + JS worker and a dart2js host + Wasm worker (test-only registry; no public API); dart2wasm host identity passes, but its end-to-end worker path is unverified; arbitrary closures still require compiler/build cooperation (R016, ADR-019 proposal) |
+| DWI-4 | high `dart:isolate` API similarity | research; increment 1 implemented under ADR-016 (`Dwi.runFresh`, fresh context per call), increment 2 under ADR-017 (`stopReason`/`stops`, no parity claim); since 0.9.0 also generated payload types (ADR-021) and `Stream<T>` tasks (ADR-022), all four engines and both compilers. Ports and cooperative lifecycle are open, so no level raise |
+| DWI-5 | compiler-supported arbitrary functions | research; ADR-020 implements only registered static-function selection via generated typed adapters (since 0.9.0). Native and all four JS/Wasm host-worker pairs pass in Chrome, Safari, Firefox and Edge; arbitrary closures still require a demonstrated transform/build contract (R016, ADR-019 proposal). No level raise. |
 | DWI-6 | SDK-integrated web isolate | upstream proposal only |
 
 ## Never claim

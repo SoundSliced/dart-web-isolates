@@ -1,0 +1,688 @@
+{
+  "sdk": "3.13.7 (stable) (Thu Oct 22 14:28:57 2026 -0700) on \"macos_arm64\"",
+  "revision": "b0bc10390ea6a7a682b2f98d5ad9aebee4fac5b9",
+  "sourceState": "local ADR-020 implementation, uncommitted",
+  "sourceDigests": {
+    "lib/src/descriptor.dart": "b5c04a518c8a8adad85d22004a95dc0e84c4a8bdf1fca0ec02fbccb79d79cb64",
+    "lib/src/discovery.dart": "9b022a493c3c0c2d6e0d18e3dcd14f975d06aea0e71306b5e0045e6711dca9be",
+    "lib/src/generator.dart": "7e3bef73955597929abae80e87cc581d2fe27413398516d6ca3c24c60472acf3",
+    "test/browser_static_registry_test.dart": "0a1ff95e4eafaf6e632dbbf11b769284754e3bb7af5c59b750bfbff0fce6c647"
+  },
+  "fixture": "packages/dwi_builder/test/browser_static_registry_test.dart",
+  "command": "dart test test/browser_static_registry_test.dart -r expanded",
+  "runs": [
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.50",
+      "result": {
+        "rejected": 4,
+        "registryBeforeAccepted": [],
+        "selectedResults": [
+          22,
+          42,
+          22,
+          42
+        ],
+        "typedInt": true,
+        "namedControl": 22,
+        "collections": [
+          1,
+          null,
+          3
+        ],
+        "remote": true,
+        "busyPrimes": 9592,
+        "workerIdentity": [
+          "DedicatedWorkerGlobalScope",
+          0
+        ],
+        "hostState": 1000,
+        "hostIdentity": [
+          "Window",
+          1000
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "workerCount": 1,
+        "protocolVersion": 2,
+        "timeout": true,
+        "startupFailure": true,
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "rejected": 4,
+        "registryBeforeAccepted": [],
+        "selectedResults": [
+          22,
+          42,
+          22,
+          42
+        ],
+        "typedInt": true,
+        "namedControl": 22,
+        "collections": [
+          1,
+          null,
+          3
+        ],
+        "remote": true,
+        "busyPrimes": 9592,
+        "workerIdentity": [
+          "DedicatedWorkerGlobalScope",
+          0
+        ],
+        "hostState": 1000,
+        "hostIdentity": [
+          "Window",
+          1000
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "workerCount": 1,
+        "protocolVersion": 2,
+        "timeout": true,
+        "startupFailure": true,
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 159.0.1",
+      "result": {
+        "rejected": 4,
+        "registryBeforeAccepted": [],
+        "selectedResults": [
+          22,
+          42,
+          22,
+          42
+        ],
+        "typedInt": true,
+        "namedControl": 22,
+        "collections": [
+          1,
+          null,
+          3
+        ],
+        "remote": true,
+        "busyPrimes": 9592,
+        "workerIdentity": [
+          "DedicatedWorkerGlobalScope",
+          0
+        ],
+        "hostState": 1000,
+        "hostIdentity": [
+          "Window",
+          1000
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "workerCount": 1,
+        "protocolVersion": 2,
+        "timeout": true,
+        "startupFailure": true,
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.42",
+      "result": {
+        "rejected": 4,
+        "registryBeforeAccepted": [],
+        "selectedResults": [
+          22,
+          42,
+          22,
+          42
+        ],
+        "typedInt": true,
+        "namedControl": 22,
+        "collections": [
+          1,
+          null,
+          3
+        ],
+        "remote": true,
+        "busyPrimes": 9592,
+        "workerIdentity": [
+          "DedicatedWorkerGlobalScope",
+          0
+        ],
+        "hostState": 1000,
+        "hostIdentity": [
+          "Window",
+          1000
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "workerCount": 1,
+        "protocolVersion": 2,
+        "timeout": true,
+        "startupFailure": true,
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.50",
+      "result": {
+        "rejected": 4,
+        "registryBeforeAccepted": [],
+        "selectedResults": [
+          22,
+          42,
+          22,
+          42
+        ],
+        "typedInt": true,
+        "namedControl": 22,
+        "collections": [
+          1,
+          null,
+          3
+        ],
+        "remote": true,
+        "busyPrimes": 9592,
+        "workerIdentity": [
+          "DedicatedWorkerGlobalScope",
+          0.0
+        ],
+        "hostState": 1000,
+        "hostIdentity": [
+          "Window",
+          1000
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "workerCount": 1,
+        "protocolVersion": 2,
+        "timeout": true,
+        "startupFailure": true,
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "rejected": 4,
+        "registryBeforeAccepted": [],
+        "selectedResults": [
+          22,
+          42,
+          22,
+          42
+        ],
+        "typedInt": true,
+        "namedControl": 22,
+        "collections": [
+          1,
+          null,
+          3
+        ],
+        "remote": true,
+        "busyPrimes": 9592,
+        "workerIdentity": [
+          "DedicatedWorkerGlobalScope",
+          0.0
+        ],
+        "hostState": 1000,
+        "hostIdentity": [
+          "Window",
+          1000
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "workerCount": 1,
+        "protocolVersion": 2,
+        "timeout": true,
+        "startupFailure": true,
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 159.0.1",
+      "result": {
+        "rejected": 4,
+        "registryBeforeAccepted": [],
+        "selectedResults": [
+          22,
+          42,
+          22,
+          42
+        ],
+        "typedInt": true,
+        "namedControl": 22,
+        "collections": [
+          1,
+          null,
+          3
+        ],
+        "remote": true,
+        "busyPrimes": 9592,
+        "workerIdentity": [
+          "DedicatedWorkerGlobalScope",
+          0.0
+        ],
+        "hostState": 1000,
+        "hostIdentity": [
+          "Window",
+          1000
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "workerCount": 1,
+        "protocolVersion": 2,
+        "timeout": true,
+        "startupFailure": true,
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.42",
+      "result": {
+        "rejected": 4,
+        "registryBeforeAccepted": [],
+        "selectedResults": [
+          22,
+          42,
+          22,
+          42
+        ],
+        "typedInt": true,
+        "namedControl": 22,
+        "collections": [
+          1,
+          null,
+          3
+        ],
+        "remote": true,
+        "busyPrimes": 9592,
+        "workerIdentity": [
+          "DedicatedWorkerGlobalScope",
+          0.0
+        ],
+        "hostState": 1000,
+        "hostIdentity": [
+          "Window",
+          1000
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "workerCount": 1,
+        "protocolVersion": 2,
+        "timeout": true,
+        "startupFailure": true,
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.50",
+      "result": {
+        "rejected": 4,
+        "registryBeforeAccepted": [],
+        "selectedResults": [
+          22,
+          42,
+          22,
+          42
+        ],
+        "typedInt": true,
+        "namedControl": 22,
+        "collections": [
+          1,
+          null,
+          3
+        ],
+        "remote": true,
+        "busyPrimes": 9592,
+        "workerIdentity": [
+          "DedicatedWorkerGlobalScope",
+          0
+        ],
+        "hostState": 1000,
+        "hostIdentity": [
+          "Window",
+          1000
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "workerCount": 1,
+        "protocolVersion": 2,
+        "timeout": true,
+        "startupFailure": true,
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "rejected": 4,
+        "registryBeforeAccepted": [],
+        "selectedResults": [
+          22,
+          42,
+          22,
+          42
+        ],
+        "typedInt": true,
+        "namedControl": 22,
+        "collections": [
+          1,
+          null,
+          3
+        ],
+        "remote": true,
+        "busyPrimes": 9592,
+        "workerIdentity": [
+          "DedicatedWorkerGlobalScope",
+          0
+        ],
+        "hostState": 1000,
+        "hostIdentity": [
+          "Window",
+          1000
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "workerCount": 1,
+        "protocolVersion": 2,
+        "timeout": true,
+        "startupFailure": true,
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 159.0.1",
+      "result": {
+        "rejected": 4,
+        "registryBeforeAccepted": [],
+        "selectedResults": [
+          22,
+          42,
+          22,
+          42
+        ],
+        "typedInt": true,
+        "namedControl": 22,
+        "collections": [
+          1,
+          null,
+          3
+        ],
+        "remote": true,
+        "busyPrimes": 9592,
+        "workerIdentity": [
+          "DedicatedWorkerGlobalScope",
+          0
+        ],
+        "hostState": 1000,
+        "hostIdentity": [
+          "Window",
+          1000
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "workerCount": 1,
+        "protocolVersion": 2,
+        "timeout": true,
+        "startupFailure": true,
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.42",
+      "result": {
+        "rejected": 4,
+        "registryBeforeAccepted": [],
+        "selectedResults": [
+          22,
+          42,
+          22,
+          42
+        ],
+        "typedInt": true,
+        "namedControl": 22,
+        "collections": [
+          1,
+          null,
+          3
+        ],
+        "remote": true,
+        "busyPrimes": 9592,
+        "workerIdentity": [
+          "DedicatedWorkerGlobalScope",
+          0
+        ],
+        "hostState": 1000,
+        "hostIdentity": [
+          "Window",
+          1000
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "workerCount": 1,
+        "protocolVersion": 2,
+        "timeout": true,
+        "startupFailure": true,
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.50",
+      "result": {
+        "rejected": 4,
+        "registryBeforeAccepted": [],
+        "selectedResults": [
+          22,
+          42,
+          22,
+          42
+        ],
+        "typedInt": true,
+        "namedControl": 22,
+        "collections": [
+          1,
+          null,
+          3
+        ],
+        "remote": true,
+        "busyPrimes": 9592,
+        "workerIdentity": [
+          "DedicatedWorkerGlobalScope",
+          0.0
+        ],
+        "hostState": 1000,
+        "hostIdentity": [
+          "Window",
+          1000
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "workerCount": 1,
+        "protocolVersion": 2,
+        "timeout": true,
+        "startupFailure": true,
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "rejected": 4,
+        "registryBeforeAccepted": [],
+        "selectedResults": [
+          22,
+          42,
+          22,
+          42
+        ],
+        "typedInt": true,
+        "namedControl": 22,
+        "collections": [
+          1,
+          null,
+          3
+        ],
+        "remote": true,
+        "busyPrimes": 9592,
+        "workerIdentity": [
+          "DedicatedWorkerGlobalScope",
+          0.0
+        ],
+        "hostState": 1000,
+        "hostIdentity": [
+          "Window",
+          1000
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "workerCount": 1,
+        "protocolVersion": 2,
+        "timeout": true,
+        "startupFailure": true,
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 159.0.1",
+      "result": {
+        "rejected": 4,
+        "registryBeforeAccepted": [],
+        "selectedResults": [
+          22,
+          42,
+          22,
+          42
+        ],
+        "typedInt": true,
+        "namedControl": 22,
+        "collections": [
+          1,
+          null,
+          3
+        ],
+        "remote": true,
+        "busyPrimes": 9592,
+        "workerIdentity": [
+          "DedicatedWorkerGlobalScope",
+          0.0
+        ],
+        "hostState": 1000,
+        "hostIdentity": [
+          "Window",
+          1000
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "workerCount": 1,
+        "protocolVersion": 2,
+        "timeout": true,
+        "startupFailure": true,
+        "ok": true
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.42",
+      "result": {
+        "rejected": 4,
+        "registryBeforeAccepted": [],
+        "selectedResults": [
+          22,
+          42,
+          22,
+          42
+        ],
+        "typedInt": true,
+        "namedControl": 22,
+        "collections": [
+          1,
+          null,
+          3
+        ],
+        "remote": true,
+        "busyPrimes": 9592,
+        "workerIdentity": [
+          "DedicatedWorkerGlobalScope",
+          0.0
+        ],
+        "hostState": 1000,
+        "hostIdentity": [
+          "Window",
+          1000
+        ],
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "workerCount": 1,
+        "protocolVersion": 2,
+        "timeout": true,
+        "startupFailure": true,
+        "ok": true
+      },
+      "status": "pass"
+    }
+  ],
+  "complete": true
+}

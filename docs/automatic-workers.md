@@ -66,33 +66,62 @@ envelopes, awaits asynchronous tasks, forwards typed errors, and handles
 ## Discovery rules
 
 - The annotation is `@DwiTask({String? name})`. It must be on a **public
-  top-level function** in a library reachable from the configured include paths.
+  top-level function or public non-generic class static method** in a library
+  reachable from the configured include paths.
 - A task takes no input or exactly one **required positional** input. Named,
   optional and additional parameters are rejected.
 - Parameter and result types must round-trip: primitives, `dynamic`, `Object?`,
   `Future<T>`/`FutureOr<T>`, nullable forms, typed collections
   (`List<T>`, `Set<T>`, `Map<String, V>`), and typed data (`Uint8List` and the
   other typed lists, `ByteData`, `ByteBuffer`). Generated codecs validate and
-  convert decoded `List`/`Map` values on both sides. Custom classes, enums,
-  records, functions, streams, `DateTime` and non-String map keys are build
-  errors (`DWI001`).
+  convert decoded `List`/`Map` values on both sides. Public enums, `DateTime`,
+  `Duration`, `BigInt`, `Uri`, records and classes annotated `@DwiPayload()`
+  are converted by generated encoders and decoders (ADR-021, since 0.9.0).
+  Classes without `@DwiPayload`, functions, streams and non-String map keys
+  are build errors (`DWI001`).
 - Generated proxies also register their native implementations, so the same
   `DwiTasks.foo(input)` call runs on an isolate on the VM and in a worker on
   web; no manual `Dwi.registerTask` is required for generated tasks.
 - The result may be `T`, `Future<T>`, `FutureOr<T>` or `void`. The worker awaits
   the future before replying.
-- Generic functions, getters/setters, methods, private functions, `main` and
+- Generic functions/classes, getters/setters, instance or mixin methods, private
+  functions/classes, top-level `main` and
   variables are rejected.
+- `external` functions are rejected: a task needs a Dart body.
+- Static methods of public non-generic enums are tasks, exactly like class
+  static methods (`Enum.method`, proxy `DwiTasks.Enum$method`).
+- Every other annotated declaration is rejected with `DWI003`, never ignored:
+  extension and extension-type members (static or instance), enum instance
+  methods and constants, constructors, fields, local functions, parameters,
+  and annotated classes, mixins, enums, extensions, extension types and
+  typedefs.
 - Task libraries must not import Flutter, `dart:ui`, `dart:io`, `dart:html` or
   `dart:isolate`, directly or through the project dependency closure.
 - Generated `.g.dart` files and `.dwi/` are skipped by discovery; the analyzer's
   `exclude` rules are respected by convention.
 
+### Registered static selection (ADR-020, since 0.9.0)
+
+The generated file exposes `DwiFunctions.run(task, input)` and
+`DwiFunctions.run0(task)`. The argument must be a discovered annotated top-level
+function or public class static tear-off. Runtime selection among these
+registered functions is supported; closures and unregistered functions throw
+`DwiUnknownTaskException` before startup. Incompatible registered caller
+signatures throw `DwiUnsupportedException`. The private registry selects the
+existing typed proxy, retaining its native registration and result codecs.
+
+Static task IDs default to `Class.method`, and proxy methods are named
+`DwiTasks.Class$method`; explicit task-name overrides remain supported.
+Duplicate task IDs or generated proxy names are errors. Existing top-level
+names are unchanged. No function is sent to a worker. The host retains task
+library references, so host bundle cost is not eliminated or measured.
+The same explicit pre-build step is required on released SDKs.
+
 Diagnostics:
 
 | Code | Meaning |
 | --- | --- |
-| `DWI001` | A parameter/result type cannot cross the boundary (DOM, functions, ports, `Stream`, records, classes, enums, `DateTime`, non-String map keys). |
+| `DWI001` | A parameter/result type cannot cross the boundary (DOM, functions, ports, a `Stream` input or nested stream, `Stream<void>`, classes without `@DwiPayload`, invalid payload classes, non-String map keys). A task may return `Stream<T>` (ADR-022). |
 | `DWI002` | The task library closure imports Flutter, `dart:ui`, `dart:io`, `dart:html` or `dart:isolate`. |
 | `DWI003` | Unsupported declaration or signature. |
 | `DWI004` | Duplicate task name or colliding generated proxy method. |
@@ -289,11 +318,12 @@ correction to the earlier "no web build hook" conclusion.
 
 - `Dwi.run(expensiveFunction, input)` and `Dwi.run(() { ... })`: function
   values/closures are not structured-cloneable and no compiler metadata channel
-  exists. See R013 §4.4–4.5 and ADR-002.
+  exists. Use `DwiFunctions` for the registered static subset only.
+  See R013 §4.4–4.5 and ADR-002/ADR-020.
 - Runtime compilation in the browser: no browser-hosted Dart compiler; CSP and
   size make it non-viable for v0.x. See R013 §4.5.
-- Wasm worker generation: supported as an opt-in backend from the next release
-  (not in 0.7.0) under ADR-018 (`dwi.yaml: target: wasm` or
+- Wasm worker generation: supported as an opt-in backend since 0.8.0
+  under ADR-018 (`dwi.yaml: target: wasm` or
   `--target=wasm`, content-addressed generation directory plus one entry). JS
   remains the default. See `docs/browser-matrix.md` §7–8 for the measured
   contracts.

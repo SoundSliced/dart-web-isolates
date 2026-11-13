@@ -3,6 +3,12 @@
 Status: **Proposed, not accepted.** This is a proposal for review; it does not
 change the public API. Evidence: `research/R016_DWI5_FUNCTION_FEASIBILITY.md`.
 
+The separately accepted ADR-020 in `architecture.md` adopts only registered
+static-function selection through generated typed adapters. It does not adopt
+this proposal's arbitrary-function API, lift closures, or raise DWI-5/DWI-6.
+The historical prototype coverage below is corrected in
+`audit/evidence/dwi5-static-registry-2026-11-11.txt`.
+
 ## Context
 
 DWI-5 asks whether a consumer can pass a normal Dart function or closure to DWI

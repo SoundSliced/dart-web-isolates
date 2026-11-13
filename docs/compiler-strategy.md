@@ -70,7 +70,8 @@ List<int> calculatePrimes(int max) { ... }
 
 The developer writes no worker file. `dwi_builder`:
 
-1. Discovers annotated public top-level functions with the analyzer's resolved
+1. Discovers annotated public top-level functions and public class static methods
+   (ADR-020, since 0.9.0) with the analyzer's resolved
    AST (not source-text regex), including the enclosing library, task-name
    override, parameter/return types and the transitive import closure.
 2. Emits `.dwi/generated_worker.dart` with **static references**:
@@ -138,7 +139,7 @@ worker runs in Chrome (`examples/automatic_worker`). Tree shaking of the
 generated registry is verified for the tested task shapes, not for every
 possible library.
 
-## Wasm path (supported opt-in, not in 0.7.0)
+## Wasm path (supported opt-in since 0.8.0)
 
 Keep the two sides apart:
 
@@ -162,14 +163,23 @@ Keep the two sides apart:
 
 The measured boundaries are recorded: Flutter target selection, dart2wasm host +
 dart2wasm worker, deployment (MIME/CSP/same-origin) and benchmarks. The backend
-is supported as an opt-in in `main` and is not in 0.7.0; JS remains the default.
+is supported as an opt-in since 0.8.0; JS remains the default.
 
-## Closure research (DWI-5, no design)
+## Registered functions and closure research (DWI-5)
 
-The only way to support `Dwi.run(() { ... })` is compiler cooperation:
-identifying the closure, generating an entrypoint for it, and mapping captured
-variables to a serialized environment. Nothing in the current Dart toolchain
-exposes that. DWI does not promise it. Measured feasibility — analyzer
+ADR-020 generates a private function-keyed caller registry in the existing proxy
+file. `DwiFunctions` selects typed proxies without source rewriting or
+function-value transport. Native and all JS/Wasm host-worker combinations are
+measured separately in the static acceptance evidence. It does not repair
+released-SDK first-build ordering or lift bodies.
+
+Supporting `Dwi.run(() { ... })` would require identifying the closure,
+generating worker code and encoding its captures with preserved lexical
+semantics. No general supported transform has been demonstrated here.
+An explicit analyzer-based pre-build could be researched for a restricted
+subset; AST visibility alone is not proof of semantic correctness.
+The stop/go contract is in `upstream/dwi-function-lowering.md`.
+Measured feasibility — analyzer
 discovery, Chrome function transport, dart2js closure representation, tree
 shaking, and the missing build/compiler contracts — is in
 [`R016`](../research/R016_DWI5_FUNCTION_FEASIBILITY.md); the proposed decision is

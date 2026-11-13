@@ -5,6 +5,15 @@ Evidence: R010 (issues), R002 (Flutter build), R005 (Wasm).
 
 ## Position
 
+**2026-11-11 update:** ADR-020's registered-static subset passes native and all
+four JS/Wasm host-worker pairs in four browsers. This is package-level generated
+selection, not arbitrary closure lowering or SDK integration. The ordering,
+secondary-entrypoint and lowering asks are separated in
+[`dwi-function-lowering.md`](upstream/dwi-function-lowering.md), including a
+no-go decision for a general closure API without demonstrated semantics.
+No SDK edit, fork or upstream posting is part of this increment; DWI-5 and
+DWI-6 retain their definitions and research/proposal status.
+
 DWI starts as a package. SDK and Flutter changes are **not** part of v1.0 and
 must not be required for it (master plan §53). The upstream path is a
 consequence of evidence, not a plan the package depends on.

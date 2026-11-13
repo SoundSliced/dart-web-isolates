@@ -795,6 +795,13 @@ transport is ordered, but the API promises per-channel order only.
 second `listen` throws `StateError`. Broadcast is not supported: it would
 require per-listener buffers and make backpressure ambiguous.
 
+**Correction (2026-11-13).** The implementation does not delay
+acknowledgements as decision 5 says: when the receive buffer is full,
+`DwiChannelEndpoint.deliver` refuses the message and the sender's `send`
+fails with `DwiChannelBufferException`. Bounds and "never dropped silently"
+hold; a sender that awaits every send can still fail if the reader stops.
+ADR-022 streams add credit-based flow control on top for that reason.
+
 **Decision 5 — Backpressure and bounds.** `DwiConfig.channelBufferSize`
 (default 64) is the bound per channel and per direction. The receiver buffers up
 to the bound and delays acknowledgements when full. `send` completes only when
@@ -1268,7 +1275,7 @@ No protocol message, no new error type, and no public backend type were added.
 2026-11-10 for dart2js and dart2wasm hosts with Wasm workers in Chrome, Edge,
 Firefox and Safari, at `/` and `/sub/app/`, with publication-safety,
 deployment, target-selection and benchmark evidence. It is supported as an
-opt-in backend from the next release; 0.7.0 has no Wasm worker. JS remains the
+opt-in backend since 0.8.0; 0.7.0 has no Wasm worker. JS remains the
 default and there is no release-number claim in this ADR.
 
 **Context.** The measured baseline separates the two sides:
@@ -1467,6 +1474,218 @@ uploaded before the entry and deleted only after their retention window.
   Wasm-host combinations.
 - Not decided here: any `flutter build web --wasm` hook integration, any
   automatic backend negotiation, and any default change.
+
+## ADR-020 — Registered static functions through generated typed adapters
+
+**Status.** Accepted for implementation, 2026-11-11. This is the restricted
+increment approved separately from ADR-019. It does not implement full DWI-5
+or DWI-6, transmit functions, or change `Dwi.run`/`Dwi.runFresh`.
+
+The existing generated proxy file additionally exports `DwiFunctions`:
+
+```dart
+static Future<R> run<I, R>(FutureOr<R> Function(I) function, I input);
+static Future<R> run0<R>(FutureOr<R> Function() function);
+```
+
+Only discovered `@DwiTask` top-level functions and public class static methods
+are registered. A private map uses Dart function equality/hash semantics to
+select the existing typed proxy; no function crosses a worker boundary and
+the target is never invoked on the host. Proxies remain responsible for native
+registration and result decoding, including JS-number normalization on Wasm
+hosts. The map is not exposed or mutable by consumers.
+
+Lookup occurs before native registration or worker startup. Unknown functions,
+closures and bound instance methods produce `DwiUnknownTaskException`, not null
+or local execution. A registered function presented with a type-widened,
+incompatible caller signature produces `DwiUnsupportedException` before
+execution; generated typed proxy signatures must satisfy the requested input
+and output types. Existing transport, serialization, remote errors, timeouts,
+pooling and cleanup are unchanged. No new fresh/handle/cancellation surface is
+added. Runtime lookup cannot inspect captures or give capture-specific errors.
+
+`DwiTaskDescriptor` gains optional `declaringType`, plus derived
+`qualifiedName` and `proxyName`; existing top-level constructors remain valid.
+A method's default task ID is `Class.method`, and its proxy is
+`DwiTasks.Class$method`. Explicit task-name overrides keep their existing
+meaning. Top-level IDs and proxy names are unchanged. All generated proxy-name
+collisions, including a top-level name containing `$`, are DWI004 errors.
+References in both worker and native registries use `Class.method`.
+
+Static methods must have the same concrete zero/one-required-positional
+signature and worker-safe types/import closure as top-level tasks. Instance
+members, private classes/methods, generic classes/methods, getters/setters,
+mixins, `external` declarations and unsupported signatures are rejected with
+source diagnostics. So is every other placement of the annotation: extension
+and extension-type members (static or instance), enum instance methods and
+constants, constructors, fields, local functions, parameters, and class, mixin,
+enum, extension, extension-type or typedef declarations each produce `DWI003`.
+No annotated declaration is skipped silently.
+
+Amendment (2026-11-11, after the ADR-020 audit): static methods of public,
+non-generic enums are supported on the same terms as class static methods —
+task ID `Enum.method`, proxy `DwiTasks.Enum$method`, same signature, type,
+import-closure and collision rules. Private and generic enums are rejected like
+private and generic classes. Extension and extension-type statics remain
+unsupported.
+Annotation discovery and generated code use resolved declarations, not text
+rewriting or whole-program dynamic target inference.
+
+The host retains static references to annotated task libraries. Code duplication
+and host bundle cost are not measured performance improvements. Generated
+sources must be produced using the documented explicit pre-build on released
+SDKs; this API does not repair Flutter hook ordering.
+
+Acceptance requires deterministic generation; positive and negative discovery
+tests; sync/async/void/nullable/collection adapter cases; repeated tear-offs;
+typed failures before startup; real VM isolate execution; separate JS/Wasm host
+and worker compilation in each measured browser; actual worker realm and
+independent task state; clean builds, cache invalidation and cleanup. Prototype
+identity or worker-only compilation cannot satisfy that gate.
+
+## ADR-022 — Tasks that return a `Stream`
+
+**Status.** Accepted, 2026-11-13. Completion-plan tranche C, first increment
+(master plan §31, handoff §25). Ports are a separate, later increment. No
+protocol change: streams are built on ADR-014 channels and ADR-013 handles.
+
+**Problem.** A task returned one value. Progress reports and incremental
+results needed a hand-built handle, a named channel and matching code on both
+sides.
+
+**Decision.** A `@DwiTask` may return `Stream<T>` (usually an `async*`
+function). `T` follows the ADR-021 type rules; `Stream<void>`,
+`Stream<dynamic>`, a `Stream` input and a stream nested in another value are
+`DWI001`.
+
+```dart
+@DwiTask()
+Stream<Progress> scan(List<String> paths) async* { ... }
+
+await for (final progress in DwiTasks.scan(paths)) { ... }
+await for (final item in Dwi.runStream('scan', paths)) { ... }  // untyped
+final items = DwiFunctions.stream(scan, paths);                   // by function
+```
+
+New public API: `Dwi.runStream(String task, [Object? input])`;
+`DwiFunctions.stream` and `stream0` in the generated file; `DwiStreamTask`
+(worker-side, used by generated code) exported from `dwi_core` and `dwi`.
+
+**Mechanism.** Listening spawns a dedicated handle, opens the channel
+`dwi.stream` on it, and runs the task with `[channel, input, window]`. The
+generated worker entry calls `DwiStreamTask.serve`, which sends each item over
+the channel and closes it when the stream ends. The handle is closed when the
+host stream ends, fails or is cancelled.
+
+**Flow control.** ADR-014 channels reject a send when the receiver's buffer is
+full (see the correction under ADR-014), so a slow listener would otherwise
+fail the producer. Streams therefore use credit on the same channel: the worker
+may have at most `window` (`DwiConfig.channelBufferSize`) items the host
+listener has not taken; the host returns credit in batches of `window ~/ 2`.
+The receive buffer never fills, a paused listener pauses the producer, and no
+item is dropped, coalesced or reordered.
+
+**Semantics.**
+
+- One fresh context per listen (the `Dwi.runFresh` model). Startup is paid per
+  stream; worker-local state does not carry over.
+- Cancelling the subscription terminates the context. Items produced but not
+  delivered are discarded; the task gets no notification.
+- A task error is delivered after the items sent before it, then the stream
+  closes. Startup, timeout, crash and `Dwi.close()` failures are the usual
+  typed errors.
+- `DwiConfig.taskTimeout` bounds the whole stream, not one item.
+- Calling a stream task through the pooled `Dwi.run` fails with
+  `DwiUnsupportedException`; `DwiFunctions.run` on a stream task fails the
+  same way before startup.
+
+**Alternatives rejected.** Streams over the pool (a stream would hold a pooled
+worker indefinitely and need a new protocol message); changing ADR-014 to
+delay acknowledgements (a behaviour change to a shipped API; credit gives the
+same result locally).
+
+**Acceptance.** Ordered items, 300 items through a 4-item window read slowly,
+converted input and items, an error after two items, cancellation of an
+infinite stream followed by a new stream, zero-input and nullable items,
+`DwiFunctions.stream`/`stream0`, both misuse errors, and on web every worker
+created by a stream terminated. Native and all four host/worker compiler pairs
+in Chrome, Safari, Firefox and Edge.
+
+## ADR-021 — Generated encoders for enums, core value types, records and payload classes
+
+**Status.** Accepted, 2026-11-12. Completion-plan tranche B. No protocol,
+transport or lifecycle change; the envelope still carries only values that
+structured clone and the payload validator already accept.
+
+**Problem.** A task could only take and return primitives, collections and
+typed data. Enums, `DateTime`, records and application classes were `DWI001`
+build errors, so real tasks needed hand-written conversion on both sides, and a
+value that a closure would simply have captured had no typed way to reach a
+task (ADR-019 keeps closures out of the package).
+
+**Decision.** The generator emits an encoder next to each decoder, for these
+types only:
+
+| Dart type | Wire form |
+| --- | --- |
+| a public enum | its constant name (`String`) |
+| `DateTime` | `[microsecondsSinceEpoch, isUtc]` |
+| `Duration` | microseconds (`int`) |
+| `BigInt`, `Uri` | `toString()` |
+| a record | a list: positional fields, then named fields sorted by name |
+| a `@DwiPayload` class | a map from constructor parameter name to encoded value |
+
+Collections of these (`List<T>`, `Set<T>`, `Map<String, V>`) and nullable forms
+compose. The host encodes the input and decodes the result; the worker, or the
+native registration, decodes the input and encodes the result. Types that were
+already supported are still sent as-is and their generated code is unchanged.
+
+New public API, in `dwi_annotations`:
+
+```dart
+final class DwiPayload { const DwiPayload(); }
+```
+
+A `@DwiPayload` class must be public, concrete and non-generic, declared under
+`lib/`, with a public unnamed constructor, and must expose for every
+constructor parameter a public getter or field of the same name and type. The
+decoder calls that constructor. A class may refer to itself.
+
+`DwiTypeDescriptor` gains `kind`, `positional`, `named`, `shape`, `codecKey`
+and `needsEncoding`; `DwiPayloadShape` and `DwiPayloadField` are new. Codecs
+are keyed by `codecKey`, which includes the declaring library for enums and
+payload classes, so equal names in two libraries do not collide.
+
+**Semantics that differ from `dart:isolate`.**
+
+- A payload object is rebuilt from its constructor parameters. Identity, state
+  outside those parameters, and the runtime subtype are not preserved; a
+  subclass instance arrives as the declared class.
+- Shared references inside one message are duplicated, and a cyclic object
+  graph does not terminate; payload classes must be trees.
+- `DateTime` keeps its instant and `isUtc`; a local time is rebuilt in the
+  receiver's time zone, which is the same zone in a page and its workers.
+- A `Set` of converted values is sent as a list and rebuilt as a `Set`.
+- Enums travel by name, so a host and a stale worker that disagree about an
+  enum fail with `DwiSerializationException` instead of mapping to the wrong
+  constant.
+
+**Rejected at build time (`DWI001`).** Classes without `@DwiPayload`; private,
+generic or abstract payload classes; a missing unnamed constructor; a parameter
+without a matching public getter or with a different type; enums or payload
+classes that are private or declared outside `lib/`; the bare `Record` and
+`Enum` types; non-`String` map keys (unchanged).
+
+**Alternatives rejected.** JSON `toJson`/`fromJson` conventions (untyped,
+hand-written, and silently lossy); sending enums by index (a stale worker maps
+to the wrong constant); reflecting over fields (no reflection on web, and
+private state would cross silently).
+
+**Acceptance.** Round trip of every form on native isolates and in all four
+host/worker compiler pairs in Chrome, Safari, Firefox and Edge, including a
+recursive class, nested collections, a wrong enum name and a wrong record
+arity; negative discovery tests for every rejection; generated output unchanged
+for existing types.
 
 ## Consequences
 

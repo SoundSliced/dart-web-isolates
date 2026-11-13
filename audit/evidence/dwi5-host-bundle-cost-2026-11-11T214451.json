@@ -1,0 +1,36 @@
+{
+  "sdk": "3.13.7 (stable) (Thu Oct 22 14:28:57 2026 -0700) on \"macos_arm64\"",
+  "optimization": {
+    "js": "-O2",
+    "wasm": "default"
+  },
+  "bytes": {
+    "named": {
+      "js": 107509,
+      "wasm": 82194
+    },
+    "proxy": {
+      "js": 108415,
+      "wasm": 83063
+    },
+    "function": {
+      "js": 109041,
+      "wasm": 84031
+    }
+  },
+  "taskCodeRetainedInJsHost": {
+    "named": false,
+    "proxy": true,
+    "function": true
+  },
+  "deltaVsNamed": {
+    "proxy": {
+      "js": 906,
+      "wasm": 869
+    },
+    "function": {
+      "js": 1532,
+      "wasm": 1837
+    }
+  }
+}
