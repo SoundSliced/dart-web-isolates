@@ -1,6 +1,7 @@
 # DWI 0.9.0 — release review
 
-Status: **prepared for publication (2026-11-13).** Minor release with three
+Status: **published to pub.dev on 2026-11-13** in the upload order below, each
+package verified before the next (`audit/evidence/pub-0.9.0-upload-2026-11-13.txt`). Minor release with three
 additive features and two fixes. Existing APIs, protocol v2 and the generated
 code for previously supported types are unchanged. Rebuild worker artefacts
 with `dart run dwi_builder:dwi build`.

@@ -15,7 +15,7 @@ reproduce. Where the plans and the implementation differ by recorded decision
 
 ## 1. Position
 
-Published: 0.8.1. Prepared as 0.9.0 (2026-11-13): ADR-020 (registered static
+Published: 0.9.0 (2026-11-13): ADR-020 (registered static
 functions, including enum statics) with its audit corrections, ADR-021 (payload
 types) and ADR-022 (stream tasks).
 

@@ -1,0 +1,19 @@
+DWI 0.9.0 publication to pub.dev (2026-11-13)
+
+Environment
+  macOS 26.5.1 arm64, Dart SDK version: 3.13.7 (stable) (Thu Oct 22 14:28:57 2026 -0700) on "macos_arm64"
+  Commit: c99e9753c9c142d0934e6b53cd0bb494b1eefa76 on main, clean
+  Credential: staged in .research/pubhome (gitignored); no value recorded.
+
+Uploads (in order, each verified on pub.dev before the next)
+  1. dwi_annotations 0.9.0  01:33:38Z  Successfully uploaded
+  2. dwi_protocol 0.9.0  01:35:50Z  Successfully uploaded
+  3. dwi_core 0.9.0  01:38:02Z  Successfully uploaded
+  4. dwi_native 0.9.0  01:40:14Z  Successfully uploaded
+  5. dwi_web 0.9.0  01:42:27Z  Successfully uploaded
+  6. dwi_builder 0.9.0  01:44:41Z  Successfully uploaded
+  7. dwi 0.9.0  01:46:55Z  Successfully uploaded
+
+Verification
+  https://pub.dev/api/packages/<name> reported latest.version == 0.9.0
+  for each package before the next was uploaded.

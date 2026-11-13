@@ -9,7 +9,7 @@ Dart web applications have no `dart:isolate`. `Isolate.run`, `Isolate.spawn`,
 DWI investigates closing that gap with browser Web Workers, a versioned message
 protocol, and — where it is honest to do so — an isolate-shaped API.
 
-> **Status: 0.9.0 is prepared for publication (2026-11-13).** It adds
+> **Status: all seven packages are published at 0.9.0 (2026-11-13).** It adds
 > registered static functions (`DwiFunctions`, ADR-020), generated payload
 > types (`@DwiPayload`, enums, `DateTime`, records…, ADR-021) and tasks that
 > return `Stream<T>` (ADR-022). The previous release, 0.8.1 (2026-11-10). v0.8
@@ -45,8 +45,7 @@ Chrome-only: see [`docs/browser-matrix.md`](docs/browser-matrix.md).
 
 ## Packages
 
-All seven packages are published on pub.dev at **0.8.1** (2026-11-10); 0.9.0
-is prepared for publication (2026-11-13).
+All seven packages are published on pub.dev at **0.9.0** (2026-11-13).
 
 | Package | What it does | Status |
 | --- | --- | --- |

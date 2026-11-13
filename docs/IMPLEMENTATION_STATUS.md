@@ -68,7 +68,7 @@ text is the older intent.
 | 55 | Diagnostics and observability | open | `Dwi.capabilities()` only | G |
 | 56 | Documentation and examples | partial | docs maintained; five listed example directories are empty; no troubleshooting guide | E, H |
 | 57–58 | Agent organisation and workflow | complete | `AGENTS.md` | — |
-| 59 | Release roadmap to v1.0 | partial | 0.8.1 published; 0.9.0 prepared 2026-11-13 | H |
+| 59 | Release roadmap to v1.0 | partial | 0.9.0 published 2026-11-13 | H |
 | 60 | Upstream strategy | partial | two proposals written, one follow-up posted, hook-ordering proposal not posted | I |
 | 61 | Final definition of success | partial | this file is the required classification | H |
 
