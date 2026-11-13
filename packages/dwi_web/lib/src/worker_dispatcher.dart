@@ -36,6 +36,9 @@ class DwiWorkerDispatcher {
       <String, DwiChannelEndpoint>{};
   final Map<String, int> _channelGens = <String, int>{};
 
+  /// Tokens of requests that are still running, by request id (ADR-027).
+  final Map<int, DwiCancelToken> _running = <int, DwiCancelToken>{};
+
   /// Identifier copied into error/result metadata.
   final String workerId;
 
@@ -94,11 +97,12 @@ class DwiWorkerDispatcher {
         _handleChannelClose(envelope);
         return null;
       case DwiMessageType.cancel:
-        return _error(
-          envelope.id,
-          DwiErrorCode.protocol,
-          'cancellation is not implemented in protocol v1',
-        );
+        // Cooperative cancellation (ADR-027): signal the task and send
+        // nothing. The request's own result or error is the only reply, and
+        // the host ignores it because the caller was already settled.
+        final id = envelope.id;
+        if (id != null) _running[id]?.cancel();
+        return null;
       default:
         return _error(
           envelope.id,
@@ -136,7 +140,18 @@ class DwiWorkerDispatcher {
         input = DwiTransferableBytes.fromBuffer(input);
       }
       validateDwiPayload(input, path: 'input', maxBytes: maxBytes);
-      final result = await Future<Object?>.sync(() => implementation(input));
+      final token = DwiCancelToken();
+      final id = envelope.id;
+      if (id != null) _running[id] = token;
+      final Object? result;
+      try {
+        result = await DwiCancelToken.runWith(
+          token,
+          () => Future<Object?>.sync(() => implementation(input)),
+        );
+      } finally {
+        if (id != null) _running.remove(id);
+      }
       validateDwiPayload(result, path: 'result', maxBytes: maxBytes);
       return DwiEnvelope(
         type: DwiMessageType.result,

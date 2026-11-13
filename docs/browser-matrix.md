@@ -1,5 +1,33 @@
 # Browser Matrix
 
+## Cooperative cancellation (ADR-027, 2026-11-13, checkout only)
+
+`browser_cooperative_cancel_test.dart` compiles each host and worker
+separately and runs one pooled worker with `cancelGracePeriod: 1 s`. A task
+awaiting 20 ms steps is cancelled: the caller settles with
+`DwiCancelledException` within 200 ms, the task observes `DwiCancelToken` and
+stops, and the same worker serves the next call (one worker created, none
+terminated). A synchronous 4 s loop is cancelled: it cannot observe the token,
+is terminated near the 1 s mark and replaced, and its worker-local state is
+gone. Every worker the page created is terminated at the end. All sixteen
+combinations pass:
+
+| Host / worker | Chrome 157.0.8103.78 | Safari 26.5 | Firefox 160.0 | Edge 157.0.4341.46 |
+| --- | --- | --- | --- | --- |
+| dart2js / dart2js | pass | pass | pass | pass |
+| dart2js / dart2wasm | pass | pass | pass | pass |
+| dart2wasm / dart2js | pass | pass | pass | pass |
+| dart2wasm / dart2wasm | pass | pass | pass | pass |
+
+Native: `packages/dwi_native/test/cooperative_cancel_test.dart`. Evidence:
+`audit/evidence/cooperative-cancel-acceptance-2026-11-13T113102.json`. The pool
+contract (`browser_lifecycle_test.dart`) was rerun after the change and passes
+in all four engines
+(`audit/evidence/pool-lifecycle-four-engines-2026-11-13T113102.json`). The
+earlier run (`…T111900.json`, same sources) also passed every browser cell; its
+native suite exposed a race in the test's marker-file polling, fixed before
+the second run.
+
 ## Pool idle retirement and draining (ADR-024, 2026-11-13, checkout only)
 
 `browser_pool_lifecycle_test.dart` compiles each host and worker separately

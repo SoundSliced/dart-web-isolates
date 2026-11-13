@@ -131,6 +131,22 @@ There is no function overload for `Dwi.run`/`Dwi.runFresh`, fresh-function API,
 capture introspection or compatibility-level raise. Use the existing explicit
 pre-build workflow on released SDKs.
 
+### Cooperative cancellation (ADR-027, checkout only)
+
+```dart
+const DwiConfig({Duration? cancelGracePeriod /* default null: terminate */});
+final class DwiCancelToken {
+  static DwiCancelToken get current;
+  bool get isCancelled;
+  Future<void> get whenCancelled;
+  void throwIfCancelled();
+}
+```
+
+With a grace period, cancelling a running pooled call settles `result` at
+once, signals the task's token, and terminates the worker only if the task
+has not stopped when the period ends.
+
 ### Idle retirement and draining close (ADR-024, checkout only)
 
 ```dart

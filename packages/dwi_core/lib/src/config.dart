@@ -30,6 +30,7 @@ class DwiConfig {
     this.heartbeatMisses = 2,
     this.channelBufferSize = 64,
     this.idleTimeout,
+    this.cancelGracePeriod,
   });
 
   /// Conventional served path for the generated worker.
@@ -106,6 +107,17 @@ class DwiConfig {
   /// `DwiWorker` handles are never retired by it.
   final Duration? idleTimeout;
 
+  /// How long a cancelled running call may take to stop on its own (ADR-027).
+  ///
+  /// `null` (the default) keeps the ADR-010 behaviour: cancelling a running
+  /// call terminates its worker or isolate at once. When set, cancelling still
+  /// settles `result` with `DwiCancelledException` immediately, and the task
+  /// sees `DwiCancelToken.current` cancelled. A pooled web worker whose task
+  /// returns or throws within this period is kept for the next call; one that
+  /// does not is terminated. A native call's isolate is killed when the period
+  /// ends if it has not exited. Dedicated handles ignore this setting.
+  final Duration? cancelGracePeriod;
+
   /// Returns a copy with validated values or throws [ArgumentError].
   DwiConfig validated() {
     if (maxWorkers < 1) {
@@ -166,6 +178,14 @@ class DwiConfig {
     final idle = idleTimeout;
     if (idle != null && idle <= Duration.zero) {
       throw ArgumentError.value(idle, 'idleTimeout', 'must be positive');
+    }
+    final grace = cancelGracePeriod;
+    if (grace != null && grace <= Duration.zero) {
+      throw ArgumentError.value(
+        grace,
+        'cancelGracePeriod',
+        'must be positive',
+      );
     }
     return this;
   }

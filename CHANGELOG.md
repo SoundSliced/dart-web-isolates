@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Cooperative cancellation (ADR-027)
+
+- `DwiConfig.cancelGracePeriod`: cancelling a running pooled call signals
+  `DwiCancelToken.current` in the task and terminates the worker only if the
+  task has not stopped when the period ends. A web worker whose task stops in
+  time is reused. Off by default; without it cancellation terminates at once.
+- `DwiCancelToken` (`isCancelled`, `whenCancelled`, `throwIfCancelled`),
+  exported from `package:dwi/dwi.dart` and `package:dwi_core/dwi_worker.dart`.
+- Fixed: cancelling a native call while its isolate was still spawning could
+  raise an unhandled `DwiCancelledException`.
+
 ### Idle retirement and draining close (ADR-024)
 
 - `DwiConfig.idleTimeout` retires pooled web workers that stayed idle that

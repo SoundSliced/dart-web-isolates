@@ -354,6 +354,15 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
     bounded by `taskTimeout` plus `queueTimeout`. Measured in all sixteen
     host/worker/engine cells (2026-11-13,
     `audit/evidence/pool-idle-drain-acceptance-2026-11-13T104143.json`).
+54. **Cooperative cancellation needs a yielding task (ADR-027, checkout
+    only).** `DwiCancelToken` is observed only by code that checks it between
+    awaits, and only when `DwiConfig.cancelGracePeriod` is set; a synchronous
+    loop is terminated when the period ends, as before. It covers pooled
+    `runCancellable` calls: handle calls have no per-call cancellation and
+    `runStream` closes its channel. On native the call's isolate is never
+    reused, so the period only gives the task time to clean up. Measured in
+    all sixteen host/worker/engine cells (2026-11-13,
+    `audit/evidence/cooperative-cancel-acceptance-2026-11-13T113102.json`).
 
 ## Research debt (unresolved, tracked)
 

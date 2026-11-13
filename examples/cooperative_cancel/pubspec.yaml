@@ -1,0 +1,13 @@
+name: dwi_cooperative_cancel_example
+description: A task that notices cancellation and stops between steps (ADR-027).
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  dwi:
+    path: ../../packages/dwi
+  dwi_core:
+    path: ../../packages/dwi_core

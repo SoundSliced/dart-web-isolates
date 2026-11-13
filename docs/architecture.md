@@ -378,7 +378,9 @@ Rules:
 8. **Not cooperative, and not advertised as cooperative.** A `cancel` envelope
    is advisory only; adding a cooperative token is a separate, later change and
    must not alter `DwiTaskFunction`. `DwiCapabilities` gains no
-   `cooperativeCancellation` claim in v0.4.
+   `cooperativeCancellation` claim in v0.4. *Amended by ADR-027:* with
+   `DwiConfig.cancelGracePeriod` set, the task observes `DwiCancelToken` and
+   termination becomes the fallback; without it this item still holds.
 
 **Native semantics.** Native cancellation is *not* the same mechanism and must
 not be described as parity.
@@ -1542,6 +1544,79 @@ typed failures before startup; real VM isolate execution; separate JS/Wasm host
 and worker compilation in each measured browser; actual worker realm and
 independent task state; clean builds, cache invalidation and cleanup. Prototype
 identity or worker-only compilation cannot satisfy that gate.
+
+## ADR-027 — Cooperative cancellation (lifecycle, increment 2)
+
+**Status.** Accepted, 2026-11-13. Completion-plan tranche D, second increment
+(master plan §27, handoff §26 "cancellation token observed between awaits").
+Amends ADR-010 §10.1 item 8. Uses the `cancel` message already reserved in
+protocol v1 (`docs/protocol.md`); no version change.
+
+**Problem.** Cancelling a running call terminates its worker or isolate. The
+task cannot release what it holds, and the pool pays a fresh worker start for
+every cancellation even when the task was idle in an `await`.
+
+**Decision.**
+
+```dart
+await Dwi.configure(const DwiConfig(cancelGracePeriod: Duration(seconds: 1)));
+
+// task code (web: import package:dwi_core/dwi_worker.dart)
+for (final item in items) {
+  DwiCancelToken.current.throwIfCancelled();
+  await process(item);
+}
+```
+
+1. `DwiConfig.cancelGracePeriod` (`Duration?`, default `null`). With `null`
+   nothing changes: a running call is terminated at once (ADR-010).
+2. With a period set, `cancel()` on a running call still settles `result` with
+   `DwiCancelledException` at once and returns `true`; the ADR-010 race rules
+   are unchanged. The host then signals the task:
+   - web: a `cancel` envelope with the request id. The worker cancels that
+     request's token and sends nothing. The task's own `result` or `error`
+     reply, ignored because the caller was settled, frees the worker for the
+     next call. If no reply arrives within the period, the worker is
+     terminated. `taskTimeout` still applies.
+   - native: the task isolate reports a control port when it starts; the host
+     sends the signal on it and kills the isolate when the period ends. A
+     cancel that arrives before the port is delivered when the port arrives.
+3. `DwiCancelToken.current` is a zone value set around each task call, so
+   `DwiTaskFunction` and generated signatures are unchanged. Outside a task,
+   in a call that was not cancelled, or without a grace period, the token
+   never fires. API: `isCancelled`, `whenCancelled`, `throwIfCancelled()`
+   (throws `DwiCancelledException`); `cancel()` and `runWith` are for
+   backends. It is exported from `package:dwi/dwi.dart` and from the
+   worker-side `package:dwi_core/dwi_worker.dart`.
+4. Termination stays the fallback and the documented guarantee: a task that
+   never yields (a synchronous loop) cannot observe the token and is
+   terminated when the period ends.
+5. Scope: pooled `Dwi.runCancellable` calls. Handles (`DwiWorker.run`) have no
+   per-call cancellation, and `runStream` keeps closing its channel on
+   cancellation (ADR-022). `DwiCapabilities.cancellation` stays `running`.
+
+A worker built before this change answers `cancel` with a protocol error that
+carries the request id. The host treats that reply on a cancelled call as
+"worker still busy" and terminates it, so mixing versions cannot hand a busy
+worker to the next caller.
+
+**Alternatives rejected.** A token parameter on every task (changes
+`DwiTaskFunction` and every generated adapter); reusing the worker without
+waiting for the task's reply (the next call would share a worker with a task
+still running); an acknowledgement message (`cancelled` in the protocol table)
+— the task's own reply already says the worker is free.
+
+**Acceptance.** Core: token zone scoping across awaits, idempotent cancel,
+config validation. Dispatcher (VM): the cancel envelope reaches only its
+request, sends no reply, and unknown ids are ignored. Native: a cooperative
+task stops and records it, a cancel before the control port arrives still
+reaches it, a task that never yields is killed at the end of the period, no
+period means immediate kill, and an uncancelled call's token never fires.
+Web, four host/worker compiler pairs in four engines
+(`browser_cooperative_cancel_test.dart`, one pooled worker, 1 s period): the
+caller settles within 200 ms, the task observes the token, the same worker
+serves the next call, a cancelled synchronous loop is terminated near 1 s and
+replaced, and every worker is terminated at the end.
 
 ## ADR-024 — Idle worker retirement and draining close (lifecycle, increment 1)
 

@@ -15,6 +15,10 @@ class _NativeState {
   Isolate? isolate;
   ReceivePort? port;
   Completer<Object?>? reply;
+
+  /// The task isolate's control port, used to signal its cancel token
+  /// (ADR-027).
+  SendPort? control;
   bool cancelled = false;
 }
 
@@ -27,15 +31,27 @@ class _IsolateJob {
   final SendPort reply;
 }
 
-/// Entry point of a task isolate. Sends `[ok, value]` or
-/// `[failed, message, type, stack]`.
+/// Entry point of a task isolate.
+///
+/// Sends `[null, controlPort]` first, then `[ok, value]` or
+/// `[failed, message, type, stack]`. A message on the control port cancels
+/// the task's [DwiCancelToken] (ADR-027); the port is closed once the task
+/// settles so the isolate can exit.
 void _isolateMain(_IsolateJob job) {
+  final token = DwiCancelToken();
+  final control = RawReceivePort((Object? _) => token.cancel());
+  job.reply.send(<Object?>[null, control.sendPort]);
   final input = _decodeFromIsolate(job.input);
-  Future<Object?>.sync(() => job.implementation(input)).then(
+  DwiCancelToken.runWith(
+    token,
+    () => Future<Object?>.sync(() => job.implementation(input)),
+  ).then(
     (value) {
+      control.close();
       job.reply.send(<Object?>[true, _encodeForIsolate(value)]);
     },
     onError: (Object error, StackTrace stack) {
+      control.close();
       job.reply.send(<Object?>[
         false,
         error.toString(),
@@ -112,6 +128,8 @@ class NativeBackend implements DwiBackend {
       port = ReceivePort();
       state.port = port;
       final reply = Completer<Object?>();
+      // A cancel during spawn completes this before it is awaited.
+      reply.future.ignore();
       state.reply = reply;
 
       final transferable = input is DwiTransferableBytes ? input : null;
@@ -133,6 +151,13 @@ class NativeBackend implements DwiBackend {
         (message) {
           if (reply.isCompleted) return;
           final fields = message as List<Object?>;
+          if (fields[0] == null) {
+            final control = fields[1]! as SendPort;
+            state.control = control;
+            // A cancel that arrived before the port did is delivered now.
+            if (state.cancelled) control.send(null);
+            return;
+          }
           if (fields[0] == true) {
             reply.complete(_decodeFromIsolate(fields[1]));
             return;
@@ -151,7 +176,11 @@ class NativeBackend implements DwiBackend {
       );
 
       if (state.cancelled) {
-        isolate.kill(priority: Isolate.immediate);
+        if (_config.cancelGracePeriod == null) {
+          isolate.kill(priority: Isolate.immediate);
+        } else {
+          _killAfterGrace(isolate, port);
+        }
         throw DwiCancelledException('task "$task" was cancelled');
       }
 
@@ -182,8 +211,13 @@ class NativeBackend implements DwiBackend {
     } finally {
       state.isolate = null;
       state.reply = null;
-      state.port = null;
-      port?.close();
+      state.control = null;
+      // With a grace period the port stays open until the period ends, so
+      // the cancel signal and the task's exit are not cut short.
+      if (!state.cancelled || _config.cancelGracePeriod == null) {
+        state.port = null;
+        port?.close();
+      }
     }
   }
 
@@ -202,8 +236,25 @@ class NativeBackend implements DwiBackend {
     final reply = state.reply;
     if (reply != null && !reply.isCompleted) reply.completeError(error);
     final isolate = state.isolate;
-    if (isolate != null) isolate.kill(priority: Isolate.immediate);
+    if (isolate == null) return true;
+    if (_config.cancelGracePeriod == null) {
+      isolate.kill(priority: Isolate.immediate);
+      return true;
+    }
+    // Cooperative cancellation (ADR-027): signal the task, then kill the
+    // isolate when the grace period ends. An isolate that already exited
+    // ignores the kill. Before the control port arrives, the listener sends
+    // the signal as soon as it does.
+    state.control?.send(null);
+    _killAfterGrace(isolate, state.port);
     return true;
+  }
+
+  void _killAfterGrace(Isolate isolate, [ReceivePort? port]) {
+    Timer(_config.cancelGracePeriod!, () {
+      isolate.kill(priority: Isolate.immediate);
+      port?.close();
+    });
   }
 
   @override

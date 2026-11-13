@@ -20,6 +20,7 @@ export 'package:dwi_annotations/dwi_annotations.dart' show DwiTask;
 export 'package:dwi_core/dwi_core.dart'
     show
         DwiBackendKind,
+        DwiCancelToken,
         DwiCancellableTask,
         DwiCancellation,
         DwiCancelledException,

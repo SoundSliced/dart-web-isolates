@@ -143,16 +143,69 @@ void main() {
       expect(after.error!.code, DwiErrorCode.protocol);
     });
 
-    test('does not pretend cancellation is implemented', () async {
-      final dispatcher = DwiWorkerDispatcher(<String, DwiWorkerTask>{});
+    test('a cancel envelope signals the running task and sends nothing '
+        '(ADR-027)', () async {
+      final observed = Completer<bool>();
+      final dispatcher = DwiWorkerDispatcher(<String, DwiWorkerTask>{
+        'waits': (Object? input) async {
+          await DwiCancelToken.current.whenCancelled;
+          observed.complete(DwiCancelToken.current.isCancelled);
+          DwiCancelToken.current.throwIfCancelled();
+          return 'unreachable';
+        },
+      });
 
-      final response = await dispatcher.handle(
+      final reply = dispatcher.handle(request('waits', id: 9));
+      await Future<void>.delayed(Duration.zero);
+      final ack = await dispatcher.handle(
         const DwiEnvelope(type: DwiMessageType.cancel, id: 9),
       );
 
+      expect(ack, isNull);
+      expect(await observed.future, isTrue);
+      final response = await reply;
       expect(response!.type, DwiMessageType.error);
-      expect(response.error!.code, DwiErrorCode.protocol);
-      expect(response.error!.message, contains('not implemented'));
+      expect(response.id, 9);
+      expect(response.error!.remoteType, 'DwiCancelledException');
+    });
+
+    test('cancel for an unknown or finished id is ignored', () async {
+      final dispatcher = DwiWorkerDispatcher(<String, DwiWorkerTask>{
+        'token': (Object? input) => DwiCancelToken.current.isCancelled,
+      });
+
+      expect(
+        await dispatcher.handle(
+          const DwiEnvelope(type: DwiMessageType.cancel, id: 3),
+        ),
+        isNull,
+      );
+      final response = await dispatcher.handle(request('token', id: 3));
+      expect(response!.payload, isFalse);
+      expect(
+        await dispatcher.handle(
+          const DwiEnvelope(type: DwiMessageType.cancel, id: 3),
+        ),
+        isNull,
+      );
+    });
+
+    test('each request has its own token', () async {
+      final dispatcher = DwiWorkerDispatcher(<String, DwiWorkerTask>{
+        'wait': (Object? input) async {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+          return DwiCancelToken.current.isCancelled;
+        },
+      });
+
+      final first = dispatcher.handle(request('wait', id: 1));
+      final second = dispatcher.handle(request('wait', id: 2));
+      await dispatcher.handle(
+        const DwiEnvelope(type: DwiMessageType.cancel, id: 1),
+      );
+
+      expect((await first)!.payload, isTrue);
+      expect((await second)!.payload, isFalse);
     });
 
     test('enforces the payload budget sent in request metadata', () async {

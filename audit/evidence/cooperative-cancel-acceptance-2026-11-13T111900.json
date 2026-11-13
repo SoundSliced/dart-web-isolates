@@ -1,0 +1,501 @@
+{
+  "sdk": "3.13.7 (stable) (Thu Oct 22 14:28:57 2026 -0700) on \"macos_arm64\"",
+  "revision": "27c6910f60d097fe186fa551a8a393696275f9b5",
+  "sourceState": "local ADR-027 implementation, uncommitted",
+  "sourceDigests": {
+    "../dwi/lib/dwi.dart": "6be0c135e28c43eb474379c14dea01db00ed0493d6be209046c6b31db817484b",
+    "../dwi_core/lib/src/cancel_token.dart": "f2fbe48b0486fdadda5f04a2dd3aa510e27b891a063fbb6c600d125a5ac29108",
+    "../dwi_core/lib/src/config.dart": "b48656d68cd0e3b3e95e88882bbd4f0d2c1403fa579b96280783f947d6216dc2",
+    "../dwi_web/lib/src/web_backend.dart": "139c528378e62ed8022688e06db8e742d71916a90ee539bb5ef7c2a3c019ac85",
+    "../dwi_web/lib/src/worker_dispatcher.dart": "f6cf7690dd96922fedc3ca54b9c34c0e8a309d2a5c139430a257d827e7c53b46",
+    "test/browser_cooperative_cancel_test.dart": "975e2252defdb70387474b55515df1c43c9070ef224398747efb29073d1d008f",
+    "test/support/browser_engines.dart": "f9a966c5ef5e5dc1549e6571e27fe3791aa421f5895cc1ec1ca53409f0b51744",
+    "test/support/browser_probe.dart": "bd47500f59a49a366b99d69d27c7a07e62b77d691933cad19553c16da6871109",
+    "test/support/fixture.dart": "fc51a81a45180802e4cf4b78a246b8af32d66cad8d32d881edd4bd9a4d43f380"
+  },
+  "fixture": "packages/dwi_builder/test/browser_cooperative_cancel_test.dart",
+  "command": "dart test test/browser_cooperative_cancel_test.dart -r expanded",
+  "runs": [
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "warm": "a",
+        "cancelled": true,
+        "coopResult": "DwiCancelledException",
+        "settleFast": true,
+        "next": "b",
+        "observed": true,
+        "reused": true,
+        "cancelAgain": false,
+        "stubbornCancelled": true,
+        "stubbornResult": "DwiCancelledException",
+        "afterStubborn": "c",
+        "terminatedAtGrace": true,
+        "replaced": true,
+        "freshState": -1,
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          2,
+          2
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "warm": "a",
+        "cancelled": true,
+        "coopResult": "DwiCancelledException",
+        "settleFast": true,
+        "next": "b",
+        "observed": true,
+        "reused": true,
+        "cancelAgain": false,
+        "stubbornCancelled": true,
+        "stubbornResult": "DwiCancelledException",
+        "afterStubborn": "c",
+        "terminatedAtGrace": true,
+        "replaced": true,
+        "freshState": -1,
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          2,
+          2
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 160.0",
+      "result": {
+        "warm": "a",
+        "cancelled": true,
+        "coopResult": "DwiCancelledException",
+        "settleFast": true,
+        "next": "b",
+        "observed": true,
+        "reused": true,
+        "cancelAgain": false,
+        "stubbornCancelled": true,
+        "stubbornResult": "DwiCancelledException",
+        "afterStubborn": "c",
+        "terminatedAtGrace": true,
+        "replaced": true,
+        "freshState": -1,
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          2,
+          2
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "js",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "warm": "a",
+        "cancelled": true,
+        "coopResult": "DwiCancelledException",
+        "settleFast": true,
+        "next": "b",
+        "observed": true,
+        "reused": true,
+        "cancelAgain": false,
+        "stubbornCancelled": true,
+        "stubbornResult": "DwiCancelledException",
+        "afterStubborn": "c",
+        "terminatedAtGrace": true,
+        "replaced": true,
+        "freshState": -1,
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          2,
+          2
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "warm": "a",
+        "cancelled": true,
+        "coopResult": "DwiCancelledException",
+        "settleFast": true,
+        "next": "b",
+        "observed": true,
+        "reused": true,
+        "cancelAgain": false,
+        "stubbornCancelled": true,
+        "stubbornResult": "DwiCancelledException",
+        "afterStubborn": "c",
+        "terminatedAtGrace": true,
+        "replaced": true,
+        "freshState": -1,
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          2,
+          2
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "warm": "a",
+        "cancelled": true,
+        "coopResult": "DwiCancelledException",
+        "settleFast": true,
+        "next": "b",
+        "observed": true,
+        "reused": true,
+        "cancelAgain": false,
+        "stubbornCancelled": true,
+        "stubbornResult": "DwiCancelledException",
+        "afterStubborn": "c",
+        "terminatedAtGrace": true,
+        "replaced": true,
+        "freshState": -1,
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          2,
+          2
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 160.0",
+      "result": {
+        "warm": "a",
+        "cancelled": true,
+        "coopResult": "DwiCancelledException",
+        "settleFast": true,
+        "next": "b",
+        "observed": true,
+        "reused": true,
+        "cancelAgain": false,
+        "stubbornCancelled": true,
+        "stubbornResult": "DwiCancelledException",
+        "afterStubborn": "c",
+        "terminatedAtGrace": true,
+        "replaced": true,
+        "freshState": -1,
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          2,
+          2
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "js",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "warm": "a",
+        "cancelled": true,
+        "coopResult": "DwiCancelledException",
+        "settleFast": true,
+        "next": "b",
+        "observed": true,
+        "reused": true,
+        "cancelAgain": false,
+        "stubbornCancelled": true,
+        "stubbornResult": "DwiCancelledException",
+        "afterStubborn": "c",
+        "terminatedAtGrace": true,
+        "replaced": true,
+        "freshState": -1,
+        "backend": "worker",
+        "workerBackend": "dart2js",
+        "ok": true,
+        "workers": [
+          2,
+          2
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "warm": "a",
+        "cancelled": true,
+        "coopResult": "DwiCancelledException",
+        "settleFast": true,
+        "next": "b",
+        "observed": true,
+        "reused": true,
+        "cancelAgain": false,
+        "stubbornCancelled": true,
+        "stubbornResult": "DwiCancelledException",
+        "afterStubborn": "c",
+        "terminatedAtGrace": true,
+        "replaced": true,
+        "freshState": -1,
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          2,
+          2
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "warm": "a",
+        "cancelled": true,
+        "coopResult": "DwiCancelledException",
+        "settleFast": true,
+        "next": "b",
+        "observed": true,
+        "reused": true,
+        "cancelAgain": false,
+        "stubbornCancelled": true,
+        "stubbornResult": "DwiCancelledException",
+        "afterStubborn": "c",
+        "terminatedAtGrace": true,
+        "replaced": true,
+        "freshState": -1,
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          2,
+          2
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 160.0",
+      "result": {
+        "warm": "a",
+        "cancelled": true,
+        "coopResult": "DwiCancelledException",
+        "settleFast": true,
+        "next": "b",
+        "observed": true,
+        "reused": true,
+        "cancelAgain": false,
+        "stubbornCancelled": true,
+        "stubbornResult": "DwiCancelledException",
+        "afterStubborn": "c",
+        "terminatedAtGrace": true,
+        "replaced": true,
+        "freshState": -1,
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          2,
+          2
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "js",
+      "worker": "wasm",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "warm": "a",
+        "cancelled": true,
+        "coopResult": "DwiCancelledException",
+        "settleFast": true,
+        "next": "b",
+        "observed": true,
+        "reused": true,
+        "cancelAgain": false,
+        "stubbornCancelled": true,
+        "stubbornResult": "DwiCancelledException",
+        "afterStubborn": "c",
+        "terminatedAtGrace": true,
+        "replaced": true,
+        "freshState": -1,
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          2,
+          2
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "chrome",
+      "browserVersion": "Google Chrome 157.0.8103.78",
+      "result": {
+        "warm": "a",
+        "cancelled": true,
+        "coopResult": "DwiCancelledException",
+        "settleFast": true,
+        "next": "b",
+        "observed": true,
+        "reused": true,
+        "cancelAgain": false,
+        "stubbornCancelled": true,
+        "stubbornResult": "DwiCancelledException",
+        "afterStubborn": "c",
+        "terminatedAtGrace": true,
+        "replaced": true,
+        "freshState": -1,
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          2,
+          2
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "safari",
+      "browserVersion": "26.5",
+      "result": {
+        "warm": "a",
+        "cancelled": true,
+        "coopResult": "DwiCancelledException",
+        "settleFast": true,
+        "next": "b",
+        "observed": true,
+        "reused": true,
+        "cancelAgain": false,
+        "stubbornCancelled": true,
+        "stubbornResult": "DwiCancelledException",
+        "afterStubborn": "c",
+        "terminatedAtGrace": true,
+        "replaced": true,
+        "freshState": -1,
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          2,
+          2
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "firefox",
+      "browserVersion": "Mozilla Firefox 160.0",
+      "result": {
+        "warm": "a",
+        "cancelled": true,
+        "coopResult": "DwiCancelledException",
+        "settleFast": true,
+        "next": "b",
+        "observed": true,
+        "reused": true,
+        "cancelAgain": false,
+        "stubbornCancelled": true,
+        "stubbornResult": "DwiCancelledException",
+        "afterStubborn": "c",
+        "terminatedAtGrace": true,
+        "replaced": true,
+        "freshState": -1,
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          2,
+          2
+        ]
+      },
+      "status": "pass"
+    },
+    {
+      "host": "wasm",
+      "worker": "wasm",
+      "engine": "edge",
+      "browserVersion": "Microsoft Edge 157.0.4341.46",
+      "result": {
+        "warm": "a",
+        "cancelled": true,
+        "coopResult": "DwiCancelledException",
+        "settleFast": true,
+        "next": "b",
+        "observed": true,
+        "reused": true,
+        "cancelAgain": false,
+        "stubbornCancelled": true,
+        "stubbornResult": "DwiCancelledException",
+        "afterStubborn": "c",
+        "terminatedAtGrace": true,
+        "replaced": true,
+        "freshState": -1,
+        "backend": "worker",
+        "workerBackend": "dart2wasm",
+        "ok": true,
+        "workers": [
+          2,
+          2
+        ]
+      },
+      "status": "pass"
+    }
+  ],
+  "complete": true
+}

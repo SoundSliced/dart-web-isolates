@@ -61,7 +61,9 @@ class _CancelState {
 ///
 /// Cancellation follows ADR-010 §10.1: a queued request leaves the queue, a
 /// running request terminates its worker, and `result` is the only future that
-/// receives [DwiCancelledException].
+/// receives [DwiCancelledException]. With `DwiConfig.cancelGracePeriod`
+/// (ADR-027) a running request's worker is first asked to stop and is kept
+/// when the task returns within the period.
 class WebBackend implements DwiBackend {
   /// How many startups may fail in a row before the queued callers are failed.
   static const int _maxConsecutiveSpawnFailures = 3;
@@ -167,6 +169,15 @@ class WebBackend implements DwiBackend {
       }
 
       final response = await completer.future.timeout(_config.taskTimeout);
+      if (state.cancelled &&
+          response.type == DwiMessageType.error &&
+          response.error?.code == DwiErrorCode.protocol) {
+        // A worker that predates ADR-027 answers `cancel` with a protocol
+        // error carrying the request id while the task is still running:
+        // the worker is not free, so terminate it.
+        _terminate(slot, DwiCancelledException('task "$task" was cancelled'));
+        return;
+      }
       if (response.type == DwiMessageType.error) {
         throw _mapError(response);
       }
@@ -233,7 +244,27 @@ class WebBackend implements DwiBackend {
       // Settle the caller first so the observable outcome is "cancelled" even
       // though termination also settles the in-flight request.
       handle.completeError(error);
-      _terminate(slot, error);
+      final grace = _config.cancelGracePeriod;
+      if (grace == null) {
+        _terminate(slot, error);
+        return true;
+      }
+      // Cooperative cancellation (ADR-027): the worker signals the task's
+      // token; the slot stays busy until the task's own reply arrives, which
+      // releases it in [_execute]. Termination remains the fallback.
+      try {
+        slot.worker.postMessage(
+          DwiEnvelope(type: DwiMessageType.cancel, id: id).toMap().jsify(),
+        );
+      } catch (_) {
+        _terminate(slot, error);
+        return true;
+      }
+      Timer(grace, () {
+        if (!slot.failed && slot.pending.containsKey(id)) {
+          _terminate(slot, error);
+        }
+      });
       return true;
     }
     if (slot == null && id == null) {
