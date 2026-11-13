@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Idle retirement and draining close (ADR-024)
+
+- `DwiConfig.idleTimeout` retires pooled web workers that stayed idle that
+  long; the next call starts a replacement. Off by default.
+- `Dwi.close(drain: true)` refuses new pooled and fresh calls, lets the ones
+  already started settle, then closes. `Dwi.close()` is unchanged.
+
 ### Links between handles (ADR-023)
 
 - `DwiWorker.link(a, b, name)` connects channel `name` in two handles; task

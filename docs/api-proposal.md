@@ -131,6 +131,19 @@ There is no function overload for `Dwi.run`/`Dwi.runFresh`, fresh-function API,
 capture introspection or compatibility-level raise. Use the existing explicit
 pre-build workflow on released SDKs.
 
+### Idle retirement and draining close (ADR-024, checkout only)
+
+```dart
+const DwiConfig({Duration? idleTimeout /* default null: never */});
+abstract final class Dwi {
+  static Future<void> close({bool drain = false});
+}
+```
+
+`idleTimeout` retires pooled web workers that stayed idle that long.
+`close(drain: true)` refuses new pooled and fresh calls, lets started ones
+settle, then closes.
+
 ### Links between handles (ADR-023, checkout only)
 
 ```dart

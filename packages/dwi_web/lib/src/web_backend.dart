@@ -24,6 +24,9 @@ class _WorkerSlot {
   /// Consecutive heartbeats not answered while idle (ADR-010 §10.3).
   int missedHeartbeats = 0;
   Timer? heartbeat;
+
+  /// Retires this worker after `DwiConfig.idleTimeout` without work (ADR-024).
+  Timer? idle;
 }
 
 /// One caller waiting for pool capacity.
@@ -315,7 +318,7 @@ class WebBackend implements DwiBackend {
     if (_waiters.isEmpty) {
       final idle = _idleSlot();
       if (idle != null) {
-        idle.busy = true;
+        _claim(idle);
         return idle;
       }
       if (_slots.length < _config.maxWorkers) {
@@ -358,10 +361,25 @@ class WebBackend implements DwiBackend {
     return null;
   }
 
+  void _claim(_WorkerSlot slot) {
+    slot.idle?.cancel();
+    slot.idle = null;
+    slot.busy = true;
+  }
+
   void _release(_WorkerSlot slot) {
     if (slot.failed) return;
     slot.busy = false;
     _drainWaiters();
+    final timeout = _config.idleTimeout;
+    if (timeout != null && !slot.busy && !slot.failed) {
+      slot.idle?.cancel();
+      slot.idle = Timer(timeout, () {
+        // Only a worker that is still idle is retired; it has no pending
+        // request, so terminating it settles nobody.
+        if (!slot.busy && !slot.failed && !_closed) _terminate(slot);
+      });
+    }
   }
 
   Future<_WorkerSlot> _spawn() async {
@@ -535,6 +553,8 @@ class WebBackend implements DwiBackend {
     slot.failed = true;
     slot.heartbeat?.cancel();
     slot.heartbeat = null;
+    slot.idle?.cancel();
+    slot.idle = null;
     _slots.remove(slot);
     final error =
         cause ??
@@ -581,7 +601,7 @@ class WebBackend implements DwiBackend {
         final idle = _idleSlot();
         if (idle != null) {
           _waiters.removeAt(0);
-          idle.busy = true;
+          _claim(idle);
           waiter.completer.complete(idle);
           _consecutiveSpawnFailures = 0;
           continue;

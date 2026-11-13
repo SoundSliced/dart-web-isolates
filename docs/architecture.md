@@ -1543,6 +1543,48 @@ and worker compilation in each measured browser; actual worker realm and
 independent task state; clean builds, cache invalidation and cleanup. Prototype
 identity or worker-only compilation cannot satisfy that gate.
 
+## ADR-024 — Idle worker retirement and draining close (lifecycle, increment 1)
+
+**Status.** Accepted, 2026-11-13. Completion-plan tranche D, first increment
+(master plan §27 idle termination, handoff §26 graceful shutdown). Cooperative
+cancellation is the next increment. No protocol change.
+
+**Decision.**
+
+```dart
+await Dwi.configure(const DwiConfig(idleTimeout: Duration(seconds: 30)));
+await Dwi.close(drain: true);
+```
+
+1. `DwiConfig.idleTimeout` (`Duration?`, default `null`): a pooled web worker
+   that has been idle that long is terminated. Handing it a task cancels the
+   timer. A retired worker is replaced on demand. Native `Dwi.run` keeps no
+   idle isolate (one per call), so the setting has nothing to retire there;
+   dedicated handles are never retired by it. Non-positive values are
+   rejected by `validated()`.
+2. `Dwi.close({bool drain = false})`: with `drain`, new `run`,
+   `runCancellable` and `runFresh` calls are refused with
+   `DwiUnsupportedException` while calls already started settle normally,
+   each bounded by its own timeouts; then the usual close runs. Without
+   `drain`, behaviour is unchanged: running pooled calls are settled with
+   `DwiUnsupportedException`.
+
+Draining is implemented in the `Dwi` facade by tracking unsettled calls, so
+both backends share it and `DwiBackend` is unchanged. Handles, links and
+`runStream` streams are not waited for.
+
+**Alternatives rejected.** Draining inside each backend (two implementations
+of the same rule); an idle timeout on by default (changes the warm-pool
+latency users already rely on).
+
+**Acceptance.** Native: started pooled, cancellable and fresh calls complete
+during a drain, new ones are refused, a failing call does not block the
+drain, a plain close does not wait, and work is accepted after close. Web, all
+four host/worker compiler pairs in four engines: one worker retired after
+300 ms idle, replaced on the next call, kept alive by steady work, two slow
+calls drained while a new call is refused, a plain close still cutting a
+running call, and every worker terminated.
+
 ## ADR-023 — Links between two handles (port-like messaging, increment 2)
 
 **Status.** Accepted, 2026-11-13. Completion-plan tranche C, second increment

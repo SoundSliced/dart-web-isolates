@@ -29,6 +29,7 @@ class DwiConfig {
     this.heartbeatInterval = const Duration(seconds: 5),
     this.heartbeatMisses = 2,
     this.channelBufferSize = 64,
+    this.idleTimeout,
   });
 
   /// Conventional served path for the generated worker.
@@ -90,9 +91,20 @@ class DwiConfig {
   /// direction, and on the receiver-side channel buffer (ADR-014).
   ///
   /// A further send throws [DwiChannelBufferException] instead of growing
-  /// memory; a receiver that stops reading delays acknowledgements, so the
-  /// sender stalls rather than losing messages.
+  /// memory, and a receiver whose buffer is full refuses the message, so the
+  /// sender's `send` fails rather than a message being lost. Link channels
+  /// (ADR-023) acknowledge on consumption instead, so an awaiting sender waits.
   final int channelBufferSize;
+
+  /// How long a pooled web worker may stay idle before it is terminated
+  /// (ADR-024). `null`, the default, keeps idle workers until [maxWorkers] or
+  /// `Dwi.close()` retires them.
+  ///
+  /// A retired worker is replaced on demand, so the next call pays startup
+  /// again. Native `Dwi.run` uses a fresh isolate per call and keeps no idle
+  /// isolate, so this setting has nothing to retire there; dedicated
+  /// `DwiWorker` handles are never retired by it.
+  final Duration? idleTimeout;
 
   /// Returns a copy with validated values or throws [ArgumentError].
   DwiConfig validated() {
@@ -150,6 +162,10 @@ class DwiConfig {
         'channelBufferSize',
         'must be >= 1',
       );
+    }
+    final idle = idleTimeout;
+    if (idle != null && idle <= Duration.zero) {
+      throw ArgumentError.value(idle, 'idleTimeout', 'must be positive');
     }
     return this;
   }

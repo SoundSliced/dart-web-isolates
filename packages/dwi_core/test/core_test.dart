@@ -13,6 +13,16 @@ void main() {
       expect(config.validated(), same(config));
     });
 
+    test('idleTimeout is off by default and must be positive (ADR-024)', () {
+      expect(const DwiConfig().idleTimeout, isNull);
+      const config = DwiConfig(idleTimeout: Duration(seconds: 1));
+      expect(config.validated().idleTimeout, const Duration(seconds: 1));
+      expect(
+        () => const DwiConfig(idleTimeout: Duration.zero).validated(),
+        throwsArgumentError,
+      );
+    });
+
     test('rejects invalid values', () {
       expect(
         () => const DwiConfig(maxWorkers: 0).validated(),

@@ -63,6 +63,29 @@ abstract final class Dwi {
 
   static DwiBackend get _active => _backend ??= impl.createBackend(registry);
 
+  /// Pooled and fresh calls that have not settled, for `close(drain: true)`.
+  static final Set<Future<Object?>> _inFlight = <Future<Object?>>{};
+
+  /// Set while a draining [close] waits; new calls are refused meanwhile.
+  static bool _closing = false;
+
+  /// Records [call] until it settles and returns it unchanged.
+  static Future<T> _track<T>(Future<T> call) {
+    _inFlight.add(call);
+    call.then<void>((_) {}, onError: (Object _) {}).whenComplete(
+      () => _inFlight.remove(call),
+    );
+    return call;
+  }
+
+  static void _refuseWhileClosing(String task) {
+    if (_closing) {
+      throw DwiUnsupportedException(
+        'task "$task" was refused: DWI is closing',
+      );
+    }
+  }
+
   /// Applies configuration. Safe to call before the first task.
   ///
   /// On web, [DwiConfig.workerScript] is required; without it calls fail with
@@ -86,7 +109,8 @@ abstract final class Dwi {
   /// [DwiTimeoutException], [DwiSerializationException] or [DwiRemoteException]
   /// on failure. There is no main-thread fallback.
   static Future<R> run<R>(String task, [Object? input]) async {
-    final result = await _active.run(task, input);
+    _refuseWhileClosing(task);
+    final result = await _track(_active.run(task, input));
     if (result is R) return result;
     throw DwiResultTypeException(
       'task "$task" returned ${result.runtimeType}, expected $R',
@@ -109,8 +133,11 @@ abstract final class Dwi {
   /// a performance improvement. Errors are the same typed failures [run] and
   /// [DwiWorker.run] raise; a spawn failure propagates unchanged and nothing is
   /// retried.
-  static Future<R> runFresh<R>(String task, [Object? input]) {
-    return DwiWorker.using<R>((worker) => worker.run<R>(task, input));
+  static Future<R> runFresh<R>(String task, [Object? input]) async {
+    _refuseWhileClosing(task);
+    return _track(
+      DwiWorker.using<R>((worker) => worker.run<R>(task, input)),
+    );
   }
 
   /// Runs a stream [task] in a fresh execution context and returns its items
@@ -203,7 +230,16 @@ abstract final class Dwi {
   /// final cancelled = await task.cancel();
   /// ```
   static DwiCancellableTask<R> runCancellable<R>(String task, [Object? input]) {
+    if (_closing) {
+      final refused = DwiCancellableTask<R>(cancel: () async => false);
+      refused.result.ignore();
+      refused.completeError(
+        DwiUnsupportedException('task "$task" was refused: DWI is closing'),
+      );
+      return refused;
+    }
     final inner = _active.start(task, input);
+    _track(inner.result);
     final outer = DwiCancellableTask<R>(cancel: inner.cancel);
     outer.result.ignore();
     unawaited(
@@ -239,7 +275,27 @@ abstract final class Dwi {
   ///
   /// Live [DwiWorker] handles are closed first (ADR-013), so page or
   /// application teardown cannot leak a dedicated context.
-  static Future<void> close() async {
+  ///
+  /// With [drain] (ADR-024), new [run], [runCancellable] and [runFresh] calls
+  /// are refused with [DwiUnsupportedException] while the calls already
+  /// started (queued or running) settle normally, each still bounded by its
+  /// own timeouts; then everything is closed as usual. Dedicated handles,
+  /// their calls, links and [runStream] streams are not waited for: close them
+  /// first if they must finish.
+  static Future<void> close({bool drain = false}) async {
+    if (drain && !_closing) {
+      _closing = true;
+      try {
+        while (_inFlight.isNotEmpty) {
+          await Future.wait(<Future<void>>[
+            for (final call in List<Future<Object?>>.of(_inFlight))
+              call.then<void>((_) {}, onError: (Object _) {}),
+          ]);
+        }
+      } finally {
+        _closing = false;
+      }
+    }
     final backend = _backend;
     _backend = null;
     await backend?.close();

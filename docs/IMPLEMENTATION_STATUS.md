@@ -43,7 +43,7 @@ text is the older intent.
 | 19 | Flutter main-thread vs worker demonstration | partial | measured in `integration_tests/`; `examples/flutter_jank_demo` is an empty directory | E |
 | 22–24 | Protocol, correlation, error propagation | complete | `dwi_protocol`, protocol tests | — |
 | 25–26 | Native and browser backends | complete | package tests, browser matrices | — |
-| 27 | Worker pools | partial | pool size, queue, limits, replacement done; idle termination and alternative scheduling policies absent | D |
+| 27 | Worker pools | partial | pool size, queue, limits, replacement, idle retirement (ADR-024, unreleased) and draining close done; alternative scheduling policies not yet compared | D |
 | 28 | Timeouts and cancellation | partial | timeouts, queued cancellation, termination-based running cancellation; no cooperative cancellation | D |
 | 29 | Worker lifecycle states | limited | handle states and `stopReason` (ADR-013, ADR-017); pool slots have no public state | G |
 | 30 | Port-like messaging | limited | named bounded channels (ADR-014); handle-to-handle links relayed by the host (ADR-023, unreleased; native + 16 cells); no `SendPort` objects or direct worker-to-worker path | — |

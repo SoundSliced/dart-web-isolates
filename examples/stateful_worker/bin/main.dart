@@ -28,6 +28,7 @@ Future<void> main() async {
   } finally {
     // Always release the dedicated context, including on failure.
     await worker.close();
-    await Dwi.close();
+    // Let any pooled call still running finish before shutting down (ADR-024).
+    await Dwi.close(drain: true);
   }
 }

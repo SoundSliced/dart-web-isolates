@@ -345,6 +345,12 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
     content hash still avoids recompiling an unchanged worker). A disposable
     Flutter 3.47.6 release app was measured switching js → wasm → js by file
     creation and deletion alone.
+53. **Idle retirement and draining are pool-level (ADR-024, checkout only).**
+    `DwiConfig.idleTimeout` retires idle pooled web workers; native pooled
+    calls already use one isolate per call. `Dwi.close(drain: true)` waits
+    only for pooled and fresh calls: handles, links and `runStream` streams
+    are closed as before. A drain is as long as the slowest started call,
+    bounded by `taskTimeout` plus `queueTimeout`.
 
 ## Research debt (unresolved, tracked)
 
