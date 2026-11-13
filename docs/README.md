@@ -19,6 +19,11 @@ directory holds the maintained reference material.
 | `benchmarks.md` | Benchmark methodology and results. |
 | `limitations.md` | Known gaps, stated plainly. |
 | `upstream-strategy.md` | Path toward Dart/Flutter upstream integration. |
+| `MASTER_PLAN.md` | The master plan (reconstructed by its author, 2026-11-11). |
+| `ENGINEERING_HANDOFF.md` | Audit and continuation handoff that accompanies the master plan. |
+| `ZERO_BOILERPLATE_ADDENDUM.md` | Addendum: automatic worker compilation and the zero-boilerplate goal. |
+| `IMPLEMENTATION_STATUS.md` | Every plan objective classified against the repository. |
+| `completion-plan.md` | Ordered tranches that finish what the status leaves open. |
 | `upstream/flutter-web-hook-ordering.md` | Prepared proposal: order web build hooks before Dart compilation. |
 | `prior-art.md` | Existing packages and what to reuse or avoid. |
 
