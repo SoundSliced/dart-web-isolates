@@ -4,10 +4,16 @@ Development-time tools. None of these ship in a user's dependency graph.
 
 | Tool | Purpose | Status |
 | --- | --- | --- |
-| `worker_compiler/` | Compile Dart worker entrypoints (`dart compile js`, later `dart compile wasm`) and place artefacts where the app serves them. | Planned |
-| `code_generator/` | Generate deterministic worker registries, dispatch tables and serialization bindings from `@DwiTask` declarations. | Planned |
-| `benchmark_runner/` | Run the benchmark matrix (main thread / worker / Wasm worker / native isolate) and emit comparable results. | Planned |
 | `proxy_gate/` | Reproduce the fresh typed-proxy Flutter ordering gap (first build fails, second succeeds) and fail if Flutter ever orders it correctly. | Implemented |
+| `tree_shaking_probe/` | Build the generator's registry for annotated shapes and check dart2js output at `-O1`, `-O2` and `-O4` keeps every annotated shape and drops an unreferenced one. | Implemented (completion-plan tranche A8) |
+| `hosted_consumer/` | Drive the four supported engines against a served directory (the probe used by the browser matrix). | Implemented |
+| `dwi5_probe/` | DWI-5 function-reference probes (static identity, analyzer forms). | Research probe |
+| `data_asset_gate/` | Data-asset build gate evidence for Flutter web. | Research probe |
+
+Code generation lives in `packages/dwi_builder`. Benchmarks live in `benchmarks/`
+and `benchmarks/browser_matrix`. The earlier `worker_compiler/`, `code_generator/`
+and `benchmark_runner/` entries were never populated and were removed from this
+table on 2026-11-14.
 
 Rules:
 
