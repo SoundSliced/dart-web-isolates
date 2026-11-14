@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [dwi, dwi_annotations, dwi_builder, dwi_core, dwi_flutter, dwi_native, dwi_protocol, dwi_web]
+    defaults:
+      run:
+        working-directory: packages/${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: "3.15.0-133.0.dev"
+
+      - name: Resolve dependencies
+        run: dart pub get
+
+      - name: Format check
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze (no infos ignored)
+        run: dart analyze --fatal-infos
+
+      - name: VM tests
+        # dwi_builder's browser_*_test.dart files drive real browsers and are
+        # run locally with the browser matrix, not on this runner.
+        run: |
+          if [ "${{ matrix.package }}" = "dwi_builder" ]; then
+            dart test $(ls test/*_test.dart | grep -v '/browser_')
+          else
+            dart test
+          fi
