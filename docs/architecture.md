@@ -1931,6 +1931,137 @@ recursive class, nested collections, a wrong enum name and a wrong record
 arity; negative discovery tests for every rejection; generated output unchanged
 for existing types.
 
+## ADR-025 — Flutter surface: `dwi_flutter` and runnable examples (tranche E)
+
+**Status.** Proposed, 2026-11-14. Not accepted. No code lands until the
+maintainer accepts this ADR and `docs/api-proposal.md` (AGENTS.md rule 2).
+Completion-plan tranche E.
+
+**Problem.** The packages have no Flutter-facing entry point. `dwi` and its
+dependencies are pure Dart, so a Flutter widget tree has to wire `Dwi`
+calls itself. Five example directories are empty: `flutter_counter`,
+`flutter_jank_demo`, `image_processing`, `json_parser` and `worker_pool`
+(`examples/`). The tranche text also asks for a responsiveness demo against
+Flutter's `compute()`.
+
+**Proposal.**
+
+1. A new package `dwi_flutter` depends on `dwi` and `flutter`. The pure
+   Dart packages do not gain a Flutter dependency.
+2. `dwi_flutter` exposes one function, `computeParallel`, which runs one
+   registered task per input on the shared pool and returns results in input
+   order:
+
+   ```dart
+   Future<List<O>> computeParallel<I, O>(
+     Future<O> Function(I input) task,
+     List<I> inputs, {
+     int? maxConcurrency,
+   });
+   ```
+
+   `task` is a generated typed proxy (ADR-020, ADR-021), so the input and
+   output types are checked at compile time. A name-based overload is not
+   proposed. Open question O1 below asks whether `maxConcurrency` is needed
+   at all, since the pool already bounds work.
+3. Errors are the existing typed errors (`DwiTimeoutException`,
+   `DwiWorkerFailedException`, `DwiRemoteException`). The first failing input
+   fails the whole call, and the remaining work is cancelled through
+   ADR-027. No failure is swallowed (AGENTS.md rule 12).
+4. Examples: `flutter_counter` and `flutter_jank_demo` become runnable Flutter
+   examples of `computeParallel` and of the responsiveness comparison. The
+   other three are open question O2.
+5. The responsiveness demo reports three rows, measured separately: work on
+   the main thread, work through `computeParallel`, and work through
+   `compute()`. The demo makes no claim that one is faster than another
+   beyond what its measurements show. `critical-review.md` M10 applies: no
+   parity or replacement claim for `compute()`.
+
+**Constraints the package must state.** Flutter web builds need DWI's
+worker build hook (ADR-009). A fresh typed-proxy app's first Flutter build
+can fail (`docs/upstream/flutter-web-hook-ordering.md`; measured 2026-11-10
+on Flutter 3.47.6). The package documentation must say so and link the
+limitation, not hide it.
+
+**Open questions (decision needed before acceptance).**
+
+- O1. Keep or drop `maxConcurrency`. Dropping it keeps the surface smaller;
+  keeping it lets one call use fewer than all pool workers.
+- O2. `image_processing`, `json_parser` and `worker_pool` are empty. Fill
+  each with a runnable example, or remove the directory. Filling them adds
+  test and maintenance cost on each example.
+- O3. Which Flutter SDK version the Flutter web matrix runs on. The
+  measurements so far are on Flutter 3.47.x.
+
+**Alternatives rejected.** Adding Flutter to `dwi` (makes every pure Dart
+user depend on Flutter). Changing or wrapping `compute()` itself (out of
+scope and a semantic change that maintainers would resist, M10).
+
+**Acceptance.** Unit tests for `computeParallel`: order preserved, first error
+fails the call and cancels the rest, empty input returns an empty list, a
+non-cloneable input is rejected as the proxy rejects it. Each runnable example
+runs in the Flutter web matrix in the four engines, and the matrix result is
+recorded in `docs/browser-matrix.md` with the Flutter version.
+
+## ADR-026 — Diagnostics and architecture decisions (tranche G)
+
+**Status.** Proposed, 2026-11-14. Not accepted. Each item below is either
+shipped with tests or closed with a dated decision, as completion-plan
+tranche G requires. Items are independent; accepting one does not accept the
+others.
+
+**Current state, from code.** No metrics exist (no `metric` symbol in
+`packages/*/lib`). Protocol version is reported, not negotiated:
+`DwiCapabilities.protocolVersion` (`packages/dwi_core/lib/src/capabilities.dart`),
+native reports `1` (`packages/dwi_native/lib/src/native_backend.dart:263`),
+web reports `dwiProtocolVersion`
+(`packages/dwi_web/lib/src/web_backend.dart:304`). No negotiation code
+exists (zero `negotiat` hits in `packages/*/lib`).
+
+**Decisions proposed.**
+
+1. **Opt-in metrics (G1).** `DwiConfig(metrics: true)` enables a snapshot
+   `Dwi.metrics()` with worker count, queue depth, startup time, task time,
+   transfer size and failure counts. Off by default: no cost when unused.
+   Open question O4: is a snapshot enough, or does the API also need a
+   stream?
+2. **Public pool state (G2).** `Dwi.poolState()` returns the state of each
+   worker (`ready`, `running`, `closing`, `failed`) and its queue depth. It
+   reads existing state; it adds no new states.
+3. **Protocol version negotiation (G3).** The host sends its version in the
+   `ready` handshake. A worker reporting a different version fails the
+   handle with a typed protocol error, not a silent mismatch. Open question
+   O5: whether `dwiProtocolVersion` must change for this, which would be a
+   wire change with its own compatibility note.
+4. **Explicit opt-in fallback policy (G4).** Current behaviour: an
+   unavailable worker fails the call (AGENTS.md rule 12, no silent
+   main-thread fallback). Proposal: keep that default. Add an explicit
+   `DwiFallback.mainThread` opt-in, recorded in `DwiCapabilities` so the
+   caller can see that work ran on the main thread. Open question O6: whether
+   the opt-in is wanted at all, given the rule above.
+5. **Worker replacement on hot restart in debug (G5).** Critical-review S5
+   is open. The mechanism is not decided: this item stays **unresolved**
+   until a probe shows how Flutter's hot restart reaches the worker. No API
+   is proposed until then.
+6. **Universal vs per-task vs chunked workers (G6).** A benchmark, not an
+   API decision. It is unverified until a benchmark design is accepted and
+   run in the four engines. No conclusion is drawn here.
+7. **Written Wasm comparison (G7).** A document comparing Wasm instances,
+   shared memory and threads. No API. Writing it has no dependency on the
+   other items.
+8. **`SharedArrayBuffer` bytes (G8).** Possible only under COOP/COEP (see
+   `docs/limitations.md`). No API is proposed. The decision is whether to
+   document it as a limitation or to add an opt-in type; that is open
+   question O7.
+
+**Alternatives rejected.** Metrics on by default (costs every user, including
+those who never look at them). Silent fallback to the main thread (breaks
+AGENTS.md rule 12 and hides where the work actually ran).
+
+**Acceptance.** Each accepted item has tests on native and the host/worker
+matrix where it touches the web backend. Each declined or deferred item
+has a dated entry in `docs/architecture.md` naming its reason.
+
 ## Consequences
 
 - The first release is deliberately narrow: named tasks, one worker pool, typed

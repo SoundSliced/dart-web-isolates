@@ -59,7 +59,7 @@ The table above is kept as raised. Current state of the open items:
 | Gate 2 browser matrix | closed for desktop engines; mobile unverified | `docs/browser-matrix.md` |
 | Gate 3 cooperative cancellation | open | `docs/completion-plan.md` tranche D |
 | Gate 4 pool-sizing guidance | open | tranche A10 |
-| Gate 5 tree shaking for every shape | open | tranche A8 |
+| Gate 5 tree shaking for every shape | open (tested shapes measured, see `docs/limitations.md` 13) | tranche A8 |
 
 ## What this review changed
 

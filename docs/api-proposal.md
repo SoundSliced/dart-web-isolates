@@ -696,6 +696,35 @@ runtime compilation is rejected for v0.x on evidence grounds.
   `DwiWorkerDispatcher`, `DwiWorkerTask`) for generated workers.
 - Added `dwi_builder` and its CLI; no application runtime dependency on it.
 
+## Flutter surface (ADR-025, proposed 2026-11-14, not accepted)
+
+New package `dwi_flutter` (depends on `dwi` and `flutter`):
+
+```dart
+Future<List<O>> computeParallel<I, O>(
+  Future<O> Function(I input) task,
+  List<I> inputs, {
+  int? maxConcurrency, // open question O1 in ADR-025
+});
+```
+
+`task` is a generated typed proxy. No name-based overload. Open questions O1–O3
+are in ADR-025.
+
+## Diagnostics (ADR-026, proposed 2026-11-14, not accepted)
+
+- `DwiConfig(metrics: true)` and `Dwi.metrics()`: opt-in snapshot (G1). Open
+  question O4: whether a stream is also needed.
+- `Dwi.poolState()`: per-worker state and queue depth (G2). Reads existing
+  states only.
+- Protocol version negotiated in the `ready` handshake (G3). Open question O5:
+  whether the wire version changes.
+- `DwiFallback.mainThread`: explicit opt-in only, recorded in
+  `DwiCapabilities` (G4). Open question O6: whether to offer it at all.
+- G5 (hot-restart replacement) is unresolved; no API proposed.
+- G8 (`SharedArrayBuffer` bytes) proposes no API; open question O7 asks whether
+  to document it as a limitation or add an opt-in type.
+
 ## Documentation requirement
 
 Every exported declaration is dartdoc'd and has a runnable example in

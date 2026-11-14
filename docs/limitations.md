@@ -115,6 +115,12 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
 13. **Generated-registry tree shaking is verified for tested shapes.** The
     generated worker uses static references, and v0.3 compiles and runs in
     Chrome. A universal proof for every library shape is not claimed.
+    `tooling/tree_shaking_probe/run.sh` (2026-11-14) runs the real generator
+    on seven shapes: top-level functions reached through an `export` barrel,
+    a `part` file, a top-level const table, an async task, a local function,
+    and a transitive unannotated helper. An unreferenced function is dropped.
+    Checked with dart2js at `-O1`, `-O2` and `-O4`, three passes, identical
+    results. dart2wasm is not measured by this probe.
 14. **Wasm worker generation is supported as an opt-in backend (since 0.8.0).** `dwi build --target=wasm`
     publishes a content-addressed `gen-<generation>/` directory (module and
     loader) plus a small `worker.boot.mjs` entry that is switched atomically;
