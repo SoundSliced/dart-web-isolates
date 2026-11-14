@@ -138,6 +138,15 @@ int boxBlurSum(Uint8List pixels) {
   return sum;
 }
 
+/// G6 chunked strategy: one call does [items] units of 2 ms busy work in one
+/// worker, so the call's cost is items x 2 ms on a single context.
+@DwiTask()
+String spinBatch(int items) {
+  final until = DateTime.now().add(Duration(milliseconds: items * 2));
+  while (DateTime.now().isBefore(until)) {}
+  return 'batch';
+}
+
 /// Answers, then closes the worker's global scope so the pool sees an idle
 /// worker that can never reply again.
 @DwiTask()

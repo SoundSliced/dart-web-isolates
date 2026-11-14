@@ -1,5 +1,25 @@
 # Browser Matrix
 
+## Worker-use strategies and protocol check, four engines (ADR-026 G6, G3, 2026-11-14)
+
+Phase L of the page, three passes, four engines. Evidence:
+`audit/evidence/worker-strategies-and-protocol-check-2026-11-14.json`.
+
+| Strategy | Units | Calls | Chrome (ms) | Safari | Firefox | Edge |
+| --- | --- | --- | --- | --- | --- | --- |
+| Shared pool of 4, one call per unit | 200 | 200 | 126.6 | 137 | 130 | 126.2 |
+| Shared pool of 4, four chunks of 50 | 200 | 4 | 100.2 | 101 | 100 | 100.2 |
+| One worker, one call for all units | 200 | 1 | 400 | 401 | 400 | 399.8 |
+| Fresh worker per unit (`runFresh`) | 50 | 50 | 283.2 | 351 | 289 | 236.7 |
+
+Each unit is 2 ms of busy work. The fresh-worker row is 50 units, so its
+makespan is not comparable to the 200-unit rows; per unit it costs about 4 to 7
+times the pooled rows.
+
+Protocol check (G3): the same page served with a worker whose `ready` message
+reports protocol version 9 while the host speaks 2. Every engine failed the
+startup with `worker reported protocol version 9; the host speaks protocol 2`.
+
 ## Metrics and pool state, four engines (ADR-026 G1, G2, 2026-11-14)
 
 The page's phase K runs with `DwiConfig(metrics: true, maxWorkers: 2)`: 20

@@ -7,6 +7,7 @@ import 'package:dwi_protocol/dwi_protocol.dart';
 import 'package:web/web.dart' as web;
 
 import 'payload.dart';
+import 'protocol_check.dart';
 import 'web_worker_handle.dart';
 
 /// One live worker and its in-flight requests.
@@ -466,6 +467,15 @@ class WebBackend implements DwiBackend, DwiPoolInspector {
       }
       if (envelope.type == DwiMessageType.ready) {
         final capabilities = envelope.meta['capabilities'];
+        // G3: a worker on another protocol version fails the startup, rather
+        // than running calls it may not decode.
+        final mismatch = workerProtocolMismatch(
+          capabilities is Map ? capabilities['protocolVersion'] : null,
+        );
+        if (mismatch != null) {
+          _fail(slot, mismatch);
+          return;
+        }
         if (capabilities is Map) {
           final backend = capabilities['backend'];
           if (backend is String && backend.isNotEmpty) {

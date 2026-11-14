@@ -2018,11 +2018,24 @@ the items below. Acceptance does not mean every item is shipped. Per item:
 
 - G1 (metrics): decided and shipped, with tests and browser runs.
 - G2 (pool state): decided and shipped, with tests and browser runs.
-- G3 (protocol version): decided (no wire change); the host-side check is not written.
 - G4 (fallback): closed by decision (no fallback option).
-- G5 (hot-restart replacement): **unresolved**; needs a probe before any API.
-- G6 (worker model benchmark): **open**; needs a benchmark design.
-- G7 (Wasm comparison): **open**; written document not started.
+- G3 (protocol version): shipped 2026-11-14. The host reads the version from
+  the worker's `ready` capabilities and fails the startup on any other value
+  (`packages/dwi_web/lib/src/protocol_check.dart`). Measured end to end in four
+  engines with a worker reporting version 9 (`audit/evidence/worker-strategies-and-protocol-check-2026-11-14.json`).
+- G5 (hot-restart replacement): closed by decision 2026-11-14. DWI does not
+  replace workers on hot restart. The reason is in the code: the facade keeps
+  its backend in static state (`packages/dwi/lib/dwi.dart`, `_backend`), so a
+  restart that re-initialises Dart statics drops the reference to workers that
+  are still running. No probe was run; the claim follows from the code. The
+  mitigation is `Dwi.close()` on teardown, and `Dwi.poolState()` (G2) to inspect
+  what is live.
+- G6 (worker-use strategies): measured 2026-11-14 in four engines, three passes
+  (`docs/browser-matrix.md`). A shared pool of 4 and 4 chunks finished in about
+  100 to 137 ms for 200 units of 2 ms; one worker running all 200 units took about
+  400 ms; a fresh worker per task (50 units) took 236 to 351 ms.
+- G7 (Wasm comparison): written 2026-11-14 in `docs/wasm-worker-comparison.md`.
+  One instance per worker stays the only shipped design.
 - G8 (`SharedArrayBuffer`): closed by decision (limitation, no API).
 
 **Current state, from code.** No metrics exist (no `metric` symbol in

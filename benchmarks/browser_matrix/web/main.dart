@@ -490,6 +490,81 @@ Future<void> _run() async {
       'workersIdle': idlePool.workers.length,
     };
 
+    // L: worker-use strategies (ADR-026 G6). 200 units of 2 ms work, split three
+    // ways: a shared pool of 4 workers (200 calls), chunks of 50 on that pool
+    // (4 calls), and one worker running all 200 units in a single call. Per-task
+    // fresh workers (runFresh) are measured on 50 units only, because spawning
+    // 200 workers is far slower; their figure is per call, not comparable as a
+    // makespan.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        maxWorkers: 4,
+        maxQueuedTasks: 1024,
+      ),
+    );
+    final strategies = <String, Object?>{};
+    Future<double> timed(Future<Object?> Function() body) async {
+      final watch = Stopwatch()..start();
+      await body();
+      return watch.elapsedMicroseconds / 1000;
+    }
+
+    strategies['pool200Calls'] = <String, Object?>{
+      'units': 200,
+      'calls': 200,
+      'makespanMs': await timed(
+        () => Future.wait(<Future<String>>[
+          for (var i = 0; i < 200; i++) Dwi.run<String>('spinBatch', 1),
+        ]),
+      ),
+    };
+    strategies['pool4Chunks'] = <String, Object?>{
+      'units': 200,
+      'calls': 4,
+      'makespanMs': await timed(
+        () => Future.wait(<Future<String>>[
+          for (var i = 0; i < 4; i++) Dwi.run<String>('spinBatch', 50),
+        ]),
+      ),
+    };
+    strategies['singleWorkerOneCall'] = <String, Object?>{
+      'units': 200,
+      'calls': 1,
+      'makespanMs': await timed(() => Dwi.run<String>('spinBatch', 200)),
+    };
+    final freshMs = await timed(
+      () => Future.wait(<Future<String>>[
+        for (var i = 0; i < 50; i++) Dwi.runFresh<String>('spinBatch', 1),
+      ]),
+    );
+    strategies['freshWorkerPerTask'] = <String, Object?>{
+      'units': 50,
+      'calls': 50,
+      'makespanMs': freshMs,
+    };
+    result['strategies'] = strategies;
+
+    // M: G3 end to end. Loads a worker whose ready message reports another
+    // protocol version. The probe serves a patched copy under dwi-mismatch/ in
+    // one run; in the unpatched root the file is missing and the message says so.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: 'dwi-mismatch/worker.dart.js',
+        maxWorkers: 1,
+      ),
+    );
+    String protocolMessage;
+    try {
+      await Dwi.run<int>('tiny', 1);
+      protocolMessage = 'no error';
+    } catch (error) {
+      protocolMessage = error.toString();
+    }
+    result['protocolMismatch'] = <String, Object?>{'message': protocolMessage};
+
     await Dwi.close();
     result['status'] = 'ok';
   } catch (error, stack) {

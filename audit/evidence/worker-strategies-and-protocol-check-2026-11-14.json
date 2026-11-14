@@ -1,0 +1,198 @@
+{
+  "date": "2026-11-14",
+  "method": "G6: browser matrix page phase L, probe, three passes. G3: same page served with a worker whose ready message reports protocol version 9 (host speaks 2), probe, three passes.",
+  "summary": {
+    "chrome": {
+      "allOk": true,
+      "strategies": {
+        "pool200Calls": {
+          "units": 200,
+          "calls": 200,
+          "makespanMedianMs": 126.6,
+          "makespanMs": [
+            126.6,
+            133.2,
+            123.4
+          ]
+        },
+        "pool4Chunks": {
+          "units": 200,
+          "calls": 4,
+          "makespanMedianMs": 100.2,
+          "makespanMs": [
+            100,
+            100.2,
+            101.1
+          ]
+        },
+        "singleWorkerOneCall": {
+          "units": 200,
+          "calls": 1,
+          "makespanMedianMs": 400,
+          "makespanMs": [
+            400,
+            399.9,
+            400.3
+          ]
+        },
+        "freshWorkerPerTask": {
+          "units": 50,
+          "calls": 50,
+          "makespanMedianMs": 283.199,
+          "makespanMs": [
+            283.199,
+            273.4,
+            331.9
+          ]
+        }
+      },
+      "protocolMismatchMessages": [
+        "minified:aw: worker reported protocol version 9; the host speaks protocol 2"
+      ]
+    },
+    "safari": {
+      "allOk": true,
+      "strategies": {
+        "pool200Calls": {
+          "units": 200,
+          "calls": 200,
+          "makespanMedianMs": 137,
+          "makespanMs": [
+            137,
+            129,
+            156
+          ]
+        },
+        "pool4Chunks": {
+          "units": 200,
+          "calls": 4,
+          "makespanMedianMs": 101,
+          "makespanMs": [
+            101,
+            101,
+            100
+          ]
+        },
+        "singleWorkerOneCall": {
+          "units": 200,
+          "calls": 1,
+          "makespanMedianMs": 401,
+          "makespanMs": [
+            401,
+            406,
+            401
+          ]
+        },
+        "freshWorkerPerTask": {
+          "units": 50,
+          "calls": 50,
+          "makespanMedianMs": 351,
+          "makespanMs": [
+            351,
+            314,
+            382
+          ]
+        }
+      },
+      "protocolMismatchMessages": [
+        "minified:aw: worker reported protocol version 9; the host speaks protocol 2"
+      ]
+    },
+    "firefox": {
+      "allOk": true,
+      "strategies": {
+        "pool200Calls": {
+          "units": 200,
+          "calls": 200,
+          "makespanMedianMs": 130,
+          "makespanMs": [
+            133,
+            130,
+            123
+          ]
+        },
+        "pool4Chunks": {
+          "units": 200,
+          "calls": 4,
+          "makespanMedianMs": 100,
+          "makespanMs": [
+            100,
+            100,
+            100
+          ]
+        },
+        "singleWorkerOneCall": {
+          "units": 200,
+          "calls": 1,
+          "makespanMedianMs": 400,
+          "makespanMs": [
+            399,
+            400,
+            400
+          ]
+        },
+        "freshWorkerPerTask": {
+          "units": 50,
+          "calls": 50,
+          "makespanMedianMs": 289,
+          "makespanMs": [
+            289,
+            242,
+            358
+          ]
+        }
+      },
+      "protocolMismatchMessages": [
+        "minified:aw: worker reported protocol version 9; the host speaks protocol 2"
+      ]
+    },
+    "edge": {
+      "allOk": true,
+      "strategies": {
+        "pool200Calls": {
+          "units": 200,
+          "calls": 200,
+          "makespanMedianMs": 126.2,
+          "makespanMs": [
+            118.4,
+            127.4,
+            126.2
+          ]
+        },
+        "pool4Chunks": {
+          "units": 200,
+          "calls": 4,
+          "makespanMedianMs": 100.2,
+          "makespanMs": [
+            100.199,
+            100.2,
+            100.201
+          ]
+        },
+        "singleWorkerOneCall": {
+          "units": 200,
+          "calls": 1,
+          "makespanMedianMs": 399.801,
+          "makespanMs": [
+            399.801,
+            399.8,
+            400
+          ]
+        },
+        "freshWorkerPerTask": {
+          "units": 50,
+          "calls": 50,
+          "makespanMedianMs": 236.699,
+          "makespanMs": [
+            216.301,
+            258.2,
+            236.699
+          ]
+        }
+      },
+      "protocolMismatchMessages": [
+        "minified:aw: worker reported protocol version 9; the host speaks protocol 2"
+      ]
+    }
+  }
+}
