@@ -1,5 +1,27 @@
 # Browser Matrix
 
+## Strict CSP worker, four engines (tranche A7, 2026-11-14)
+
+The matrix page runs unchanged under this meta policy:
+
+`default-src 'none'; script-src 'self'; worker-src 'self'; connect-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'`
+
+It has no `'unsafe-inline'`, `'unsafe-eval'` or `blob:` source. The DWI worker
+is a same-origin script URL, so `worker-src 'self'` is enough. Runner:
+`benchmarks/browser_matrix/run_csp.sh`. Evidence:
+`audit/evidence/browser-matrix-csp-2026-11-14.json`.
+
+Result, three passes per engine: every pass on Chrome 157, Safari 26.5, Firefox
+160 and Edge 157 completed the full matrix with status `ok`.
+
+Enforcement control: a page with the same policy and an inline script. Every
+engine, every pass, blocked the inline script (`inlineRan: false`). So a pass
+above means the policy was enforced, not merely unchecked.
+
+Limits: this run covers same-origin scripts and workers only. A `blob:` worker
+(as used by the scheduling benchmark's own page) would need `worker-src blob:`,
+which is a weaker policy and is not measured here.
+
 ## Burst, leak and payload range, four engines (tranche A, 2026-11-13)
 
 Harness: `benchmarks/browser_matrix/web/main.dart`, run through
