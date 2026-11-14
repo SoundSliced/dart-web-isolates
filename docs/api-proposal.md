@@ -696,7 +696,7 @@ runtime compilation is rejected for v0.x on evidence grounds.
   `DwiWorkerDispatcher`, `DwiWorkerTask`) for generated workers.
 - Added `dwi_builder` and its CLI; no application runtime dependency on it.
 
-## Flutter surface (ADR-025, proposed 2026-11-14, not accepted)
+## Flutter surface (ADR-025, accepted 2026-11-14)
 
 New package `dwi_flutter` (depends on `dwi` and `flutter`):
 
@@ -710,7 +710,7 @@ Future<List<O>> computeParallel<I, O>(
 `task` is a generated typed proxy. No name-based overload and no concurrency
 parameter (O1, decided in ADR-025).
 
-## Diagnostics (ADR-026, proposed 2026-11-14; G1 and G2 implemented, not accepted)
+## Diagnostics (ADR-026, accepted 2026-11-14; G1 and G2 implemented)
 
 - `DwiConfig(metrics: true)` and `Dwi.metrics()` returning `DwiMetrics`:
   opt-in snapshot (G1, implemented 2026-11-14). Counts `Dwi.run` calls only.

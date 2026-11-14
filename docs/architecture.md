@@ -1933,9 +1933,11 @@ for existing types.
 
 ## ADR-025 — Flutter surface: `dwi_flutter` and runnable examples (tranche E)
 
-**Status.** Proposed, 2026-11-14. Not accepted. No code lands until the
-maintainer accepts this ADR and `docs/api-proposal.md` (AGENTS.md rule 2).
-Completion-plan tranche E.
+**Status.** Accepted by the maintainer, 2026-11-14. Implementation so far:
+`computeParallel` in `packages/dwi_flutter` with five tests (shipped). Not yet
+done: the two runnable Flutter examples (`flutter_counter`, `flutter_jank_demo`)
+and the Flutter web matrix in four engines. Completion-plan tranche E stays open
+until those land.
 
 **Problem.** The packages have no Flutter-facing entry point. `dwi` and its
 dependencies are pure Dart, so a Flutter widget tree has to wire `Dwi`
@@ -2011,10 +2013,17 @@ recorded in `docs/browser-matrix.md` with the Flutter version.
 
 ## ADR-026 — Diagnostics and architecture decisions (tranche G)
 
-**Status.** Proposed, 2026-11-14. G1 and G2 are implemented on 2026-11-14 at
-the maintainer's request ("G1 and G2 code"); they are not accepted as ADR text
-until the maintainer says so. G3 to G8 remain Proposed. Items are independent;
-implementing one does not accept the others.
+**Status.** Accepted by the maintainer, 2026-11-14, as the decision record for
+the items below. Acceptance does not mean every item is shipped. Per item:
+
+- G1 (metrics): decided and shipped, with tests and browser runs.
+- G2 (pool state): decided and shipped, with tests and browser runs.
+- G3 (protocol version): decided (no wire change); the host-side check is not written.
+- G4 (fallback): closed by decision (no fallback option).
+- G5 (hot-restart replacement): **unresolved**; needs a probe before any API.
+- G6 (worker model benchmark): **open**; needs a benchmark design.
+- G7 (Wasm comparison): **open**; written document not started.
+- G8 (`SharedArrayBuffer`): closed by decision (limitation, no API).
 
 **Current state, from code.** No metrics exist (no `metric` symbol in
 `packages/*/lib`). Protocol version is reported, not negotiated:
