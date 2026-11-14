@@ -9,10 +9,7 @@ import 'package:dwi_builder/dwi_builder.dart';
 
 Future<void> main() async {
   final builder = DwiBuilder(
-    const DwiBuildConfig(
-      projectRoot: '.',
-      compile: false,
-    ),
+    const DwiBuildConfig(projectRoot: '.', compile: false),
   );
 
   final result = await builder.build();

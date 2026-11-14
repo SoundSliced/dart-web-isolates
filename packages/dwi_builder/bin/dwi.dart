@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:dwi_builder/dwi_builder.dart';
 import 'package:path/path.dart' as p;
+
 Future<void> main(List<String> arguments) async {
   final parser = _parser();
   ArgResults results;
@@ -210,9 +211,7 @@ Future<int> _build(ArgResults command) async {
         '  manifest:   ${_relative(result.manifestPath, config.absoluteProjectRoot)}',
       );
     } else {
-      stdout.writeln(
-        '  manifest:   not written (compilation disabled)',
-      );
+      stdout.writeln('  manifest:   not written (compilation disabled)');
     }
     stdout.writeln('  hash:       ${result.hash.substring(0, 12)}');
     if (config.compile) {

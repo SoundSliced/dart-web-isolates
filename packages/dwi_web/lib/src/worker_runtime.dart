@@ -110,9 +110,7 @@ abstract final class DwiWorkerRuntime {
           remoteStack: remoteStack,
           taskId: id,
         ),
-        meta: <String, Object?>{
-          if (channel != null) 'channel': channel,
-        },
+        meta: <String, Object?>{if (channel != null) 'channel': channel},
       ),
     );
   }

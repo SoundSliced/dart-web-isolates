@@ -117,20 +117,23 @@ void main() {
       expect(config.workerScript, 'dwi/worker.boot.mjs');
     });
 
-    test('capabilities report an observed worker backend only when present', () {
-      const js = DwiCapabilities(
-        backend: DwiBackendKind.worker,
-        protocolVersion: 2,
-      );
-      expect(js.toMap().containsKey('workerBackend'), isFalse);
+    test(
+      'capabilities report an observed worker backend only when present',
+      () {
+        const js = DwiCapabilities(
+          backend: DwiBackendKind.worker,
+          protocolVersion: 2,
+        );
+        expect(js.toMap().containsKey('workerBackend'), isFalse);
 
-      const wasm = DwiCapabilities(
-        backend: DwiBackendKind.worker,
-        protocolVersion: 2,
-        workerBackend: 'dart2wasm',
-      );
-      expect(wasm.toMap()['workerBackend'], 'dart2wasm');
-    });
+        const wasm = DwiCapabilities(
+          backend: DwiBackendKind.worker,
+          protocolVersion: 2,
+          workerBackend: 'dart2wasm',
+        );
+        expect(wasm.toMap()['workerBackend'], 'dart2wasm');
+      },
+    );
   });
 
   group('exceptions', () {

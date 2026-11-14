@@ -54,14 +54,8 @@ void main() {
       bytes.markSent();
 
       expect(bytes.isDetached, isTrue);
-      expect(
-        () => bytes.bytes,
-        throwsA(isA<DwiSerializationException>()),
-      );
-      expect(
-        () => bytes.buffer,
-        throwsA(isA<DwiSerializationException>()),
-      );
+      expect(() => bytes.bytes, throwsA(isA<DwiSerializationException>()));
+      expect(() => bytes.buffer, throwsA(isA<DwiSerializationException>()));
     });
 
     test('empty bytes are not treated as detached', () {

@@ -22,19 +22,22 @@ void main() {
       expect(dwiProtocolVersion, 2);
     });
 
-    test('round-trips a channel message with name, generation and sequence', () {
-      const envelope = DwiEnvelope(
-        type: DwiMessageType.channelMessage,
-        payload: 'hello',
-        meta: <String, Object?>{'channel': 'chat', 'gen': 3, 'seq': 7},
-      );
-      final decoded = DwiEnvelope.fromMap(envelope.toMap());
-      expect(decoded.type, DwiMessageType.channelMessage);
-      expect(decoded.channel, 'chat');
-      expect(decoded.seq, 7);
-      expect(decoded.meta['gen'], 3);
-      expect(decoded.payload, 'hello');
-    });
+    test(
+      'round-trips a channel message with name, generation and sequence',
+      () {
+        const envelope = DwiEnvelope(
+          type: DwiMessageType.channelMessage,
+          payload: 'hello',
+          meta: <String, Object?>{'channel': 'chat', 'gen': 3, 'seq': 7},
+        );
+        final decoded = DwiEnvelope.fromMap(envelope.toMap());
+        expect(decoded.type, DwiMessageType.channelMessage);
+        expect(decoded.channel, 'chat');
+        expect(decoded.seq, 7);
+        expect(decoded.meta['gen'], 3);
+        expect(decoded.payload, 'hello');
+      },
+    );
 
     test('parses the channel error code', () {
       final payload = DwiErrorPayload.fromMap(<Object?, Object?>{
@@ -50,9 +53,7 @@ void main() {
         throwsA(isA<DwiProtocolException>()),
       );
       expect(
-        () => DwiEnvelope.fromMap(
-          <Object?, Object?>{'v': 99, 'type': 'ready'},
-        ),
+        () => DwiEnvelope.fromMap(<Object?, Object?>{'v': 99, 'type': 'ready'}),
         throwsA(isA<DwiProtocolException>()),
       );
     });
@@ -66,9 +67,11 @@ void main() {
 
     test('rejects a negative id', () {
       expect(
-        () => DwiEnvelope.fromMap(
-          <Object?, Object?>{'v': 1, 'type': 'request', 'id': -1},
-        ),
+        () => DwiEnvelope.fromMap(<Object?, Object?>{
+          'v': 1,
+          'type': 'request',
+          'id': -1,
+        }),
         throwsA(isA<DwiProtocolException>()),
       );
     });
@@ -144,10 +147,8 @@ void main() {
 
     test('still rejects numbers that are not integral', () {
       expect(
-        () => DwiEnvelope.fromMap(<Object?, Object?>{
-          'v': 1.5,
-          'type': 'ready',
-        }),
+        () =>
+            DwiEnvelope.fromMap(<Object?, Object?>{'v': 1.5, 'type': 'ready'}),
         throwsA(isA<DwiProtocolException>()),
       );
       expect(

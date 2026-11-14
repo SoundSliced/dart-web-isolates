@@ -161,6 +161,8 @@ void main() {
       }
     },
     timeout: const Timeout(Duration(minutes: 5)),
-    skip: chromeExecutable() == null ? 'Google Chrome is not installed.' : false,
+    skip: chromeExecutable() == null
+        ? 'Google Chrome is not installed.'
+        : false,
   );
 }

@@ -129,10 +129,7 @@ Future<Set<String>> collectRuntimeDependencies(DwiBuildConfig config) async {
     if (resolved.scheme != 'file') continue;
     final lib = Directory(p.join(resolved.toFilePath(), 'lib'));
     if (!await lib.exists()) continue;
-    await for (final entity in lib.list(
-      recursive: true,
-      followLinks: false,
-    )) {
+    await for (final entity in lib.list(recursive: true, followLinks: false)) {
       if (entity is File && entity.path.endsWith('.dart')) {
         files.add(p.normalize(entity.path));
       }

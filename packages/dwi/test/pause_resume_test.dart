@@ -151,9 +151,6 @@ void main() {
     } finally {
       await worker.close();
     }
-    await expectLater(
-      worker.ping(),
-      throwsA(isA<DwiWorkerClosedException>()),
-    );
+    await expectLater(worker.ping(), throwsA(isA<DwiWorkerClosedException>()));
   });
 }

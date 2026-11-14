@@ -5,10 +5,12 @@ void main() {
   group('DwiCancellableTask', () {
     test('settles once with a value and ignores later completion', () async {
       var cancelled = 0;
-      final task = DwiCancellableTask<int>(cancel: () async {
-        cancelled++;
-        return true;
-      });
+      final task = DwiCancellableTask<int>(
+        cancel: () async {
+          cancelled++;
+          return true;
+        },
+      );
 
       expect(task.isDone, isFalse);
       task.complete(7);
@@ -25,34 +27,39 @@ void main() {
       task.completeError(const DwiCancelledException('cancelled'));
       task.complete(1);
 
-      await expectLater(
-        task.result,
-        throwsA(isA<DwiCancelledException>()),
-      );
+      await expectLater(task.result, throwsA(isA<DwiCancelledException>()));
     });
 
-    test('cancel delegates and reports whether it changed the outcome', () async {
-      var result = true;
-      final task = DwiCancellableTask<int>(cancel: () async => result);
+    test(
+      'cancel delegates and reports whether it changed the outcome',
+      () async {
+        var result = true;
+        final task = DwiCancellableTask<int>(cancel: () async => result);
 
-      expect(await task.cancel(), isTrue);
-      result = false;
-      expect(await task.cancel(), isFalse);
-    });
+        expect(await task.cancel(), isTrue);
+        result = false;
+        expect(await task.cancel(), isFalse);
+      },
+    );
 
-    test('cancellation is delivered through result, not through cancel', () async {
-      late final DwiCancellableTask<int> task;
-      task = DwiCancellableTask<int>(cancel: () async {
-        task.completeError(const DwiCancelledException('cancelled'));
-        return true;
-      });
+    test(
+      'cancellation is delivered through result, not through cancel',
+      () async {
+        late final DwiCancellableTask<int> task;
+        task = DwiCancellableTask<int>(
+          cancel: () async {
+            task.completeError(const DwiCancelledException('cancelled'));
+            return true;
+          },
+        );
 
-      final expectation = expectLater(
-        task.result,
-        throwsA(isA<DwiCancelledException>()),
-      );
-      expect(await task.cancel(), isTrue);
-      await expectation;
-    });
+        final expectation = expectLater(
+          task.result,
+          throwsA(isA<DwiCancelledException>()),
+        );
+        expect(await task.cancel(), isTrue);
+        await expectation;
+      },
+    );
   });
 }

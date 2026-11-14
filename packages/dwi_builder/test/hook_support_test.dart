@@ -14,7 +14,8 @@ void main() {
     app = Directory(p.join(temp.path, 'app'))..createSync(recursive: true);
     Directory(p.join(app.path, '.dart_tool')).createSync(recursive: true);
     Directory(p.join(app.path, 'web')).createSync(recursive: true);
-    File(p.join(app.path, 'web', 'index.html')).writeAsStringSync('<html></html>');
+    File(p.join(app.path, 'web', 'index.html'))
+        .writeAsStringSync('<html></html>');
     writeAppPubspec(app);
     writeConfig(app);
   });
@@ -23,7 +24,8 @@ void main() {
     if (temp.existsSync()) temp.deleteSync(recursive: true);
   });
 
-  bool hasWeb(String path) => File(p.join(path, 'web', 'index.html')).existsSync();
+  bool hasWeb(String path) =>
+      File(p.join(path, 'web', 'index.html')).existsSync();
 
   test('finds the application package that owns the config', () {
     final config = File(p.join(app.path, '.dart_tool', 'package_config.json'));
@@ -39,14 +41,15 @@ void main() {
     // for the application just because it is listed in the app's config.
     final dependency = Directory(p.join(temp.path, 'dep'))..createSync();
     Directory(p.join(dependency.path, 'web')).createSync();
-    File(
-      p.join(dependency.path, 'web', 'index.html'),
-    ).writeAsStringSync('<html></html>');
+    File(p.join(dependency.path, 'web', 'index.html'))
+        .writeAsStringSync('<html></html>');
     writeAppPubspec(dependency);
     Directory(p.join(dependency.path, '.dart_tool')).createSync();
     writeConfig(dependency);
 
-    final appConfig = File(p.join(app.path, '.dart_tool', 'package_config.json'));
+    final appConfig = File(
+      p.join(app.path, '.dart_tool', 'package_config.json'),
+    );
     appConfig.writeAsStringSync(
       const JsonEncoder.withIndent('  ').convert(<String, Object?>{
         'configVersion': 2,
@@ -143,9 +146,7 @@ void writeConfig(
     },
   ];
   File(p.join(app.path, '.dart_tool', 'package_config.json')).writeAsStringSync(
-    const JsonEncoder.withIndent('  ').convert(<String, Object?>{
-      'configVersion': 2,
-      'packages': packages,
-    }),
+    const JsonEncoder.withIndent('  ')
+        .convert(<String, Object?>{'configVersion': 2, 'packages': packages}),
   );
 }

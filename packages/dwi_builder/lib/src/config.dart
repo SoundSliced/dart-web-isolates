@@ -131,9 +131,8 @@ class DwiBuildConfig {
   /// Every file this build publishes.
   ///
   /// Only meaningful for the `js` target; a wasm build needs its generation.
-  List<String> get absoluteArtifacts => isWasm
-      ? <String>[absoluteEntry]
-      : <String>[absoluteArtifact];
+  List<String> get absoluteArtifacts =>
+      isWasm ? <String>[absoluteEntry] : <String>[absoluteArtifact];
 
   /// Absolute manifest file.
   String get absoluteManifest => resolve(manifestPath);
@@ -172,11 +171,7 @@ class DwiBuildConfig {
       throw ArgumentError.value(workerId, 'workerId', 'must not be empty');
     }
     if (target != 'js' && target != 'wasm') {
-      throw ArgumentError.value(
-        target,
-        'target',
-        'must be "js" or "wasm"',
-      );
+      throw ArgumentError.value(target, 'target', 'must be "js" or "wasm"');
     }
     return this;
   }

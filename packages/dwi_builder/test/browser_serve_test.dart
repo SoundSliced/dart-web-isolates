@@ -16,8 +16,13 @@ void main() {
 
     setUp(() async {
       root = Directory.systemTemp.createTempSync('dwi_serve_');
-      for (final name in <String>['worker.boot.mjs', 'worker.mjs', 'worker.js']) {
-        File('${root.path}/$name').writeAsStringSync('export const value = 1;\n');
+      for (final name in <String>[
+        'worker.boot.mjs',
+        'worker.mjs',
+        'worker.js',
+      ]) {
+        File('${root.path}/$name')
+            .writeAsStringSync('export const value = 1;\n');
       }
       File('${root.path}/worker.wasm').writeAsBytesSync(<int>[0, 97, 115, 109]);
       File('${root.path}/index.html').writeAsStringSync('<html></html>');

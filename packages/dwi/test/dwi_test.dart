@@ -73,32 +73,28 @@ void main() {
     expect(caps.cancellation, DwiCancellation.running);
   });
 
-  test('runCancellable delivers a value and cannot cancel a finished task',
-      () async {
-    final task = Dwi.runCancellable<int>('primes', <String, Object?>{
-      'limit': 1000,
-    });
-    expect(await task.result, 168);
-    expect(task.isDone, isTrue);
-    expect(await task.cancel(), isFalse);
-  });
+  test(
+    'runCancellable delivers a value and cannot cancel a finished task',
+    () async {
+      final task = Dwi.runCancellable<int>('primes', <String, Object?>{
+        'limit': 1000,
+      });
+      expect(await task.result, 168);
+      expect(task.isDone, isTrue);
+      expect(await task.cancel(), isFalse);
+    },
+  );
 
   test('runCancellable reports a type mismatch through result', () async {
     final task = Dwi.runCancellable<String>('primes', <String, Object?>{
       'limit': 10,
     });
-    await expectLater(
-      task.result,
-      throwsA(isA<DwiResultTypeException>()),
-    );
+    await expectLater(task.result, throwsA(isA<DwiResultTypeException>()));
   });
 
   test('runCancellable keeps DwiUnknownTaskException typed', () async {
     final task = Dwi.runCancellable<Object?>('does-not-exist', null);
-    await expectLater(
-      task.result,
-      throwsA(isA<DwiUnknownTaskException>()),
-    );
+    await expectLater(task.result, throwsA(isA<DwiUnknownTaskException>()));
     expect(await task.cancel(), isFalse);
   });
 

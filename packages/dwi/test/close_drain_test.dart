@@ -16,40 +16,42 @@ void main() {
 
   tearDownAll(() => Dwi.close());
 
-  test('close(drain: true) lets started calls finish and refuses new ones',
-      () async {
-    final running = Dwi.run<int>('slow', 300);
-    final cancellable = Dwi.runCancellable<int>('slow', 200);
-    final fresh = Dwi.runFresh<int>('slow', 250);
-    // Give the calls a moment to be started before draining.
-    await Future<void>.delayed(const Duration(milliseconds: 20));
+  test(
+    'close(drain: true) lets started calls finish and refuses new ones',
+    () async {
+      final running = Dwi.run<int>('slow', 300);
+      final cancellable = Dwi.runCancellable<int>('slow', 200);
+      final fresh = Dwi.runFresh<int>('slow', 250);
+      // Give the calls a moment to be started before draining.
+      await Future<void>.delayed(const Duration(milliseconds: 20));
 
-    final watch = Stopwatch()..start();
-    final closing = Dwi.close(drain: true);
+      final watch = Stopwatch()..start();
+      final closing = Dwi.close(drain: true);
 
-    await expectLater(
-      Dwi.run<int>('slow', 1),
-      throwsA(isA<DwiUnsupportedException>()),
-    );
-    await expectLater(
-      Dwi.runCancellable<int>('slow', 1).result,
-      throwsA(isA<DwiUnsupportedException>()),
-    );
-    await expectLater(
-      Dwi.runFresh<int>('slow', 1),
-      throwsA(isA<DwiUnsupportedException>()),
-    );
+      await expectLater(
+        Dwi.run<int>('slow', 1),
+        throwsA(isA<DwiUnsupportedException>()),
+      );
+      await expectLater(
+        Dwi.runCancellable<int>('slow', 1).result,
+        throwsA(isA<DwiUnsupportedException>()),
+      );
+      await expectLater(
+        Dwi.runFresh<int>('slow', 1),
+        throwsA(isA<DwiUnsupportedException>()),
+      );
 
-    expect(await running, 300);
-    expect(await cancellable.result, 200);
-    expect(await fresh, 250);
-    await closing;
-    // The drain waited for the slowest call.
-    expect(watch.elapsedMilliseconds, greaterThanOrEqualTo(200));
+      expect(await running, 300);
+      expect(await cancellable.result, 200);
+      expect(await fresh, 250);
+      await closing;
+      // The drain waited for the slowest call.
+      expect(watch.elapsedMilliseconds, greaterThanOrEqualTo(200));
 
-    // A drained close keeps the configuration and accepts work again.
-    expect(await Dwi.run<int>('slow', 5), 5);
-  });
+      // A drained close keeps the configuration and accepts work again.
+      expect(await Dwi.run<int>('slow', 5), 5);
+    },
+  );
 
   test('a failing call does not block the drain', () async {
     Dwi.registerTask('fail', (Object? input) => throw StateError('nope'));

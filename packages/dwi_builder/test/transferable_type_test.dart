@@ -26,8 +26,9 @@ void main() {
     final result = await DwiBuilder(project.config()).build();
 
     expect(
-      result.discovery.diagnostics
-          .where((item) => item.severity == DwiDiagnosticSeverity.error),
+      result.discovery.diagnostics.where(
+        (item) => item.severity == DwiDiagnosticSeverity.error,
+      ),
       isEmpty,
       reason: result.discovery.diagnostics.map((item) => item.format()).join(),
     );

@@ -231,7 +231,14 @@ void main() {
 
     final compiled = await Process.run(
       Platform.resolvedExecutable,
-      <String>['compile', 'js', '-O1', '-o', 'web/main.dart.js', 'web/main.dart'],
+      <String>[
+        'compile',
+        'js',
+        '-O1',
+        '-o',
+        'web/main.dart.js',
+        'web/main.dart',
+      ],
       workingDirectory: project.root.path,
       environment: <String, String>{
         'PUB_CACHE': Platform.environment['PUB_CACHE'] ?? '',
@@ -253,79 +260,72 @@ void main() {
   });
 
   for (final engine in BrowserEngine.values) {
-    test(
-      'scoped helper contract in ${engine.name}',
-      () async {
-        final availability = browserAvailability(engine);
-        if (!availability.available) {
-          await _recordBlocked(engine, availability.reason!);
-          markTestSkipped(availability.reason!);
-          return;
-        }
+    test('scoped helper contract in ${engine.name}', () async {
+      final availability = browserAvailability(engine);
+      if (!availability.available) {
+        await _recordBlocked(engine, availability.reason!);
+        markTestSkipped(availability.reason!);
+        return;
+      }
 
-        final runs = <Map<String, Object?>>[];
-        var browserVersion = 'unknown';
-        var failures = 0;
+      final runs = <Map<String, Object?>>[];
+      var browserVersion = 'unknown';
+      var failures = 0;
 
-        for (var run = 1; run <= 2; run++) {
-          Map<String, dynamic>? decoded;
-          Object? lastError;
-          for (var attempt = 1; attempt <= 2 && decoded == null; attempt++) {
-            try {
-              final result = await probeBrowser(engine, url);
-              browserVersion = result.browserVersion;
-              decoded = result.data;
-            } on BrowserBlockedException catch (error) {
-              await _recordBlocked(engine, error.reason);
-              markTestSkipped(error.reason);
-              return;
-            } catch (error) {
-              lastError = error;
-            }
-          }
-
-          if (decoded == null) {
-            failures++;
-            runs.add(<String, Object?>{
-              'run': run,
-              'status': 'error',
-              'error': '$lastError',
-            });
-            continue;
-          }
-
-          final problems = <String>[];
+      for (var run = 1; run <= 2; run++) {
+        Map<String, dynamic>? decoded;
+        Object? lastError;
+        for (var attempt = 1; attempt <= 2 && decoded == null; attempt++) {
           try {
-            _expectContract(decoded);
+            final result = await probeBrowser(engine, url);
+            browserVersion = result.browserVersion;
+            decoded = result.data;
+          } on BrowserBlockedException catch (error) {
+            await _recordBlocked(engine, error.reason);
+            markTestSkipped(error.reason);
+            return;
           } catch (error) {
-            problems.add('$error');
-          }
-          if (problems.isEmpty) {
-            runs.add(<String, Object?>{'run': run, 'status': 'pass'});
-          } else {
-            failures++;
-            runs.add(<String, Object?>{
-              'run': run,
-              'status': 'fail',
-              'details': problems.join('\n'),
-            });
+            lastError = error;
           }
         }
 
-        await _recordRun(
-          engine,
-          browserVersion: browserVersion,
-          runs: runs,
-        );
-        expect(
-          failures,
-          0,
-          reason: '$failures of ${runs.length} runs failed in ${engine.name}: '
-              '$runs',
-        );
-      },
-      timeout: const Timeout(Duration(minutes: 12)),
-    );
+        if (decoded == null) {
+          failures++;
+          runs.add(<String, Object?>{
+            'run': run,
+            'status': 'error',
+            'error': '$lastError',
+          });
+          continue;
+        }
+
+        final problems = <String>[];
+        try {
+          _expectContract(decoded);
+        } catch (error) {
+          problems.add('$error');
+        }
+        if (problems.isEmpty) {
+          runs.add(<String, Object?>{'run': run, 'status': 'pass'});
+        } else {
+          failures++;
+          runs.add(<String, Object?>{
+            'run': run,
+            'status': 'fail',
+            'details': problems.join('\n'),
+          });
+        }
+      }
+
+      await _recordRun(engine, browserVersion: browserVersion, runs: runs);
+      expect(
+        failures,
+        0,
+        reason:
+            '$failures of ${runs.length} runs failed in ${engine.name}: '
+            '$runs',
+      );
+    }, timeout: const Timeout(Duration(minutes: 12)));
   }
 }
 
@@ -384,7 +384,7 @@ Future<void> _recordRun(
     'harness': 'packages/dwi_builder/test/browser_scoped_test.dart',
     'command':
         'dart test test/browser_scoped_test.dart --plain-name '
-            '"scoped helper contract in ${engine.name}"',
+        '"scoped helper contract in ${engine.name}"',
     'environment': <String, Object?>{
       'os': Platform.operatingSystemVersion,
       'dartVersion': Platform.version,

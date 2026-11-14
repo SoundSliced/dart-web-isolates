@@ -11,10 +11,10 @@ enum BrowserEngine { chrome, safari, firefox, edge }
 /// Whether [engine] can be automated here, and why not when it cannot.
 class BrowserAvailability {
   const BrowserAvailability.available(this.engine, String this.executable)
-      : reason = null;
+    : reason = null;
 
   const BrowserAvailability.blocked(this.engine, String this.reason)
-      : executable = null;
+    : executable = null;
 
   final BrowserEngine engine;
   final String? executable;
@@ -55,11 +55,11 @@ class BrowserBlockedException implements Exception {
 
 /// Google Chrome (or Chromium) on this machine, if any.
 String? chromeExecutable() => _firstExisting(<String>[
-      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-      '/usr/bin/google-chrome',
-      '/usr/bin/chromium',
-      '/usr/bin/chromium-browser',
-    ]);
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  '/usr/bin/google-chrome',
+  '/usr/bin/chromium',
+  '/usr/bin/chromium-browser',
+]);
 
 /// Microsoft Edge on this machine, if any.
 ///
@@ -88,9 +88,9 @@ String? firefoxExecutable() {
 
 /// `safaridriver`, which ships with macOS, if present.
 String? safariDriverExecutable() => _firstExisting(<String>[
-      '/System/Cryptexes/App/usr/bin/safaridriver',
-      '/usr/bin/safaridriver',
-    ]);
+  '/System/Cryptexes/App/usr/bin/safaridriver',
+  '/usr/bin/safaridriver',
+]);
 
 /// Reports whether [engine] can be started on this machine.
 BrowserAvailability browserAvailability(BrowserEngine engine) {
@@ -109,7 +109,7 @@ BrowserAvailability browserAvailability(BrowserEngine engine) {
           ? const BrowserAvailability.blocked(
               BrowserEngine.edge,
               'Microsoft Edge is not installed (set DWI_EDGE_BINARY to a '
-                  'usable Microsoft Edge binary).',
+              'usable Microsoft Edge binary).',
             )
           : BrowserAvailability.available(BrowserEngine.edge, executable);
     case BrowserEngine.firefox:
@@ -118,7 +118,7 @@ BrowserAvailability browserAvailability(BrowserEngine engine) {
           ? const BrowserAvailability.blocked(
               BrowserEngine.firefox,
               'Mozilla Firefox is not installed (set DWI_FIREFOX_BINARY to a '
-                  'usable firefox binary).',
+              'usable firefox binary).',
             )
           : BrowserAvailability.available(BrowserEngine.firefox, executable);
     case BrowserEngine.safari:
@@ -259,9 +259,8 @@ Future<BrowserRunResult> _probeChromium(
     );
     // A browser that accepts the CDP socket but never completes the handshake
     // must fail the run, not hang the test.
-    socket = await WebSocket.connect(
-      target,
-    ).timeout(const Duration(seconds: 30));
+    socket = await WebSocket.connect(target)
+        .timeout(const Duration(seconds: 30));
     final pending = <int, Completer<Map<String, dynamic>>>{};
     var nextId = 0;
     socket.listen((message) {
@@ -509,26 +508,30 @@ Future<BrowserRunResult> _probeFirefox(String executable, String url) async {
   final version = await _executableVersion(executable, 'Firefox');
   final profile = Directory.systemTemp.createTempSync('dwi_firefox_');
   final port = await _freePort();
-  final process = await Process.start(executable, <String>[
-    '--headless',
-    '--no-remote',
-    '--new-instance',
-    '--profile',
-    profile.path,
-    '--remote-debugging-port=$port',
-    'about:blank',
-  ], environment: <String, String>{
-    // Firefox's own process sandbox cannot initialise inside a restricted
-    // (seatbelt) host session; it crashes each sandboxed process with
-    // `sandbox_init() failed with error "Operation not permitted"`. Disable
-    // every per-process sandbox this build exposes (there is no global switch).
-    'MOZ_DISABLE_CONTENT_SANDBOX': '1',
-    'MOZ_DISABLE_GMP_SANDBOX': '1',
-    'MOZ_DISABLE_GPU_SANDBOX': '1',
-    'MOZ_DISABLE_RDD_SANDBOX': '1',
-    'MOZ_DISABLE_SOCKET_PROCESS_SANDBOX': '1',
-    'MOZ_DISABLE_UTILITY_SANDBOX': '1',
-  });
+  final process = await Process.start(
+    executable,
+    <String>[
+      '--headless',
+      '--no-remote',
+      '--new-instance',
+      '--profile',
+      profile.path,
+      '--remote-debugging-port=$port',
+      'about:blank',
+    ],
+    environment: <String, String>{
+      // Firefox's own process sandbox cannot initialise inside a restricted
+      // (seatbelt) host session; it crashes each sandboxed process with
+      // `sandbox_init() failed with error "Operation not permitted"`. Disable
+      // every per-process sandbox this build exposes (there is no global switch).
+      'MOZ_DISABLE_CONTENT_SANDBOX': '1',
+      'MOZ_DISABLE_GMP_SANDBOX': '1',
+      'MOZ_DISABLE_GPU_SANDBOX': '1',
+      'MOZ_DISABLE_RDD_SANDBOX': '1',
+      'MOZ_DISABLE_SOCKET_PROCESS_SANDBOX': '1',
+      'MOZ_DISABLE_UTILITY_SANDBOX': '1',
+    },
+  );
   final log = StringBuffer();
   process.stdout.transform(utf8.decoder).listen(log.write);
   process.stderr.transform(utf8.decoder).listen(log.write);
@@ -538,20 +541,17 @@ Future<BrowserRunResult> _probeFirefox(String executable, String url) async {
     await client.send('session.new', <String, Object?>{
       'capabilities': <String, Object?>{},
     });
-    final created = await client.send('browsingContext.create', <String, Object?>{
-      'type': 'tab',
-    });
+    final created = await client.send(
+      'browsingContext.create',
+      <String, Object?>{'type': 'tab'},
+    );
     final context = created['context'];
     if (context is! String) {
       throw StateError('Firefox did not return a browsing context: $created');
     }
     final navigation = await client.send(
       'browsingContext.navigate',
-      <String, Object?>{
-        'context': context,
-        'url': url,
-        'wait': 'complete',
-      },
+      <String, Object?>{'context': context, 'url': url, 'wait': 'complete'},
     );
     if (navigation['navigation'] == null) {
       throw StateError('Firefox refused to navigate to $url: $navigation');

@@ -38,8 +38,7 @@ class DwiTransferableBytes {
 
   static ByteBuffer _claim(TypedData data) {
     final buffer = data.buffer;
-    if (data.offsetInBytes == 0 &&
-        data.lengthInBytes == buffer.lengthInBytes) {
+    if (data.offsetInBytes == 0 && data.lengthInBytes == buffer.lengthInBytes) {
       return buffer;
     }
     final copy = Uint8List(data.lengthInBytes);

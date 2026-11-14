@@ -50,7 +50,9 @@ void main() {
 
   test('runs a registered task on an isolate', () async {
     await backend.configure(const DwiConfig());
-    final result = await backend.run('primes', <String, Object?>{'limit': 1000});
+    final result = await backend.run('primes', <String, Object?>{
+      'limit': 1000,
+    });
     expect(result, 168);
   });
 
@@ -61,29 +63,34 @@ void main() {
     );
   });
 
-  test('throws DwiTimeoutException when the task outlives its budget',
-      () async {
-    await backend.configure(
-      const DwiConfig(taskTimeout: Duration(milliseconds: 50)),
-    );
-    expect(
-      () => backend.run('slow', null),
-      throwsA(isA<DwiTimeoutException>()),
-    );
-  });
+  test(
+    'throws DwiTimeoutException when the task outlives its budget',
+    () async {
+      await backend.configure(
+        const DwiConfig(taskTimeout: Duration(milliseconds: 50)),
+      );
+      expect(
+        () => backend.run('slow', null),
+        throwsA(isA<DwiTimeoutException>()),
+      );
+    },
+  );
 
-  test('delivers a typed remote error with the remote type and stack', () async {
-    await backend.configure(const DwiConfig());
-    await expectLater(
-      backend.run('boom', null),
-      throwsA(
-        isA<DwiRemoteException>()
-            .having((error) => error.remoteType, 'remoteType', 'StateError')
-            .having((error) => error.message, 'message', contains('boom'))
-            .having((error) => error.remoteStack, 'remoteStack', isNotEmpty),
-      ),
-    );
-  });
+  test(
+    'delivers a typed remote error with the remote type and stack',
+    () async {
+      await backend.configure(const DwiConfig());
+      await expectLater(
+        backend.run('boom', null),
+        throwsA(
+          isA<DwiRemoteException>()
+              .having((error) => error.remoteType, 'remoteType', 'StateError')
+              .having((error) => error.message, 'message', contains('boom'))
+              .having((error) => error.remoteStack, 'remoteStack', isNotEmpty),
+        ),
+      );
+    },
+  );
 
   test('reports isolate capabilities', () async {
     final caps = await backend.capabilities();
@@ -120,10 +127,7 @@ void main() {
 
       final watch = Stopwatch()..start();
       expect(await task.cancel(), isTrue);
-      await expectLater(
-        task.result,
-        throwsA(isA<DwiCancelledException>()),
-      );
+      await expectLater(task.result, throwsA(isA<DwiCancelledException>()));
       // The isolate is killed, not abandoned: the caller is not waiting for the
       // five second loop to finish.
       expect(watch.elapsedMilliseconds, lessThan(2000));
@@ -138,29 +142,25 @@ void main() {
       expect(await task.result, 4);
     });
 
-    test('repeated cancellation reports true once and false afterwards',
-        () async {
-      await backend.configure(const DwiConfig());
-      final task = backend.start('spin', null);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+    test(
+      'repeated cancellation reports true once and false afterwards',
+      () async {
+        await backend.configure(const DwiConfig());
+        final task = backend.start('spin', null);
+        await Future<void>.delayed(const Duration(milliseconds: 50));
 
-      expect(await task.cancel(), isTrue);
-      expect(await task.cancel(), isFalse);
-      await expectLater(
-        task.result,
-        throwsA(isA<DwiCancelledException>()),
-      );
-    });
+        expect(await task.cancel(), isTrue);
+        expect(await task.cancel(), isFalse);
+        await expectLater(task.result, throwsA(isA<DwiCancelledException>()));
+      },
+    );
 
     test('a timeout kills the isolate and later work still runs', () async {
       await backend.configure(
         const DwiConfig(taskTimeout: Duration(milliseconds: 100)),
       );
       final timedOut = backend.start('spin', null);
-      await expectLater(
-        timedOut.result,
-        throwsA(isA<DwiTimeoutException>()),
-      );
+      await expectLater(timedOut.result, throwsA(isA<DwiTimeoutException>()));
       expect(timedOut.isDone, isTrue);
 
       await backend.configure(const DwiConfig());
@@ -174,9 +174,7 @@ void main() {
   group('transferable bytes', () {
     test('transfers an argument and detaches the sender', () async {
       await backend.configure(const DwiConfig());
-      final bytes = DwiTransferableBytes(
-        Uint8List.fromList(<int>[1, 2, 3]),
-      );
+      final bytes = DwiTransferableBytes(Uint8List.fromList(<int>[1, 2, 3]));
 
       final result = await backend.run('echoTransferable', bytes);
 
@@ -216,15 +214,9 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 50));
       expect(await task.cancel(), isTrue);
 
-      await expectLater(
-        task.result,
-        throwsA(isA<DwiCancelledException>()),
-      );
+      await expectLater(task.result, throwsA(isA<DwiCancelledException>()));
       expect(bytes.isDetached, isTrue);
-      expect(
-        () => bytes.bytes,
-        throwsA(isA<DwiSerializationException>()),
-      );
+      expect(() => bytes.bytes, throwsA(isA<DwiSerializationException>()));
     });
   });
 }

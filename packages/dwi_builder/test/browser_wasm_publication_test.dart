@@ -92,8 +92,8 @@ Future<HttpServer> _serveRealistic(
           p.basename(path) == 'worker.boot.mjs'
               ? 'no-cache'
               : path.contains('/gen-')
-                  ? 'public, max-age=31536000, immutable'
-                  : 'no-cache',
+              ? 'public, max-age=31536000, immutable'
+              : 'no-cache',
         );
         final name = p.basename(path);
         if (name.endsWith('.html')) {
@@ -125,7 +125,8 @@ Future<HttpServer> _serveRealistic(
 
 String _generationOf(FixtureProject project) =>
     (jsonDecode(project.read('.dwi/worker_manifest.json'))
-        as Map<String, dynamic>)['generation'] as String;
+            as Map<String, dynamic>)['generation']
+        as String;
 
 void main() {
   late FixtureProject project;
@@ -184,9 +185,7 @@ void main() {
           );
 
           // Deploy A, then B and C while the page keeps spawning workers.
-          await firstWorkerRequest.future.timeout(
-            const Duration(seconds: 90),
-          );
+          await firstWorkerRequest.future.timeout(const Duration(seconds: 90));
           await Future<void>.delayed(const Duration(seconds: 1));
           project.write(
             'lib/tasks.dart',

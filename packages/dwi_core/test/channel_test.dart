@@ -76,57 +76,58 @@ void main() {
       await sent;
     });
 
-    test('acknowledges on enqueue and delivers in order to the listener',
-        () async {
-      final transport = _Transport();
-      final channel = transport.endpoint();
+    test(
+      'acknowledges on enqueue and delivers in order to the listener',
+      () async {
+        final transport = _Transport();
+        final channel = transport.endpoint();
 
-      expect(channel.deliver(1, 'a'), isTrue);
-      expect(channel.deliver(2, 'b'), isTrue);
-      expect(transport.acks, <int>[1, 2]);
+        expect(channel.deliver(1, 'a'), isTrue);
+        expect(channel.deliver(2, 'b'), isTrue);
+        expect(transport.acks, <int>[1, 2]);
 
-      final received = <Object?>[];
-      final done = Completer<void>();
-      channel.messages.listen(
-        received.add,
-        onDone: done.complete,
-      );
-      await Future<void>.delayed(Duration.zero);
-      expect(received, <Object?>['a', 'b']);
+        final received = <Object?>[];
+        final done = Completer<void>();
+        channel.messages.listen(received.add, onDone: done.complete);
+        await Future<void>.delayed(Duration.zero);
+        expect(received, <Object?>['a', 'b']);
 
-      await channel.close();
-      await done.future;
-    });
+        await channel.close();
+        await done.future;
+      },
+    );
 
-    test('with ackOnConsume, acknowledges only what the listener took',
-        () async {
-      final transport = _Transport();
-      final channel = transport.endpoint(ackOnConsume: true);
+    test(
+      'with ackOnConsume, acknowledges only what the listener took',
+      () async {
+        final transport = _Transport();
+        final channel = transport.endpoint(ackOnConsume: true);
 
-      expect(channel.deliver(1, 'a'), isTrue);
-      expect(channel.deliver(2, 'b'), isTrue);
-      // Buffered but not consumed: nothing is acknowledged yet.
-      expect(transport.acks, isEmpty);
+        expect(channel.deliver(1, 'a'), isTrue);
+        expect(channel.deliver(2, 'b'), isTrue);
+        // Buffered but not consumed: nothing is acknowledged yet.
+        expect(transport.acks, isEmpty);
 
-      final received = <Object?>[];
-      final subscription = channel.messages.listen(received.add);
-      await Future<void>.delayed(Duration.zero);
-      expect(received, <Object?>['a', 'b']);
-      expect(transport.acks, <int>[1, 2]);
+        final received = <Object?>[];
+        final subscription = channel.messages.listen(received.add);
+        await Future<void>.delayed(Duration.zero);
+        expect(received, <Object?>['a', 'b']);
+        expect(transport.acks, <int>[1, 2]);
 
-      // A paused listener takes nothing, so nothing more is acknowledged.
-      subscription.pause();
-      expect(channel.deliver(3, 'c'), isTrue);
-      await Future<void>.delayed(Duration.zero);
-      expect(transport.acks, <int>[1, 2]);
-      subscription.resume();
-      await Future<void>.delayed(Duration.zero);
-      expect(received, <Object?>['a', 'b', 'c']);
-      expect(transport.acks, <int>[1, 2, 3]);
+        // A paused listener takes nothing, so nothing more is acknowledged.
+        subscription.pause();
+        expect(channel.deliver(3, 'c'), isTrue);
+        await Future<void>.delayed(Duration.zero);
+        expect(transport.acks, <int>[1, 2]);
+        subscription.resume();
+        await Future<void>.delayed(Duration.zero);
+        expect(received, <Object?>['a', 'b', 'c']);
+        expect(transport.acks, <int>[1, 2, 3]);
 
-      await subscription.cancel();
-      await channel.close();
-    });
+        await subscription.cancel();
+        await channel.close();
+      },
+    );
 
     test('refuses a delivery when the receive buffer is full', () {
       final transport = _Transport();
@@ -171,27 +172,26 @@ void main() {
       await third;
     });
 
-    test('peer close ends the stream normally and settles pending sends',
-        () async {
-      final transport = _Transport();
-      final channel = transport.endpoint();
-      channel.markOpened();
-      final pending = channel.send('x');
-      final done = Completer<void>();
-      channel.messages.listen((_) {}, onDone: done.complete);
+    test(
+      'peer close ends the stream normally and settles pending sends',
+      () async {
+        final transport = _Transport();
+        final channel = transport.endpoint();
+        channel.markOpened();
+        final pending = channel.send('x');
+        final done = Completer<void>();
+        channel.messages.listen((_) {}, onDone: done.complete);
 
-      channel.peerClosed();
-      await expectLater(
-        pending,
-        throwsA(isA<DwiChannelClosedException>()),
-      );
-      await done.future;
-      expect(transport.closedReplies, 1);
-      await expectLater(
-        channel.send('after'),
-        throwsA(isA<DwiChannelClosedException>()),
-      );
-    });
+        channel.peerClosed();
+        await expectLater(pending, throwsA(isA<DwiChannelClosedException>()));
+        await done.future;
+        expect(transport.closedReplies, 1);
+        await expectLater(
+          channel.send('after'),
+          throwsA(isA<DwiChannelClosedException>()),
+        );
+      },
+    );
 
     test('failure errors the stream and settles pending sends once', () async {
       final transport = _Transport();
@@ -231,25 +231,27 @@ void main() {
       );
     });
 
-    test('a serialization failure from the transport settles that send',
-        () async {
-      final channel = DwiChannelEndpoint(
-        name: 'chat',
-        bufferSize: 2,
-        onSend: (seq, message, transfer) {
-          throw const DwiSerializationException('unsendable');
-        },
-        onAck: (_) {},
-        onClose: () {},
-        onClosed: () {},
-      );
-      channel.markOpened();
-      await expectLater(
-        channel.send(Object()),
-        throwsA(isA<DwiSerializationException>()),
-      );
-      // The failed send does not consume the window.
-      expect(channel.isOpen, isTrue);
-    });
+    test(
+      'a serialization failure from the transport settles that send',
+      () async {
+        final channel = DwiChannelEndpoint(
+          name: 'chat',
+          bufferSize: 2,
+          onSend: (seq, message, transfer) {
+            throw const DwiSerializationException('unsendable');
+          },
+          onAck: (_) {},
+          onClose: () {},
+          onClosed: () {},
+        );
+        channel.markOpened();
+        await expectLater(
+          channel.send(Object()),
+          throwsA(isA<DwiSerializationException>()),
+        );
+        // The failed send does not consume the window.
+        expect(channel.isOpen, isTrue);
+      },
+    );
   });
 }

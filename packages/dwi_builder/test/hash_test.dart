@@ -86,7 +86,8 @@ void main() {
   });
 
   test('collects runtime sources and package resolution', () async {
-    final lib = Directory(p.join(root.path, 'lib'))..createSync(recursive: true);
+    final lib = Directory(p.join(root.path, 'lib'))
+      ..createSync(recursive: true);
     final packages = Directory(p.join(root.path, '.dart_tool'))
       ..createSync(recursive: true);
     final dwiWeb = Directory(p.join(Directory.current.parent.path, 'dwi_web'));

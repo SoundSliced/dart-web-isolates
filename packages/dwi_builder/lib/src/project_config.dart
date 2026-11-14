@@ -25,8 +25,7 @@ class DwiProjectConfig {
   final String? target;
 
   /// Absolute path of the configuration file for [projectRoot].
-  static String pathFor(String projectRoot) =>
-      p.join(projectRoot, fileName);
+  static String pathFor(String projectRoot) => p.join(projectRoot, fileName);
 
   /// Reads the configuration for [projectRoot].
   ///
@@ -41,9 +40,7 @@ class DwiProjectConfig {
     try {
       document = loadYaml(file.readAsStringSync());
     } on YamlException catch (error) {
-      throw ArgumentError(
-        '${fileName}: invalid YAML: ${error.message}',
-      );
+      throw ArgumentError('${fileName}: invalid YAML: ${error.message}');
     }
     if (document == null) return const DwiProjectConfig();
     if (document is! YamlMap) {

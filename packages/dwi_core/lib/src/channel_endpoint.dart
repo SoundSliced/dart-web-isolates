@@ -40,15 +40,12 @@ class DwiChannelEndpoint implements DwiChannel {
     required void Function() onClosed,
     void Function()? onTerminated,
     this.ackOnConsume = false,
-  })  : _onSend = onSend,
-        _onAck = onAck,
-        _onClose = onClose,
-        _onClosed = onClosed,
-        _onTerminated = onTerminated {
-    _controller = StreamController<Object?>(
-      onListen: _drain,
-      onResume: _drain,
-    );
+  }) : _onSend = onSend,
+       _onAck = onAck,
+       _onClose = onClose,
+       _onClosed = onClosed,
+       _onTerminated = onTerminated {
+    _controller = StreamController<Object?>(onListen: _drain, onResume: _drain);
   }
 
   /// Channel name.
@@ -206,9 +203,7 @@ class DwiChannelEndpoint implements DwiChannel {
     if (_closed) return;
     _closed = true;
     _notifyTerminated();
-    _completeOpenError(
-      DwiChannelClosedException('channel "$name" was closed'),
-    );
+    _completeOpenError(DwiChannelClosedException('channel "$name" was closed'));
     try {
       _onClose();
     } catch (_) {

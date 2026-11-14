@@ -37,7 +37,9 @@ void main() {
       expect(arguments, contains('--remote-debugging-port=4321'));
       expect(arguments, isNot(contains('--use-mock-keychain')));
       expect(
-        arguments.where((argument) => argument.startsWith('--disable-features=')),
+        arguments.where(
+          (argument) => argument.startsWith('--disable-features='),
+        ),
         isEmpty,
       );
     });

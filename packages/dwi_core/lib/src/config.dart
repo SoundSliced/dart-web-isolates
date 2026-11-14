@@ -181,11 +181,7 @@ class DwiConfig {
     }
     final grace = cancelGracePeriod;
     if (grace != null && grace <= Duration.zero) {
-      throw ArgumentError.value(
-        grace,
-        'cancelGracePeriod',
-        'must be positive',
-      );
+      throw ArgumentError.value(grace, 'cancelGracePeriod', 'must be positive');
     }
     return this;
   }

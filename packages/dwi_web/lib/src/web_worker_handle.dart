@@ -586,12 +586,7 @@ class WebWorkerHandle implements DwiWorkerHandle {
         // Browsers may omit the details for a failed worker script load.
         message = 'dedicated worker reported an error';
       }
-      _fail(
-        DwiRemoteException(
-          message: message,
-        ),
-        DwiWorkerStop.crashed,
-      );
+      _fail(DwiRemoteException(message: message), DwiWorkerStop.crashed);
     }).toJS;
     worker.onmessageerror = ((web.Event event) {
       if (!identical(_worker, worker)) return;
@@ -756,7 +751,9 @@ class WebWorkerHandle implements DwiWorkerHandle {
   /// acknowledgement matches its open generation (ADR-018).
   static int? _metaInt(Object? value) {
     if (value is int) return value;
-    if (value is double && value.isFinite && value == value.truncateToDouble()) {
+    if (value is double &&
+        value.isFinite &&
+        value == value.truncateToDouble()) {
       return value.toInt();
     }
     return null;

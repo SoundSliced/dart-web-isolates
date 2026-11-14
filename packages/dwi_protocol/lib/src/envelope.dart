@@ -69,13 +69,13 @@ class DwiErrorPayload {
   final int? taskId;
 
   Map<String, Object?> toMap() => <String, Object?>{
-        'code': code.name,
-        'message': message,
-        'remoteType': remoteType,
-        'remoteStack': remoteStack,
-        'fatal': fatal,
-        'taskId': taskId,
-      };
+    'code': code.name,
+    'message': message,
+    'remoteType': remoteType,
+    'remoteStack': remoteStack,
+    'fatal': fatal,
+    'taskId': taskId,
+  };
 
   factory DwiErrorPayload.fromMap(Map<Object?, Object?> map) {
     final message = map['message'];
@@ -90,9 +90,12 @@ class DwiErrorPayload {
     return DwiErrorPayload(
       code: DwiErrorCode.parse(map['code']),
       message: message,
-      remoteType: map['remoteType'] is String ? map['remoteType']! as String : '',
-      remoteStack:
-          map['remoteStack'] is String ? map['remoteStack']! as String : '',
+      remoteType: map['remoteType'] is String
+          ? map['remoteType']! as String
+          : '',
+      remoteStack: map['remoteStack'] is String
+          ? map['remoteStack']! as String
+          : '',
       fatal: map['fatal'] == true,
       taskId: taskId,
     );
@@ -130,14 +133,14 @@ class DwiEnvelope {
 
   /// Encodes the envelope into a structured-cloneable map.
   Map<String, Object?> toMap() => <String, Object?>{
-        'v': version,
-        'type': type.name,
-        'id': id,
-        'task': task,
-        'payload': payload,
-        'error': error?.toMap(),
-        'meta': meta,
-      };
+    'v': version,
+    'type': type.name,
+    'id': id,
+    'task': task,
+    'payload': payload,
+    'error': error?.toMap(),
+    'meta': meta,
+  };
 
   /// Decodes and validates an envelope.
   ///
@@ -185,7 +188,9 @@ class DwiEnvelope {
       payload: map['payload'],
       error: rawError == null
           ? null
-          : DwiErrorPayload.fromMap(Map<Object?, Object?>.from(rawError as Map)),
+          : DwiErrorPayload.fromMap(
+              Map<Object?, Object?>.from(rawError as Map),
+            ),
       meta: rawMeta == null
           ? const <String, Object?>{}
           : Map<String, Object?>.from(rawMeta as Map),

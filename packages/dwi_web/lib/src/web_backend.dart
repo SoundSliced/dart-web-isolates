@@ -87,8 +87,7 @@ class WebBackend implements DwiBackend {
   }
 
   @override
-  Future<Object?> run(String task, Object? input) =>
-      start(task, input).result;
+  Future<Object?> run(String task, Object? input) => start(task, input).result;
 
   @override
   DwiCancellableTask<Object?> start(String task, Object? input) {
@@ -104,11 +103,7 @@ class WebBackend implements DwiBackend {
     return handle;
   }
 
-  Future<void> _execute(
-    String task,
-    Object? input,
-    _CancelState state,
-  ) async {
+  Future<void> _execute(String task, Object? input, _CancelState state) async {
     final handle = state.handle;
     _WorkerSlot? slot;
     int? id;
@@ -420,10 +415,7 @@ class WebBackend implements DwiBackend {
       // A dart2wasm worker is a module worker: its loader and bootstrap use
       // ES module syntax. The JS worker keeps the classic constructor.
       worker = _config.workerBackend == DwiWorkerBackend.wasm
-          ? web.Worker(
-              script.toJS,
-              web.WorkerOptions(type: 'module'),
-            )
+          ? web.Worker(script.toJS, web.WorkerOptions(type: 'module'))
           : web.Worker(script.toJS);
     } catch (error) {
       throw DwiStartupException(
@@ -567,10 +559,7 @@ class WebBackend implements DwiBackend {
 
   void _fail(_WorkerSlot slot, String message) {
     if (slot.failed) return;
-    final error = DwiRemoteException(
-      message: message,
-      workerId: 'w${slot.id}',
-    );
+    final error = DwiRemoteException(message: message, workerId: 'w${slot.id}');
     if (!slot.ready.isCompleted) {
       slot.ready.completeError(DwiStartupException(message));
     }

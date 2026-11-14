@@ -102,8 +102,7 @@ class NativeBackend implements DwiBackend {
   }
 
   @override
-  Future<Object?> run(String task, Object? input) =>
-      start(task, input).result;
+  Future<Object?> run(String task, Object? input) => start(task, input).result;
 
   @override
   DwiCancellableTask<Object?> start(String task, Object? input) {
@@ -229,9 +228,7 @@ class NativeBackend implements DwiBackend {
   Future<bool> _cancel(_NativeState state) async {
     if (state.handle.isDone) return false;
     state.cancelled = true;
-    final error = DwiCancelledException(
-      'task "${state.task}" was cancelled',
-    );
+    final error = DwiCancelledException('task "${state.task}" was cancelled');
     state.handle.completeError(error);
     final reply = state.reply;
     if (reply != null && !reply.isCompleted) reply.completeError(error);
@@ -259,11 +256,11 @@ class NativeBackend implements DwiBackend {
 
   @override
   Future<DwiCapabilities> capabilities() async => DwiCapabilities(
-        backend: _closed ? DwiBackendKind.unsupported : DwiBackendKind.isolate,
-        protocolVersion: 1,
-        transferables: true,
-        cancellation: DwiCancellation.running,
-      );
+    backend: _closed ? DwiBackendKind.unsupported : DwiBackendKind.isolate,
+    protocolVersion: 1,
+    transferables: true,
+    cancellation: DwiCancellation.running,
+  );
 
   @override
   Future<DwiWorkerHandle> spawnHandle() async {

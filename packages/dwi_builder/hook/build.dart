@@ -24,9 +24,7 @@ void main(List<String> args) async {
     );
     if (root == null) return;
 
-    final proxies = File(
-      '$root${separator}lib${separator}dwi_tasks.g.dart',
-    );
+    final proxies = File('$root${separator}lib${separator}dwi_tasks.g.dart');
     final hadProxies = proxies.existsSync();
     // The application declares its target once in dwi.yaml; the hook and the
     // CLI read the same file, so neither can silently choose the other backend.
@@ -65,9 +63,7 @@ void main(List<String> args) async {
     }
     output.dependencies.add(Uri.file('$root${separator}pubspec.yaml'));
     output.dependencies.add(Uri.file('$root${separator}pubspec.lock'));
-    final projectConfig = File(
-      '$root${separator}${DwiProjectConfig.fileName}',
-    );
+    final projectConfig = File('$root${separator}${DwiProjectConfig.fileName}');
     // A missing file must also be tracked: otherwise creating dwi.yaml after
     // the first build does not invalidate Flutter's cached hook result.
     output.dependencies.add(Uri.file(projectConfig.path));

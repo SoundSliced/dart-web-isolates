@@ -118,17 +118,12 @@ void main() {
       project.write('lib/tasks.dart', generatedTasks);
       project.write('bin/native_check.dart', nativeCheck);
 
-      final built = await DwiBuilder(
-        project.config(compile: true),
-      ).build();
+      final built = await DwiBuilder(project.config(compile: true)).build();
       expect(built.compiled, isTrue);
 
       final workerSource = project.read('.dwi/generated_worker.dart');
       expect(workerSource, contains("import 'dart:typed_data' as dwi_t0;"));
-      expect(
-        workerSource,
-        contains('dwi_t0.Uint8List _dwiDecode'),
-      );
+      expect(workerSource, contains('dwi_t0.Uint8List _dwiDecode'));
 
       final proxies = project.read('lib/dwi_tasks.g.dart');
       expect(proxies, contains("Dwi.registerTask('echoBytes'"));
@@ -145,11 +140,7 @@ void main() {
           'PUB_CACHE': Platform.environment['PUB_CACHE'] ?? '',
         },
       );
-      expect(
-        result.exitCode,
-        0,
-        reason: '${result.stdout}\n${result.stderr}',
-      );
+      expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
 
       final lines = (result.stdout as String)
           .trim()
@@ -177,34 +168,26 @@ void main() {
     timeout: const Timeout(Duration(minutes: 3)),
   );
 
-  test(
-    'generated worker and proxies compile for the web target',
-    () async {
-      project.write('lib/tasks.dart', generatedTasks);
-      project.write(
-        'web/main.dart',
-        "import 'package:sample_app/dwi_tasks.g.dart';\n"
-            'void main() {}\n',
-      );
+  test('generated worker and proxies compile for the web target', () async {
+    project.write('lib/tasks.dart', generatedTasks);
+    project.write(
+      'web/main.dart',
+      "import 'package:sample_app/dwi_tasks.g.dart';\n"
+          'void main() {}\n',
+    );
 
-      await DwiBuilder(project.config()).build();
+    await DwiBuilder(project.config()).build();
 
-      final output = p.join(project.root.path, 'web', 'main.dart.js');
-      final result = await Process.run(
-        Platform.resolvedExecutable,
-        <String>['compile', 'js', '-O1', '-o', output, 'web/main.dart'],
-        workingDirectory: project.root.path,
-        environment: <String, String>{
-          'PUB_CACHE': Platform.environment['PUB_CACHE'] ?? '',
-        },
-      );
-      expect(
-        result.exitCode,
-        0,
-        reason: '${result.stdout}\n${result.stderr}',
-      );
-      expect(File(output).existsSync(), isTrue);
-    },
-    timeout: const Timeout(Duration(minutes: 3)),
-  );
+    final output = p.join(project.root.path, 'web', 'main.dart.js');
+    final result = await Process.run(
+      Platform.resolvedExecutable,
+      <String>['compile', 'js', '-O1', '-o', output, 'web/main.dart'],
+      workingDirectory: project.root.path,
+      environment: <String, String>{
+        'PUB_CACHE': Platform.environment['PUB_CACHE'] ?? '',
+      },
+    );
+    expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
+    expect(File(output).existsSync(), isTrue);
+  }, timeout: const Timeout(Duration(minutes: 3)));
 }

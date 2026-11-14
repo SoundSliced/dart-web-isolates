@@ -79,53 +79,49 @@ void main() {
 
     test('rejects a non-cloneable result instead of sending it', () async {
       final dispatcher = DwiWorkerDispatcher(<String, DwiWorkerTask>{
-        'closure': (Object? input) => (int value) => value,
+        'closure': (Object? input) =>
+            (int value) => value,
         'object': (Object? input) => _PayloadObject(),
       });
 
       final closure = await dispatcher.handle(
-        const DwiEnvelope(
-          type: DwiMessageType.request,
-          id: 1,
-          task: 'closure',
-        ),
+        const DwiEnvelope(type: DwiMessageType.request, id: 1, task: 'closure'),
       );
       expect(closure?.type, DwiMessageType.error);
       expect(closure?.error?.code, DwiErrorCode.serialization);
 
       final object = await dispatcher.handle(
-        const DwiEnvelope(
-          type: DwiMessageType.request,
-          id: 2,
-          task: 'object',
-        ),
+        const DwiEnvelope(type: DwiMessageType.request, id: 2, task: 'object'),
       );
       expect(object?.type, DwiMessageType.error);
       expect(object?.error?.code, DwiErrorCode.serialization);
     });
 
-    test('rejects a non-cloneable input instead of invoking the task', () async {
-      var invoked = false;
-      final dispatcher = DwiWorkerDispatcher(<String, DwiWorkerTask>{
-        'echo': (Object? input) {
-          invoked = true;
-          return input;
-        },
-      });
+    test(
+      'rejects a non-cloneable input instead of invoking the task',
+      () async {
+        var invoked = false;
+        final dispatcher = DwiWorkerDispatcher(<String, DwiWorkerTask>{
+          'echo': (Object? input) {
+            invoked = true;
+            return input;
+          },
+        });
 
-      final response = await dispatcher.handle(
-        DwiEnvelope(
-          type: DwiMessageType.request,
-          id: 3,
-          task: 'echo',
-          payload: <Object?, Object?>{1: 'bad key'},
-        ),
-      );
+        final response = await dispatcher.handle(
+          DwiEnvelope(
+            type: DwiMessageType.request,
+            id: 3,
+            task: 'echo',
+            payload: <Object?, Object?>{1: 'bad key'},
+          ),
+        );
 
-      expect(invoked, isFalse);
-      expect(response?.type, DwiMessageType.error);
-      expect(response?.error?.code, DwiErrorCode.serialization);
-    });
+        expect(invoked, isFalse);
+        expect(response?.type, DwiMessageType.error);
+        expect(response?.error?.code, DwiErrorCode.serialization);
+      },
+    );
 
     test('shutdown closes the dispatcher', () async {
       final dispatcher = DwiWorkerDispatcher(<String, DwiWorkerTask>{
@@ -252,226 +248,226 @@ void main() {
       expect(response.error!.code, DwiErrorCode.protocol);
     });
 
-  group('channels (ADR-014)', () {
-    setUp(DwiWorkerChannels.clear);
+    group('channels (ADR-014)', () {
+      setUp(DwiWorkerChannels.clear);
 
-    DwiEnvelope channel(
-      DwiMessageType type, {
-      String name = 'chat',
-      int gen = 1,
-      int? seq,
-      Object? payload,
-      Map<String, Object?> extra = const <String, Object?>{},
-    }) {
-      return DwiEnvelope(
-        type: type,
-        payload: payload,
-        meta: <String, Object?>{
-          'channel': name,
-          'gen': gen,
-          if (seq != null) 'seq': seq,
-          ...extra,
-        },
-      );
-    }
-
-    test('accepts integral doubles for channel meta (dart2wasm)', () async {
-      final emitted = <DwiEnvelope>[];
-      final dispatcher = DwiWorkerDispatcher(
-        <String, DwiWorkerTask>{},
-        emit: emitted.add,
-      );
-
-      final opened = await dispatcher.handle(
-        DwiEnvelope(
-          type: DwiMessageType.channelOpen,
+      DwiEnvelope channel(
+        DwiMessageType type, {
+        String name = 'chat',
+        int gen = 1,
+        int? seq,
+        Object? payload,
+        Map<String, Object?> extra = const <String, Object?>{},
+      }) {
+        return DwiEnvelope(
+          type: type,
+          payload: payload,
           meta: <String, Object?>{
-            'channel': 'chat',
-            'bufferSize': 4.0,
-            'gen': 7.0,
+            'channel': name,
+            'gen': gen,
+            if (seq != null) 'seq': seq,
+            ...extra,
           },
-        ),
-      );
-      expect(opened!.type, DwiMessageType.channelOpened);
-      expect(opened.meta['gen'], 7);
+        );
+      }
 
-      // A double generation must still match the open generation.
-      final message = await dispatcher.handle(
-        DwiEnvelope(
-          type: DwiMessageType.channelMessage,
-          payload: 'hello',
-          meta: <String, Object?>{
-            'channel': 'chat',
-            'gen': 7.0,
-            'seq': 1.0,
-          },
-        ),
-      );
-      expect(message, isNull);
+      test('accepts integral doubles for channel meta (dart2wasm)', () async {
+        final emitted = <DwiEnvelope>[];
+        final dispatcher = DwiWorkerDispatcher(
+          <String, DwiWorkerTask>{},
+          emit: emitted.add,
+        );
 
-      final endpoint = DwiWorkerChannels.find('chat');
-      expect(endpoint, isNotNull);
-      final received = <Object?>[];
-      endpoint!.messages.listen(
-        received.add,
-        onError: (Object error, StackTrace stack) {},
-      );
-      await Future<void>.delayed(Duration.zero);
-      expect(received, <Object?>['hello']);
-    });
+        final opened = await dispatcher.handle(
+          DwiEnvelope(
+            type: DwiMessageType.channelOpen,
+            meta: <String, Object?>{
+              'channel': 'chat',
+              'bufferSize': 4.0,
+              'gen': 7.0,
+            },
+          ),
+        );
+        expect(opened!.type, DwiMessageType.channelOpened);
+        expect(opened.meta['gen'], 7);
 
-    test('opens a channel, receives and acknowledges a message', () async {
-      final emitted = <DwiEnvelope>[];
-      final dispatcher = DwiWorkerDispatcher(
-        <String, DwiWorkerTask>{},
-        emit: emitted.add,
-      );
+        // A double generation must still match the open generation.
+        final message = await dispatcher.handle(
+          DwiEnvelope(
+            type: DwiMessageType.channelMessage,
+            payload: 'hello',
+            meta: <String, Object?>{'channel': 'chat', 'gen': 7.0, 'seq': 1.0},
+          ),
+        );
+        expect(message, isNull);
 
-      final opened = await dispatcher.handle(
-        channel(
-          DwiMessageType.channelOpen,
-          extra: <String, Object?>{'bufferSize': 4},
-        ),
-      );
-      expect(opened!.type, DwiMessageType.channelOpened);
-      expect(opened.meta['opened'], isTrue);
-      expect(opened.meta['gen'], 1);
+        final endpoint = DwiWorkerChannels.find('chat');
+        expect(endpoint, isNotNull);
+        final received = <Object?>[];
+        endpoint!.messages.listen(
+          received.add,
+          onError: (Object error, StackTrace stack) {},
+        );
+        await Future<void>.delayed(Duration.zero);
+        expect(received, <Object?>['hello']);
+      });
 
-      final endpoint = DwiWorkerChannels.find('chat');
-      expect(endpoint, isNotNull);
-      final received = <Object?>[];
-      endpoint!.messages.listen(
-        received.add,
-        onError: (Object error, StackTrace stack) {},
-      );
+      test('opens a channel, receives and acknowledges a message', () async {
+        final emitted = <DwiEnvelope>[];
+        final dispatcher = DwiWorkerDispatcher(
+          <String, DwiWorkerTask>{},
+          emit: emitted.add,
+        );
 
-      await dispatcher.handle(
-        channel(DwiMessageType.channelMessage, seq: 1, payload: 'ping'),
-      );
-      await Future<void>.delayed(Duration.zero);
-      expect(received, <Object?>['ping']);
-      expect(
-        emitted.where((envelope) => envelope.type == DwiMessageType.channelAck),
-        hasLength(1),
-      );
-      expect(
-        emitted.firstWhere(
-          (envelope) => envelope.type == DwiMessageType.channelAck,
-        ).meta['seq'],
-        1,
-      );
-    });
+        final opened = await dispatcher.handle(
+          channel(
+            DwiMessageType.channelOpen,
+            extra: <String, Object?>{'bufferSize': 4},
+          ),
+        );
+        expect(opened!.type, DwiMessageType.channelOpened);
+        expect(opened.meta['opened'], isTrue);
+        expect(opened.meta['gen'], 1);
 
-    test('sends from the worker side and completes on a host ack', () async {
-      final emitted = <DwiEnvelope>[];
-      final dispatcher = DwiWorkerDispatcher(
-        <String, DwiWorkerTask>{},
-        emit: emitted.add,
-      );
-      await dispatcher.handle(channel(DwiMessageType.channelOpen));
-      final endpoint = DwiWorkerChannels.find('chat')!;
+        final endpoint = DwiWorkerChannels.find('chat');
+        expect(endpoint, isNotNull);
+        final received = <Object?>[];
+        endpoint!.messages.listen(
+          received.add,
+          onError: (Object error, StackTrace stack) {},
+        );
 
-      final send = endpoint.send('progress');
-      expect(emitted, hasLength(1));
-      expect(emitted.single.type, DwiMessageType.channelMessage);
-      expect(emitted.single.meta['gen'], 1);
-      final seq = emitted.single.meta['seq']! as int;
+        await dispatcher.handle(
+          channel(DwiMessageType.channelMessage, seq: 1, payload: 'ping'),
+        );
+        await Future<void>.delayed(Duration.zero);
+        expect(received, <Object?>['ping']);
+        expect(
+          emitted.where(
+            (envelope) => envelope.type == DwiMessageType.channelAck,
+          ),
+          hasLength(1),
+        );
+        expect(
+          emitted
+              .firstWhere(
+                (envelope) => envelope.type == DwiMessageType.channelAck,
+              )
+              .meta['seq'],
+          1,
+        );
+      });
 
-      var completed = false;
-      unawaited(send.then((_) => completed = true));
-      await Future<void>.delayed(Duration.zero);
-      expect(completed, isFalse);
+      test('sends from the worker side and completes on a host ack', () async {
+        final emitted = <DwiEnvelope>[];
+        final dispatcher = DwiWorkerDispatcher(
+          <String, DwiWorkerTask>{},
+          emit: emitted.add,
+        );
+        await dispatcher.handle(channel(DwiMessageType.channelOpen));
+        final endpoint = DwiWorkerChannels.find('chat')!;
 
-      await dispatcher.handle(
-        channel(DwiMessageType.channelAck, seq: seq),
-      );
-      await send;
-    });
+        final send = endpoint.send('progress');
+        expect(emitted, hasLength(1));
+        expect(emitted.single.type, DwiMessageType.channelMessage);
+        expect(emitted.single.meta['gen'], 1);
+        final seq = emitted.single.meta['seq']! as int;
 
-    test('rejects a duplicate name and a stale generation is ignored',
+        var completed = false;
+        unawaited(send.then((_) => completed = true));
+        await Future<void>.delayed(Duration.zero);
+        expect(completed, isFalse);
+
+        await dispatcher.handle(channel(DwiMessageType.channelAck, seq: seq));
+        await send;
+      });
+
+      test(
+        'rejects a duplicate name and a stale generation is ignored',
         () async {
-      final emitted = <DwiEnvelope>[];
-      final dispatcher = DwiWorkerDispatcher(
-        <String, DwiWorkerTask>{},
-        emit: emitted.add,
-      );
-      await dispatcher.handle(channel(DwiMessageType.channelOpen));
+          final emitted = <DwiEnvelope>[];
+          final dispatcher = DwiWorkerDispatcher(
+            <String, DwiWorkerTask>{},
+            emit: emitted.add,
+          );
+          await dispatcher.handle(channel(DwiMessageType.channelOpen));
 
-      final duplicate = await dispatcher.handle(
-        channel(DwiMessageType.channelOpen),
-      );
-      expect(duplicate!.type, DwiMessageType.error);
-      expect(duplicate.error!.code, DwiErrorCode.channel);
-      expect(duplicate.meta['channel'], 'chat');
+          final duplicate = await dispatcher.handle(
+            channel(DwiMessageType.channelOpen),
+          );
+          expect(duplicate!.type, DwiMessageType.error);
+          expect(duplicate.error!.code, DwiErrorCode.channel);
+          expect(duplicate.meta['channel'], 'chat');
 
-      final endpoint = DwiWorkerChannels.find('chat')!;
-      final received = <Object?>[];
-      endpoint.messages.listen(
-        received.add,
-        onError: (Object error, StackTrace stack) {},
-      );
-      await dispatcher.handle(
-        channel(
-          DwiMessageType.channelMessage,
-          gen: 2,
-          seq: 1,
-          payload: 'stale',
-        ),
-      );
-      await Future<void>.delayed(Duration.zero);
-      expect(received, isEmpty);
-      expect(emitted, isEmpty);
-    });
-
-    test('a host close closes the worker endpoint and replies', () async {
-      final emitted = <DwiEnvelope>[];
-      final dispatcher = DwiWorkerDispatcher(
-        <String, DwiWorkerTask>{},
-        emit: emitted.add,
-      );
-      await dispatcher.handle(channel(DwiMessageType.channelOpen));
-      final endpoint = DwiWorkerChannels.find('chat')!;
-      final done = Completer<void>();
-      endpoint.messages.listen(
-        (_) {},
-        onError: (Object error, StackTrace stack) {},
-        onDone: done.complete,
-      );
-
-      await dispatcher.handle(channel(DwiMessageType.channelClose));
-      await done.future.timeout(const Duration(seconds: 5));
-      expect(
-        emitted.any(
-          (envelope) => envelope.type == DwiMessageType.channelClosed,
-        ),
-        isTrue,
-      );
-      expect(DwiWorkerChannels.find('chat'), isNull);
-    });
-
-    test('shutdown errors open channels', () async {
-      final dispatcher = DwiWorkerDispatcher(
-        <String, DwiWorkerTask>{},
-        emit: (_) {},
-      );
-      await dispatcher.handle(channel(DwiMessageType.channelOpen));
-      final endpoint = DwiWorkerChannels.find('chat')!;
-      Object? caught;
-      final done = Completer<void>();
-      endpoint.messages.listen(
-        (_) {},
-        onError: (Object error, StackTrace stack) {
-          caught = error;
+          final endpoint = DwiWorkerChannels.find('chat')!;
+          final received = <Object?>[];
+          endpoint.messages.listen(
+            received.add,
+            onError: (Object error, StackTrace stack) {},
+          );
+          await dispatcher.handle(
+            channel(
+              DwiMessageType.channelMessage,
+              gen: 2,
+              seq: 1,
+              payload: 'stale',
+            ),
+          );
+          await Future<void>.delayed(Duration.zero);
+          expect(received, isEmpty);
+          expect(emitted, isEmpty);
         },
-        onDone: done.complete,
       );
-      await dispatcher.handle(
-        const DwiEnvelope(type: DwiMessageType.shutdown),
-      );
-      await done.future.timeout(const Duration(seconds: 5));
-      expect(caught, isA<DwiWorkerClosedException>());
+
+      test('a host close closes the worker endpoint and replies', () async {
+        final emitted = <DwiEnvelope>[];
+        final dispatcher = DwiWorkerDispatcher(
+          <String, DwiWorkerTask>{},
+          emit: emitted.add,
+        );
+        await dispatcher.handle(channel(DwiMessageType.channelOpen));
+        final endpoint = DwiWorkerChannels.find('chat')!;
+        final done = Completer<void>();
+        endpoint.messages.listen(
+          (_) {},
+          onError: (Object error, StackTrace stack) {},
+          onDone: done.complete,
+        );
+
+        await dispatcher.handle(channel(DwiMessageType.channelClose));
+        await done.future.timeout(const Duration(seconds: 5));
+        expect(
+          emitted.any(
+            (envelope) => envelope.type == DwiMessageType.channelClosed,
+          ),
+          isTrue,
+        );
+        expect(DwiWorkerChannels.find('chat'), isNull);
+      });
+
+      test('shutdown errors open channels', () async {
+        final dispatcher = DwiWorkerDispatcher(
+          <String, DwiWorkerTask>{},
+          emit: (_) {},
+        );
+        await dispatcher.handle(channel(DwiMessageType.channelOpen));
+        final endpoint = DwiWorkerChannels.find('chat')!;
+        Object? caught;
+        final done = Completer<void>();
+        endpoint.messages.listen(
+          (_) {},
+          onError: (Object error, StackTrace stack) {
+            caught = error;
+          },
+          onDone: done.complete,
+        );
+        await dispatcher.handle(
+          const DwiEnvelope(type: DwiMessageType.shutdown),
+        );
+        await done.future.timeout(const Duration(seconds: 5));
+        expect(caught, isA<DwiWorkerClosedException>());
+      });
     });
-  });
   });
 }
 

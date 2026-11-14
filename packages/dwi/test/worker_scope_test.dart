@@ -61,45 +61,49 @@ void main() {
     expect(captured.state, DwiWorkerState.closed);
   });
 
-  test('a callback failure is rethrown unchanged and the handle is closed',
-      () async {
-    final error = StateError('callback failed');
-    late DwiWorker captured;
-    Object? caught;
-    try {
-      await DwiWorker.using<void>((worker) {
-        captured = worker;
-        throw error;
-      });
-      fail('expected the callback error');
-    } catch (e) {
-      caught = e;
-    }
-    expect(identical(caught, error), isTrue);
-    expect(captured.state, DwiWorkerState.closed);
-  });
+  test(
+    'a callback failure is rethrown unchanged and the handle is closed',
+    () async {
+      final error = StateError('callback failed');
+      late DwiWorker captured;
+      Object? caught;
+      try {
+        await DwiWorker.using<void>((worker) {
+          captured = worker;
+          throw error;
+        });
+        fail('expected the callback error');
+      } catch (e) {
+        caught = e;
+      }
+      expect(identical(caught, error), isTrue);
+      expect(captured.state, DwiWorkerState.closed);
+    },
+  );
 
-  test('a spawn failure never enters the callback or attempts cleanup',
-      () async {
-    final spawnError = DwiStartupException('no worker');
-    var bodyRan = false;
-    var closes = 0;
+  test(
+    'a spawn failure never enters the callback or attempts cleanup',
+    () async {
+      final spawnError = DwiStartupException('no worker');
+      var bodyRan = false;
+      var closes = 0;
 
-    await expectLater(
-      runScopedWorker<void>(
-        open: () async => throw spawnError,
-        close: (_) async {
-          closes++;
-        },
-        body: (_) {
-          bodyRan = true;
-        },
-      ),
-      throwsA(same(spawnError)),
-    );
-    expect(bodyRan, isFalse);
-    expect(closes, 0);
-  });
+      await expectLater(
+        runScopedWorker<void>(
+          open: () async => throw spawnError,
+          close: (_) async {
+            closes++;
+          },
+          body: (_) {
+            bodyRan = true;
+          },
+        ),
+        throwsA(same(spawnError)),
+      );
+      expect(bodyRan, isFalse);
+      expect(closes, 0);
+    },
+  );
 
   test('closing the handle inside the callback is allowed', () async {
     late DwiWorker captured;
@@ -187,68 +191,74 @@ void main() {
     expect(worker.state, DwiWorkerState.closed);
   });
 
-  test('a cleanup failure is the scope error when the callback succeeded',
-      () async {
-    final cleanupError = StateError('cleanup failed');
-    await expectLater(
-      runScopedWorker<void>(
-        open: DwiWorker.spawn,
-        close: (_) async => throw cleanupError,
-        body: (_) {},
-      ),
-      throwsA(same(cleanupError)),
-    );
-  });
-
-  test('a callback error wins and the cleanup failure rides in its stack',
-      () async {
-    // Deliberately no runZonedGuarded: an ordinary caller (and package:test's
-    // own zone) must neither lose the cleanup failure nor treat it as an
-    // uncaught error. The callback error stays the future's error.
-    final bodyError = StateError('body failed');
-    final cleanupError = StateError('cleanup failed');
-    Object? caught;
-    StackTrace? caughtStack;
-
-    try {
-      await runScopedWorker<void>(
-        open: DwiWorker.spawn,
-        close: (_) async => throw cleanupError,
-        body: (_) => throw bodyError,
+  test(
+    'a cleanup failure is the scope error when the callback succeeded',
+    () async {
+      final cleanupError = StateError('cleanup failed');
+      await expectLater(
+        runScopedWorker<void>(
+          open: DwiWorker.spawn,
+          close: (_) async => throw cleanupError,
+          body: (_) {},
+        ),
+        throwsA(same(cleanupError)),
       );
-      fail('expected the callback error');
-    } catch (error, stack) {
-      caught = error;
-      caughtStack = stack;
-    }
+    },
+  );
 
-    expect(identical(caught, bodyError), isTrue);
-    expect(caughtStack.toString(), contains(cleanupError.toString()));
-  });
+  test(
+    'a callback error wins and the cleanup failure rides in its stack',
+    () async {
+      // Deliberately no runZonedGuarded: an ordinary caller (and package:test's
+      // own zone) must neither lose the cleanup failure nor treat it as an
+      // uncaught error. The callback error stays the future's error.
+      final bodyError = StateError('body failed');
+      final cleanupError = StateError('cleanup failed');
+      Object? caught;
+      StackTrace? caughtStack;
 
-  test('an asynchronous cleanup failure also rides in the callback stack',
-      () async {
-    final bodyError = StateError('body failed');
-    final cleanupError = StateError('async cleanup failed');
-    Object? caught;
-    StackTrace? caughtStack;
+      try {
+        await runScopedWorker<void>(
+          open: DwiWorker.spawn,
+          close: (_) async => throw cleanupError,
+          body: (_) => throw bodyError,
+        );
+        fail('expected the callback error');
+      } catch (error, stack) {
+        caught = error;
+        caughtStack = stack;
+      }
 
-    try {
-      await runScopedWorker<void>(
-        open: DwiWorker.spawn,
-        close: (_) async {
-          await Future<void>.delayed(const Duration(milliseconds: 10));
-          throw cleanupError;
-        },
-        body: (_) => throw bodyError,
-      );
-      fail('expected the callback error');
-    } catch (error, stack) {
-      caught = error;
-      caughtStack = stack;
-    }
+      expect(identical(caught, bodyError), isTrue);
+      expect(caughtStack.toString(), contains(cleanupError.toString()));
+    },
+  );
 
-    expect(identical(caught, bodyError), isTrue);
-    expect(caughtStack.toString(), contains(cleanupError.toString()));
-  });
+  test(
+    'an asynchronous cleanup failure also rides in the callback stack',
+    () async {
+      final bodyError = StateError('body failed');
+      final cleanupError = StateError('async cleanup failed');
+      Object? caught;
+      StackTrace? caughtStack;
+
+      try {
+        await runScopedWorker<void>(
+          open: DwiWorker.spawn,
+          close: (_) async {
+            await Future<void>.delayed(const Duration(milliseconds: 10));
+            throw cleanupError;
+          },
+          body: (_) => throw bodyError,
+        );
+        fail('expected the callback error');
+      } catch (error, stack) {
+        caught = error;
+        caughtStack = stack;
+      }
+
+      expect(identical(caught, bodyError), isTrue);
+      expect(caughtStack.toString(), contains(cleanupError.toString()));
+    },
+  );
 }

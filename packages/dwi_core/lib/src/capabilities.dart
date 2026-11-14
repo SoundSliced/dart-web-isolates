@@ -1,9 +1,5 @@
 /// Which concurrency mechanism a backend uses.
-enum DwiBackendKind {
-  isolate,
-  worker,
-  unsupported,
-}
+enum DwiBackendKind { isolate, worker, unsupported }
 
 /// How much cancellation a backend actually implements (ADR-010 §10.1).
 enum DwiCancellation {
@@ -43,11 +39,11 @@ class DwiCapabilities {
   final String? workerBackend;
 
   Map<String, Object?> toMap() => <String, Object?>{
-        'backend': backend.name,
-        'protocolVersion': protocolVersion,
-        'transferables': transferables,
-        'workerCount': workerCount,
-        'cancellation': cancellation.name,
-        if (workerBackend != null) 'workerBackend': workerBackend,
-      };
+    'backend': backend.name,
+    'protocolVersion': protocolVersion,
+    'transferables': transferables,
+    'workerCount': workerCount,
+    'cancellation': cancellation.name,
+    if (workerBackend != null) 'workerBackend': workerBackend,
+  };
 }

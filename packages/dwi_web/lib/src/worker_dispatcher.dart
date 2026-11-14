@@ -27,8 +27,8 @@ class DwiWorkerDispatcher {
     Map<String, DwiWorkerTask> tasks, {
     this.workerId = '',
     void Function(DwiEnvelope)? emit,
-  })  : _tasks = Map<String, DwiWorkerTask>.unmodifiable(tasks),
-        _emit = emit;
+  }) : _tasks = Map<String, DwiWorkerTask>.unmodifiable(tasks),
+       _emit = emit;
 
   final Map<String, DwiWorkerTask> _tasks;
   final void Function(DwiEnvelope)? _emit;
@@ -160,11 +160,7 @@ class DwiWorkerDispatcher {
         meta: _meta(),
       );
     } on DwiSerializationException catch (error) {
-      return _error(
-        envelope.id,
-        DwiErrorCode.serialization,
-        error.message,
-      );
+      return _error(envelope.id, DwiErrorCode.serialization, error.message);
     } catch (error, stack) {
       return _error(
         envelope.id,
@@ -289,7 +285,8 @@ class DwiWorkerDispatcher {
       return;
     }
     final channel = _channels[name];
-    if (channel == null || _channelGens[name] != _metaInt(envelope.meta['gen'])) {
+    if (channel == null ||
+        _channelGens[name] != _metaInt(envelope.meta['gen'])) {
       return;
     }
     Object? payload = envelope.payload;
@@ -394,7 +391,9 @@ class DwiWorkerDispatcher {
   /// made channel opens and acknowledgements silently never match (ADR-018).
   static int? _metaInt(Object? value) {
     if (value is int) return value;
-    if (value is double && value.isFinite && value == value.truncateToDouble()) {
+    if (value is double &&
+        value.isFinite &&
+        value == value.truncateToDouble()) {
       return value.toInt();
     }
     return null;

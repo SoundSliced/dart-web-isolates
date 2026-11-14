@@ -19,7 +19,9 @@ void main() {
       expect(
         () => validateDwiPayload(<Object?>[
           1,
-          <String, Object?>{'a': <Object?>[true, null]},
+          <String, Object?>{
+            'a': <Object?>[true, null],
+          },
           <Object?>{1, 2},
         ]),
         returnsNormally,
@@ -44,7 +46,10 @@ void main() {
 
     test('rejects a non-cloneable value nested in a collection', () {
       expect(
-        () => validateDwiPayload(<Object?>[1, <String, Object?>{'bad': _Point(2)}]),
+        () => validateDwiPayload(<Object?>[
+          1,
+          <String, Object?>{'bad': _Point(2)},
+        ]),
         throwsA(
           isA<DwiSerializationException>().having(
             (error) => error.message,
