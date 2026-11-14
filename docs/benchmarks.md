@@ -5,14 +5,19 @@ commit is not a result.
 
 ## Project toolchain
 
-The project uses the Dart SDK embedded in the Flutter SDK at
-`~/Development/flutter` (`bin/cache/dart-sdk/bin/dart`, macOS arm64), with the
-pub cache at `~/.pub-cache`. On 2026-11-14 that Flutter SDK was upgraded from
-3.47.6 (Dart 3.13.5) to **Flutter 3.50.0 (Dart 3.14.0)**. Results dated before
-2026-11-14 keep their own Dart version; results from that date on use 3.14.0. On 2026-11-13 the separate
-Dart dev-channel SDK and the other Flutter/Dart SDK and pub-cache copies on this
-machine were removed. The `.research/` folder holds old results and probes only,
-not an SDK.
+Two SDKs, one per tool, both macOS arm64:
+
+- **Pure Dart (`dart` commands):** Dart **3.15.0-133.0.dev** (dev channel) at
+  `~/Development/dart-sdk-3.15.0-dev/dart-sdk/bin/dart`. This is the Dart the
+  research is based on. Put it first on `PATH` for Dart work.
+- **Flutter (`flutter` commands):** Flutter **3.50.0** at `~/Development/flutter`,
+  which embeds its own Dart **3.14.0**. Flutter always runs that embedded SDK;
+  it has no supported setting to use another Dart. Any Flutter measurement is
+  therefore on Dart 3.14.0 and must say so.
+
+Pub cache: `~/.pub-cache`. Results dated before 2026-11-14 keep their own Dart
+version (3.13.5 or 3.13.7). The `.research/` folder holds old results and probes
+only, not an SDK.
 
 What this does not change: every result dated before 2026-11-13 was measured on
 Dart 3.13.5 or 3.13.7 (or a dev-channel build, where its row says so) and keeps
