@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.0
+
+- `Dwi.metrics()`, `Dwi.poolState()` and `DwiConfig(metrics: true)` (ADR-026
+  G1, G2).
+- Pause, resume and ping (ADR-028), cooperative cancellation (ADR-027), draining
+  close and idle retirement (ADR-024), and links (ADR-023), as listed in the root
+  changelog.
+
 ## 0.9.0
 
 - Add `Dwi.runStream` for tasks that return `Stream<T>` (ADR-022) and

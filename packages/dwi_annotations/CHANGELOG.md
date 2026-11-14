@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.0
+
+- Version bump to match 0.10.0. No API change.
+
 ## 0.9.0
 
 - Add `@DwiPayload()` for classes that may cross the worker boundary

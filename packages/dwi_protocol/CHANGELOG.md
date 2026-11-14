@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.0
+
+- Version bump to match 0.10.0. The envelope and protocol version (2) are unchanged.
+
 ## 0.9.0
 
 - Synchronised release with `dwi` 0.9.0. No protocol change (still v2).

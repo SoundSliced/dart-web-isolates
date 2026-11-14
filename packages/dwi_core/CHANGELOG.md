@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.0
+
+- `DwiConfig(metrics: true)`, `DwiMetrics`, `DwiPoolState`, `DwiPoolWorker` and
+  the optional `DwiPoolInspector` interface (ADR-026 G1, G2).
+- Earlier unreleased work in this package, from ADR-023 to ADR-028: link and
+  stream types, idle retirement and draining close, cooperative cancellation
+  through `cancelGracePeriod`, and ping and pause.
+
 ## 0.9.0
 
 - Add `DwiStreamTask`, the worker-side half of stream tasks (ADR-022).

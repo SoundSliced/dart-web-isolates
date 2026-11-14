@@ -5,19 +5,49 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.10.0] - 2026-11-14
 
 ### Toolchain
 
-- The project uses one Dart SDK for research and implementation: Dart
-  3.15.0-133.0.dev at `.research/dart-sdk-dev/dart-sdk`. No separate research
-  toolchain. The `tooling/dwi5_probe` scripts default to it instead of the
-  Flutter-bundled Dart 3.13.7. Package constraints stay `^3.13.0`, which already
-  admits 3.13.x, 3.14.0 and 3.15.0-dev, so published consumers are unaffected.
+- Research and implementation use Dart 3.15.0-133.0.dev, installed at
+  `~/Development/dart-sdk-3.15.0-dev`. Flutter 3.50.0 runs its own embedded Dart
+  3.14.0; Flutter cannot be pointed at another Dart, so Flutter measurements are
+  labelled 3.14.0. Package constraints stay `^3.13.0`, so published consumers
+  are unaffected.
 - Benchmarks re-run on the new toolchain (browser matrix Chrome 157.0.8103.78
   and Safari 26.5, JS-vs-Wasm worker); results are new dated sections in
   `docs/benchmarks.md` and `docs/browser-matrix.md`. Earlier numbers are kept
   with their own version stamps.
+
+### Flutter helpers and examples (ADR-025)
+
+- New package `dwi_flutter` with `computeParallel(task, inputs)`: one call per
+  input on the shared pool, results in input order, the first error fails the
+  call. Pure Dart; it does not depend on Flutter.
+- Runnable examples `examples/flutter_counter` and `examples/flutter_jank_demo`.
+  The jank demo compares the main thread, `computeParallel` and Flutter's
+  `compute()`. Empty example directories were removed.
+
+### Call metrics and pool state (ADR-026 G1, G2)
+
+- `DwiConfig(metrics: true)` and `Dwi.metrics()` return a `DwiMetrics` snapshot:
+  started, completed and failed `Dwi.run` calls, total and maximum call duration,
+  and bytes sent as `DwiTransferableBytes`. Off by default.
+- `Dwi.poolState()` returns a `DwiPoolState`: `maxWorkers`, queued calls, and
+  each live worker's `busy` and `failed` flags. On native, workers are the running
+  calls and `queued` is 0.
+
+### Protocol version check (ADR-026 G3)
+
+- The host fails a worker's startup when its `ready` message reports a protocol
+  version other than the host's, or no version at all. Previously the version was
+  reported but not checked.
+
+### Tests and continuous integration
+
+- `.github/workflows/ci.yml` runs format, analyze and VM tests for every package
+  on Dart 3.15.0-133.0.dev. The first run on GitHub has not been seen yet.
+- Packages were formatted with `dart format`; no behaviour change.
 
 ### Pausing dispatch and ping (ADR-028)
 

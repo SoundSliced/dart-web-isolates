@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.0
+
+- Reports the running calls through `DwiPoolInspector` (ADR-026 G2).
+- Cooperative cancellation (ADR-027), idle retirement and draining close
+  (ADR-024), and `ping` (ADR-028), as listed in the root changelog.
+
 ## 0.9.0
 
 - Synchronised release with `dwi` 0.9.0. No API change.

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.0
+
+- Version bump to match 0.10.0. Formatting only; no behaviour change.
+
 ## 0.9.0
 
 - Registered static functions: `DwiFunctions.run`/`run0` select annotated

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.0
+
+- Checks the protocol version in the worker's `ready` message and fails the
+  startup on a mismatch (ADR-026 G3, `protocol_check.dart`).
+- Reports the shared pool through `DwiPoolInspector` (ADR-026 G2).
+- Cooperative cancellation (ADR-027), idle retirement and draining close
+  (ADR-024), links (ADR-023) and `ping` (ADR-028), as listed in the root
+  changelog.
+
 ## 0.9.0
 
 - Fix: cancelling a pooled call while its worker is still starting now
