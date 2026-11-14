@@ -1,0 +1,4730 @@
+{
+  "date": "2026-11-14",
+  "method": "benchmarks/browser_matrix/web (extended), tooling/hosted_consumer/probe, three passes, four engines, Dart 3.15.0-133.0.dev for the build",
+  "runs": [
+    [
+      {
+        "engine": "chrome",
+        "version": "Google Chrome 157.0.8103.78",
+        "url": "http://127.0.0.1:65290/",
+        "status": "ok",
+        "data": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+          "hardwareConcurrency": 8,
+          "baseUri": "http://127.0.0.1:65290/",
+          "coldStartMs": 112,
+          "warmDispatch": {
+            "samplesMs": [
+              0.799,
+              0.4,
+              0.4,
+              0.301,
+              0.199,
+              0.2,
+              0.201,
+              0.299,
+              0.201,
+              0.4,
+              0,
+              0.399,
+              0.201,
+              0.099,
+              0.2,
+              0.201,
+              0.099,
+              0.1,
+              0.1,
+              0.101,
+              0.1,
+              0.199,
+              0,
+              0.201,
+              0,
+              0.299,
+              0.201,
+              0,
+              0.1,
+              0,
+              0.199,
+              0.1,
+              0,
+              0.101,
+              0.299,
+              0.1,
+              0.101,
+              0,
+              0.1,
+              0.099,
+              0,
+              0.1,
+              0.301,
+              0.099,
+              0.301,
+              1.199,
+              0.1,
+              0.1,
+              0.101,
+              0.199
+            ],
+            "medianMs": 0.101
+          },
+          "transfer_1KiB": {
+            "bytes": 1024,
+            "copySamplesMs": [
+              1.4,
+              0.5,
+              3,
+              0.1,
+              0.099,
+              0.2,
+              4.601
+            ],
+            "copyMedianMs": 0.5,
+            "transferSamplesMs": [
+              5.901,
+              0.6,
+              0.701,
+              0.299,
+              0.5,
+              0.4,
+              0.301
+            ],
+            "transferMedianMs": 0.5
+          },
+          "transfer_100KiB": {
+            "bytes": 102400,
+            "copySamplesMs": [
+              1.5,
+              0.6,
+              0.201,
+              0.699,
+              0.701,
+              0.299,
+              0.9
+            ],
+            "copyMedianMs": 0.699,
+            "transferSamplesMs": [
+              0.9,
+              0.399,
+              0.7,
+              1.5,
+              1,
+              0.5,
+              0.301
+            ],
+            "transferMedianMs": 0.7
+          },
+          "transfer_64KiB": {
+            "bytes": 65536,
+            "copySamplesMs": [
+              0.699,
+              0.6,
+              0.4,
+              0.301,
+              0.4,
+              0.5,
+              0.399
+            ],
+            "copyMedianMs": 0.4,
+            "transferSamplesMs": [
+              0.399,
+              0.6,
+              0.701,
+              0.4,
+              0.4,
+              0.4,
+              0.401
+            ],
+            "transferMedianMs": 0.4
+          },
+          "transfer_1MiB": {
+            "bytes": 1048576,
+            "copySamplesMs": [
+              3,
+              2.201,
+              1.799,
+              1.301,
+              1.4,
+              1.299,
+              2.201
+            ],
+            "copyMedianMs": 1.799,
+            "transferSamplesMs": [
+              0.9,
+              1.6,
+              1.099,
+              1.701,
+              0.9,
+              0.8,
+              1
+            ],
+            "transferMedianMs": 1
+          },
+          "transfer_8MiB": {
+            "bytes": 8388608,
+            "copySamplesMs": [
+              14.599,
+              12.2,
+              22.601,
+              8.6,
+              8.4,
+              9.699,
+              9.401
+            ],
+            "copyMedianMs": 9.699,
+            "transferSamplesMs": [
+              7.599,
+              7,
+              6.6,
+              6.6,
+              6.699,
+              7,
+              7.1
+            ],
+            "transferMedianMs": 7
+          },
+          "transfer_10MiB": {
+            "bytes": 10485760,
+            "copySamplesMs": [
+              14.5,
+              13.8,
+              14.901,
+              10.5,
+              10.699,
+              11.6,
+              11.601
+            ],
+            "copyMedianMs": 11.601,
+            "transferSamplesMs": [
+              9.299,
+              8.301,
+              9.201,
+              8.6,
+              7.9,
+              7.8,
+              8.4
+            ],
+            "transferMedianMs": 8.4
+          },
+          "transfer_100MiB": {
+            "bytes": 104857600,
+            "copySamplesMs": [
+              168.301,
+              215.5,
+              254.299,
+              242.4,
+              167,
+              182.301,
+              99.699
+            ],
+            "copyMedianMs": 182.301,
+            "transferSamplesMs": [
+              82,
+              100.9,
+              79.301,
+              70.1,
+              70.9,
+              74.401,
+              76.9
+            ],
+            "transferMedianMs": 76.9
+          },
+          "cancelQueued": {
+            "samplesMs": [
+              5.1,
+              0,
+              0,
+              0.101,
+              0
+            ],
+            "medianMs": 0
+          },
+          "cancelRunning": {
+            "samplesMs": [
+              0.2,
+              0.1,
+              0.099,
+              0.099,
+              0.1
+            ],
+            "medianMs": 0.1
+          },
+          "sustained": {
+            "tasks": 100,
+            "settled": 100,
+            "totalMs": 70,
+            "workers": 4,
+            "correct": true
+          },
+          "burst1000": {
+            "tasks": 1000,
+            "settled": 1000,
+            "totalMs": 142,
+            "workers": 4,
+            "correct": true
+          },
+          "leak": {
+            "rounds": 20,
+            "tasksPerRound": 100,
+            "correct": true,
+            "roundMs": [
+              4,
+              4,
+              6,
+              2,
+              5,
+              8,
+              4,
+              2,
+              9,
+              3,
+              2,
+              2,
+              3,
+              3,
+              3,
+              2,
+              2,
+              2,
+              2,
+              1
+            ],
+            "heapStartBytes": 110190666,
+            "heapEndBytes": 112187822,
+            "workers": 4
+          },
+          "crashFirst": "alive",
+          "crashNext": "next",
+          "crashNextMs": 13,
+          "crashWorkers": 1,
+          "uiTicksDuringWorkerCpu": 29,
+          "uiTicksDuringLocalCpu": 0,
+          "lateReply": {
+            "cancelled": true,
+            "nextValue": 6,
+            "correct": true
+          },
+          "workloads": {
+            "sortChecksum": {
+              "dwiMedianMs": 29.299,
+              "localMedianMs": 20.401,
+              "checksum": 843023398,
+              "correct": true
+            },
+            "jsonChecksum": {
+              "dwiMedianMs": 1.199,
+              "localMedianMs": 1,
+              "checksum": 3003999,
+              "correct": true
+            },
+            "adler32": {
+              "dwiMedianMs": 1.399,
+              "localMedianMs": 1.201,
+              "checksum": 2025659875,
+              "correct": true
+            },
+            "rleSize": {
+              "dwiMedianMs": 0.5,
+              "localMedianMs": 0.4,
+              "checksum": 14170,
+              "correct": true
+            },
+            "boxBlurSum": {
+              "dwiMedianMs": 3.6,
+              "localMedianMs": 3.199,
+              "checksum": 33045947,
+              "correct": true
+            }
+          },
+          "poolSizing": {
+            "1": {
+              "makespanMs": [
+                1044,
+                999.699,
+                999.9
+              ],
+              "medianMs": 999.9,
+              "correct": true
+            },
+            "2": {
+              "makespanMs": [
+                515.699,
+                505,
+                501
+              ],
+              "medianMs": 505,
+              "correct": true
+            },
+            "4": {
+              "makespanMs": [
+                270.9,
+                250.1,
+                249.9
+              ],
+              "medianMs": 250.1,
+              "correct": true
+            },
+            "8": {
+              "makespanMs": [
+                165.9,
+                132.9,
+                134.1
+              ],
+              "medianMs": 134.1,
+              "correct": true
+            }
+          },
+          "status": "ok"
+        }
+      },
+      {
+        "engine": "safari",
+        "version": "26.5",
+        "url": "http://127.0.0.1:65290/",
+        "status": "ok",
+        "data": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15",
+          "hardwareConcurrency": 8,
+          "baseUri": "http://127.0.0.1:65290/",
+          "coldStartMs": 65,
+          "warmDispatch": {
+            "samplesMs": [
+              2,
+              1,
+              0,
+              2,
+              1,
+              0,
+              1,
+              0,
+              0,
+              2,
+              5,
+              1,
+              1,
+              0,
+              0,
+              1,
+              1,
+              1,
+              1,
+              2,
+              0,
+              1,
+              0,
+              1,
+              0,
+              0,
+              1,
+              0,
+              1,
+              0,
+              0,
+              5,
+              5,
+              2,
+              3,
+              0,
+              0,
+              1,
+              0,
+              1,
+              0,
+              0,
+              0,
+              21,
+              0,
+              1,
+              0,
+              0,
+              0,
+              1
+            ],
+            "medianMs": 1
+          },
+          "transfer_1KiB": {
+            "bytes": 1024,
+            "copySamplesMs": [
+              4,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            "copyMedianMs": 0,
+            "transferSamplesMs": [
+              2,
+              1,
+              0,
+              0,
+              1,
+              1,
+              1
+            ],
+            "transferMedianMs": 1
+          },
+          "transfer_100KiB": {
+            "bytes": 102400,
+            "copySamplesMs": [
+              1,
+              1,
+              1,
+              0,
+              0,
+              1,
+              0
+            ],
+            "copyMedianMs": 1,
+            "transferSamplesMs": [
+              3,
+              1,
+              0,
+              0,
+              5,
+              1,
+              1
+            ],
+            "transferMedianMs": 1
+          },
+          "transfer_64KiB": {
+            "bytes": 65536,
+            "copySamplesMs": [
+              0,
+              2,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            "copyMedianMs": 0,
+            "transferSamplesMs": [
+              1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            "transferMedianMs": 0
+          },
+          "transfer_1MiB": {
+            "bytes": 1048576,
+            "copySamplesMs": [
+              1,
+              1,
+              2,
+              1,
+              2,
+              3,
+              1
+            ],
+            "copyMedianMs": 1,
+            "transferSamplesMs": [
+              1,
+              1,
+              2,
+              1,
+              1,
+              0,
+              0
+            ],
+            "transferMedianMs": 1
+          },
+          "transfer_8MiB": {
+            "bytes": 8388608,
+            "copySamplesMs": [
+              15,
+              9,
+              8,
+              8,
+              10,
+              9,
+              8
+            ],
+            "copyMedianMs": 9,
+            "transferSamplesMs": [
+              100,
+              6,
+              5,
+              3,
+              4,
+              5,
+              4
+            ],
+            "transferMedianMs": 5
+          },
+          "transfer_10MiB": {
+            "bytes": 10485760,
+            "copySamplesMs": [
+              10,
+              9,
+              10,
+              9,
+              7,
+              9,
+              7
+            ],
+            "copyMedianMs": 9,
+            "transferSamplesMs": [
+              9,
+              6,
+              5,
+              4,
+              5,
+              5,
+              4
+            ],
+            "transferMedianMs": 5
+          },
+          "transfer_100MiB": {
+            "bytes": 104857600,
+            "copySamplesMs": [
+              174,
+              75,
+              93,
+              118,
+              117,
+              93,
+              111
+            ],
+            "copyMedianMs": 111,
+            "transferSamplesMs": [
+              42,
+              39,
+              49,
+              44,
+              44,
+              39,
+              47
+            ],
+            "transferMedianMs": 44
+          },
+          "cancelQueued": {
+            "samplesMs": [
+              2,
+              0,
+              0,
+              0,
+              1
+            ],
+            "medianMs": 0
+          },
+          "cancelRunning": {
+            "samplesMs": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "medianMs": 0
+          },
+          "sustained": {
+            "tasks": 100,
+            "settled": 100,
+            "totalMs": 48,
+            "workers": 4,
+            "correct": true
+          },
+          "burst1000": {
+            "tasks": 1000,
+            "settled": 1000,
+            "totalMs": 80,
+            "workers": 4,
+            "correct": true
+          },
+          "leak": {
+            "rounds": 20,
+            "tasksPerRound": 100,
+            "correct": true,
+            "roundMs": [
+              4,
+              5,
+              4,
+              4,
+              5,
+              7,
+              5,
+              6,
+              10,
+              3,
+              5,
+              4,
+              3,
+              5,
+              4,
+              3,
+              4,
+              6,
+              3,
+              6
+            ],
+            "heapStartBytes": null,
+            "heapEndBytes": null,
+            "workers": 4
+          },
+          "crashFirst": "alive",
+          "crashNext": "next",
+          "crashNextMs": 32,
+          "crashWorkers": 1,
+          "uiTicksDuringWorkerCpu": 25,
+          "uiTicksDuringLocalCpu": 0,
+          "lateReply": {
+            "cancelled": true,
+            "nextValue": 6,
+            "correct": true
+          },
+          "workloads": {
+            "sortChecksum": {
+              "dwiMedianMs": 36,
+              "localMedianMs": 25,
+              "checksum": 843023398,
+              "correct": true
+            },
+            "jsonChecksum": {
+              "dwiMedianMs": 2,
+              "localMedianMs": 1,
+              "checksum": 3003999,
+              "correct": true
+            },
+            "adler32": {
+              "dwiMedianMs": 2,
+              "localMedianMs": 2,
+              "checksum": 2025659875,
+              "correct": true
+            },
+            "rleSize": {
+              "dwiMedianMs": 1,
+              "localMedianMs": 0,
+              "checksum": 14170,
+              "correct": true
+            },
+            "boxBlurSum": {
+              "dwiMedianMs": 3,
+              "localMedianMs": 3,
+              "checksum": 33045947,
+              "correct": true
+            }
+          },
+          "poolSizing": {
+            "1": {
+              "makespanMs": [
+                1017,
+                1000,
+                1000
+              ],
+              "medianMs": 1000,
+              "correct": true
+            },
+            "2": {
+              "makespanMs": [
+                548,
+                501,
+                500
+              ],
+              "medianMs": 501,
+              "correct": true
+            },
+            "4": {
+              "makespanMs": [
+                283,
+                253,
+                252
+              ],
+              "medianMs": 253,
+              "correct": true
+            },
+            "8": {
+              "makespanMs": [
+                180,
+                138,
+                141
+              ],
+              "medianMs": 141,
+              "correct": true
+            }
+          },
+          "status": "ok"
+        }
+      },
+      {
+        "engine": "firefox",
+        "version": "Mozilla Firefox 160.0",
+        "url": "http://127.0.0.1:65290/",
+        "status": "ok",
+        "data": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:160.0) Gecko/20100101 Firefox/160.0",
+          "hardwareConcurrency": 8,
+          "baseUri": "http://127.0.0.1:65290/",
+          "coldStartMs": 33,
+          "warmDispatch": {
+            "samplesMs": [
+              1,
+              0,
+              2,
+              0,
+              1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              1
+            ],
+            "medianMs": 0
+          },
+          "transfer_1KiB": {
+            "bytes": 1024,
+            "copySamplesMs": [
+              2,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "copyMedianMs": 0,
+            "transferSamplesMs": [
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            "transferMedianMs": 0
+          },
+          "transfer_100KiB": {
+            "bytes": 102400,
+            "copySamplesMs": [
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "copyMedianMs": 0,
+            "transferSamplesMs": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0
+            ],
+            "transferMedianMs": 0
+          },
+          "transfer_64KiB": {
+            "bytes": 65536,
+            "copySamplesMs": [
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "copyMedianMs": 0,
+            "transferSamplesMs": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "transferMedianMs": 0
+          },
+          "transfer_1MiB": {
+            "bytes": 1048576,
+            "copySamplesMs": [
+              1,
+              2,
+              1,
+              0,
+              1,
+              1,
+              2
+            ],
+            "copyMedianMs": 1,
+            "transferSamplesMs": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "transferMedianMs": 1
+          },
+          "transfer_8MiB": {
+            "bytes": 8388608,
+            "copySamplesMs": [
+              8,
+              8,
+              8,
+              7,
+              12,
+              9,
+              8
+            ],
+            "copyMedianMs": 8,
+            "transferSamplesMs": [
+              6,
+              5,
+              5,
+              6,
+              6,
+              6,
+              5
+            ],
+            "transferMedianMs": 6
+          },
+          "transfer_10MiB": {
+            "bytes": 10485760,
+            "copySamplesMs": [
+              9,
+              12,
+              10,
+              9,
+              9,
+              9,
+              10
+            ],
+            "copyMedianMs": 9,
+            "transferSamplesMs": [
+              9,
+              7,
+              7,
+              9,
+              7,
+              7,
+              8
+            ],
+            "transferMedianMs": 7
+          },
+          "transfer_100MiB": {
+            "bytes": 104857600,
+            "copySamplesMs": [
+              125,
+              97,
+              110,
+              124,
+              171,
+              174,
+              127
+            ],
+            "copyMedianMs": 125,
+            "transferSamplesMs": [
+              147,
+              76,
+              77,
+              89,
+              75,
+              110,
+              87
+            ],
+            "transferMedianMs": 87
+          },
+          "cancelQueued": {
+            "samplesMs": [
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            "medianMs": 0
+          },
+          "cancelRunning": {
+            "samplesMs": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "medianMs": 0
+          },
+          "sustained": {
+            "tasks": 100,
+            "settled": 100,
+            "totalMs": 54,
+            "workers": 4,
+            "correct": true
+          },
+          "burst1000": {
+            "tasks": 1000,
+            "settled": 1000,
+            "totalMs": 76,
+            "workers": 4,
+            "correct": true
+          },
+          "leak": {
+            "rounds": 20,
+            "tasksPerRound": 100,
+            "correct": true,
+            "roundMs": [
+              4,
+              4,
+              5,
+              6,
+              4,
+              3,
+              4,
+              5,
+              3,
+              4,
+              8,
+              5,
+              4,
+              3,
+              4,
+              4,
+              3,
+              4,
+              4,
+              4
+            ],
+            "heapStartBytes": null,
+            "heapEndBytes": null,
+            "workers": 4
+          },
+          "crashFirst": "alive",
+          "crashNext": "next",
+          "crashNextMs": 16,
+          "crashWorkers": 1,
+          "uiTicksDuringWorkerCpu": 29,
+          "uiTicksDuringLocalCpu": 0,
+          "lateReply": {
+            "cancelled": true,
+            "nextValue": 6,
+            "correct": true
+          },
+          "workloads": {
+            "sortChecksum": {
+              "dwiMedianMs": 33,
+              "localMedianMs": 25,
+              "checksum": 843023398,
+              "correct": true
+            },
+            "jsonChecksum": {
+              "dwiMedianMs": 1,
+              "localMedianMs": 1,
+              "checksum": 3003999,
+              "correct": true
+            },
+            "adler32": {
+              "dwiMedianMs": 1,
+              "localMedianMs": 1,
+              "checksum": 2025659875,
+              "correct": true
+            },
+            "rleSize": {
+              "dwiMedianMs": 0,
+              "localMedianMs": 0,
+              "checksum": 14170,
+              "correct": true
+            },
+            "boxBlurSum": {
+              "dwiMedianMs": 4,
+              "localMedianMs": 5,
+              "checksum": 33045947,
+              "correct": true
+            }
+          },
+          "poolSizing": {
+            "1": {
+              "makespanMs": [
+                1023,
+                1008,
+                1004
+              ],
+              "medianMs": 1008,
+              "correct": true
+            },
+            "2": {
+              "makespanMs": [
+                528,
+                501,
+                511
+              ],
+              "medianMs": 511,
+              "correct": true
+            },
+            "4": {
+              "makespanMs": [
+                274,
+                256,
+                251
+              ],
+              "medianMs": 256,
+              "correct": true
+            },
+            "8": {
+              "makespanMs": [
+                171,
+                141,
+                137
+              ],
+              "medianMs": 141,
+              "correct": true
+            }
+          },
+          "status": "ok"
+        }
+      },
+      {
+        "engine": "edge",
+        "version": "Microsoft Edge 157.0.4341.60",
+        "url": "http://127.0.0.1:65290/",
+        "status": "ok",
+        "data": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
+          "hardwareConcurrency": 8,
+          "baseUri": "http://127.0.0.1:65290/",
+          "coldStartMs": 236,
+          "warmDispatch": {
+            "samplesMs": [
+              0.9,
+              1,
+              0.8,
+              0.6,
+              0.301,
+              0.5,
+              0.399,
+              0.4,
+              0.4,
+              0.6,
+              1,
+              0.5,
+              1,
+              0.1,
+              0.2,
+              0.6,
+              1.1,
+              0.701,
+              0.399,
+              0.3,
+              0.4,
+              0.2,
+              0.1,
+              0.3,
+              0.2,
+              0.3,
+              0.2,
+              0.2,
+              0.2,
+              0.1,
+              0.699,
+              0.1,
+              0.3,
+              0.3,
+              0.3,
+              0.9,
+              0.2,
+              0.201,
+              0.199,
+              1,
+              0.2,
+              0.4,
+              0.201,
+              0,
+              0.399,
+              3.9,
+              0.2,
+              0.401,
+              0.299,
+              0.4
+            ],
+            "medianMs": 0.35
+          },
+          "transfer_1KiB": {
+            "bytes": 1024,
+            "copySamplesMs": [
+              1.701,
+              0.299,
+              7.201,
+              0.5,
+              0.299,
+              0.6,
+              3.8
+            ],
+            "copyMedianMs": 0.6,
+            "transferSamplesMs": [
+              4.5,
+              0.299,
+              1,
+              0.2,
+              0.1,
+              0.2,
+              0.2
+            ],
+            "transferMedianMs": 0.2
+          },
+          "transfer_100KiB": {
+            "bytes": 102400,
+            "copySamplesMs": [
+              0.5,
+              0.6,
+              0.601,
+              0.599,
+              0.401,
+              0.299,
+              0.201
+            ],
+            "copyMedianMs": 0.5,
+            "transferSamplesMs": [
+              0.5,
+              0.5,
+              0.601,
+              0.4,
+              0.601,
+              0.301,
+              0.301
+            ],
+            "transferMedianMs": 0.5
+          },
+          "transfer_64KiB": {
+            "bytes": 65536,
+            "copySamplesMs": [
+              0.401,
+              1,
+              0.299,
+              1,
+              0.5,
+              0.3,
+              1.3
+            ],
+            "copyMedianMs": 0.5,
+            "transferSamplesMs": [
+              0.5,
+              0.2,
+              0.2,
+              0.4,
+              0.4,
+              0.3,
+              0.3
+            ],
+            "transferMedianMs": 0.3
+          },
+          "transfer_1MiB": {
+            "bytes": 1048576,
+            "copySamplesMs": [
+              3.299,
+              3.1,
+              3.601,
+              2.599,
+              3,
+              2.2,
+              3.8
+            ],
+            "copyMedianMs": 3.1,
+            "transferSamplesMs": [
+              2,
+              2.399,
+              3.299,
+              1.1,
+              1.3,
+              0.8,
+              1.1
+            ],
+            "transferMedianMs": 1.3
+          },
+          "transfer_8MiB": {
+            "bytes": 8388608,
+            "copySamplesMs": [
+              11.1,
+              12.5,
+              31.4,
+              12,
+              10,
+              14,
+              10.8
+            ],
+            "copyMedianMs": 12,
+            "transferSamplesMs": [
+              10.8,
+              6.601,
+              6.4,
+              6.4,
+              6,
+              7.199,
+              6.601
+            ],
+            "transferMedianMs": 6.601
+          },
+          "transfer_10MiB": {
+            "bytes": 10485760,
+            "copySamplesMs": [
+              13.701,
+              13.5,
+              25.599,
+              10.6,
+              9.9,
+              9.8,
+              12.5
+            ],
+            "copyMedianMs": 12.5,
+            "transferSamplesMs": [
+              8,
+              7.8,
+              8.4,
+              9.5,
+              8.3,
+              7.9,
+              8.1
+            ],
+            "transferMedianMs": 8.1
+          },
+          "transfer_100MiB": {
+            "bytes": 104857600,
+            "copySamplesMs": [
+              171.4,
+              150.1,
+              117,
+              152.4,
+              95.8,
+              144.301,
+              92.299
+            ],
+            "copyMedianMs": 144.301,
+            "transferSamplesMs": [
+              275.1,
+              304.2,
+              246.8,
+              236.599,
+              261.599,
+              210.1,
+              239.2
+            ],
+            "transferMedianMs": 246.8
+          },
+          "cancelQueued": {
+            "samplesMs": [
+              1,
+              0.1,
+              0.199,
+              0.1,
+              0.2
+            ],
+            "medianMs": 0.199
+          },
+          "cancelRunning": {
+            "samplesMs": [
+              0.2,
+              0.2,
+              0.199,
+              0.1,
+              0.2
+            ],
+            "medianMs": 0.2
+          },
+          "sustained": {
+            "tasks": 100,
+            "settled": 100,
+            "totalMs": 103,
+            "workers": 4,
+            "correct": true
+          },
+          "burst1000": {
+            "tasks": 1000,
+            "settled": 1000,
+            "totalMs": 114,
+            "workers": 4,
+            "correct": true
+          },
+          "leak": {
+            "rounds": 20,
+            "tasksPerRound": 100,
+            "correct": true,
+            "roundMs": [
+              3,
+              2,
+              2,
+              2,
+              2,
+              3,
+              2,
+              3,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "heapStartBytes": 110070352,
+            "heapEndBytes": 111762328,
+            "workers": 4
+          },
+          "crashFirst": "alive",
+          "crashNext": "next",
+          "crashNextMs": 20,
+          "crashWorkers": 1,
+          "uiTicksDuringWorkerCpu": 29,
+          "uiTicksDuringLocalCpu": 0,
+          "lateReply": {
+            "cancelled": true,
+            "nextValue": 6,
+            "correct": true
+          },
+          "workloads": {
+            "sortChecksum": {
+              "dwiMedianMs": 37.4,
+              "localMedianMs": 30.5,
+              "checksum": 843023398,
+              "correct": true
+            },
+            "jsonChecksum": {
+              "dwiMedianMs": 1.3,
+              "localMedianMs": 1.1,
+              "checksum": 3003999,
+              "correct": true
+            },
+            "adler32": {
+              "dwiMedianMs": 1.8,
+              "localMedianMs": 1.5,
+              "checksum": 2025659875,
+              "correct": true
+            },
+            "rleSize": {
+              "dwiMedianMs": 0.9,
+              "localMedianMs": 0.8,
+              "checksum": 14170,
+              "correct": true
+            },
+            "boxBlurSum": {
+              "dwiMedianMs": 6.6,
+              "localMedianMs": 7,
+              "checksum": 33045947,
+              "correct": true
+            }
+          },
+          "poolSizing": {
+            "1": {
+              "makespanMs": [
+                1014.5,
+                1000.7,
+                1000
+              ],
+              "medianMs": 1000.7,
+              "correct": true
+            },
+            "2": {
+              "makespanMs": [
+                590.3,
+                500,
+                500
+              ],
+              "medianMs": 500,
+              "correct": true
+            },
+            "4": {
+              "makespanMs": [
+                270.899,
+                251,
+                253
+              ],
+              "medianMs": 253,
+              "correct": true
+            },
+            "8": {
+              "makespanMs": [
+                171.7,
+                132,
+                145.101
+              ],
+              "medianMs": 145.101,
+              "correct": true
+            }
+          },
+          "status": "ok"
+        }
+      }
+    ],
+    [
+      {
+        "engine": "chrome",
+        "version": "Google Chrome 157.0.8103.78",
+        "url": "http://127.0.0.1:49273/",
+        "status": "ok",
+        "data": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+          "hardwareConcurrency": 8,
+          "baseUri": "http://127.0.0.1:49273/",
+          "coldStartMs": 36,
+          "warmDispatch": {
+            "samplesMs": [
+              0.4,
+              0.4,
+              0.2,
+              0.3,
+              0.5,
+              0.6,
+              0.3,
+              0.1,
+              0.7,
+              0.2,
+              0,
+              0.1,
+              0.1,
+              0,
+              0.1,
+              0.2,
+              0.1,
+              0.3,
+              0.2,
+              0,
+              0.1,
+              0.2,
+              0,
+              0.1,
+              0.1,
+              0.2,
+              0.1,
+              0,
+              0.1,
+              0.1,
+              0.1,
+              0,
+              0.1,
+              0,
+              0.1,
+              0.1,
+              0,
+              0,
+              0.1,
+              0.1,
+              0,
+              0.1,
+              0.1,
+              0.1,
+              0,
+              3.5,
+              0.1,
+              0.1,
+              0.1,
+              0
+            ],
+            "medianMs": 0.1
+          },
+          "transfer_1KiB": {
+            "bytes": 1024,
+            "copySamplesMs": [
+              2.2,
+              0.1,
+              0.2,
+              0,
+              0,
+              0,
+              0.5
+            ],
+            "copyMedianMs": 0.1,
+            "transferSamplesMs": [
+              7.7,
+              0.2,
+              0.3,
+              0.1,
+              0.1,
+              0.2,
+              0
+            ],
+            "transferMedianMs": 0.2
+          },
+          "transfer_100KiB": {
+            "bytes": 102400,
+            "copySamplesMs": [
+              0.4,
+              0.2,
+              0.2,
+              0.3,
+              0.3,
+              0.2,
+              0.2
+            ],
+            "copyMedianMs": 0.2,
+            "transferSamplesMs": [
+              0.4,
+              0.4,
+              0.3,
+              0.3,
+              0.2,
+              0.3,
+              0.3
+            ],
+            "transferMedianMs": 0.3
+          },
+          "transfer_64KiB": {
+            "bytes": 65536,
+            "copySamplesMs": [
+              0.2,
+              0.2,
+              0.2,
+              0.2,
+              0.1,
+              0.3,
+              0.2
+            ],
+            "copyMedianMs": 0.2,
+            "transferSamplesMs": [
+              0.5,
+              0.8,
+              0.3,
+              0.2,
+              0.2,
+              0.2,
+              0.2
+            ],
+            "transferMedianMs": 0.2
+          },
+          "transfer_1MiB": {
+            "bytes": 1048576,
+            "copySamplesMs": [
+              1.9,
+              2.6,
+              2.1,
+              2.1,
+              2.3,
+              1.9,
+              3.6
+            ],
+            "copyMedianMs": 2.1,
+            "transferSamplesMs": [
+              1.9,
+              2.1,
+              3.6,
+              3.6,
+              1.2,
+              1.6,
+              0.9
+            ],
+            "transferMedianMs": 1.9
+          },
+          "transfer_8MiB": {
+            "bytes": 8388608,
+            "copySamplesMs": [
+              9.7,
+              9.8,
+              24.1,
+              8.5,
+              7.8,
+              8.1,
+              8.9
+            ],
+            "copyMedianMs": 8.9,
+            "transferSamplesMs": [
+              7.4,
+              6.6,
+              6.4,
+              6.2,
+              6.1,
+              6.2,
+              6.2
+            ],
+            "transferMedianMs": 6.2
+          },
+          "transfer_10MiB": {
+            "bytes": 10485760,
+            "copySamplesMs": [
+              11.9,
+              12.1,
+              16,
+              10.4,
+              9.8,
+              9.8,
+              10.2
+            ],
+            "copyMedianMs": 10.4,
+            "transferSamplesMs": [
+              8.7,
+              8.4,
+              8.3,
+              8.2,
+              7.5,
+              7.8,
+              7.6
+            ],
+            "transferMedianMs": 8.2
+          },
+          "transfer_100MiB": {
+            "bytes": 104857600,
+            "copySamplesMs": [
+              137.6,
+              124.7,
+              100,
+              131.6,
+              96.9,
+              130.1,
+              101.1
+            ],
+            "copyMedianMs": 124.7,
+            "transferSamplesMs": [
+              97.7,
+              93.1,
+              82.7,
+              73.9,
+              78.1,
+              80.9,
+              79.2
+            ],
+            "transferMedianMs": 80.9
+          },
+          "cancelQueued": {
+            "samplesMs": [
+              1.7,
+              0,
+              0,
+              0,
+              0.2
+            ],
+            "medianMs": 0
+          },
+          "cancelRunning": {
+            "samplesMs": [
+              0.4,
+              0.1,
+              0.2,
+              0.1,
+              0.1
+            ],
+            "medianMs": 0.1
+          },
+          "sustained": {
+            "tasks": 100,
+            "settled": 100,
+            "totalMs": 69,
+            "workers": 4,
+            "correct": true
+          },
+          "burst1000": {
+            "tasks": 1000,
+            "settled": 1000,
+            "totalMs": 129,
+            "workers": 4,
+            "correct": true
+          },
+          "leak": {
+            "rounds": 20,
+            "tasksPerRound": 100,
+            "correct": true,
+            "roundMs": [
+              10,
+              4,
+              3,
+              3,
+              6,
+              5,
+              4,
+              3,
+              2,
+              3,
+              3,
+              2,
+              2,
+              2,
+              4,
+              2,
+              1,
+              3,
+              2,
+              2
+            ],
+            "heapStartBytes": 110169026,
+            "heapEndBytes": 112429670,
+            "workers": 4
+          },
+          "crashFirst": "alive",
+          "crashNext": "next",
+          "crashNextMs": 161,
+          "crashWorkers": 1,
+          "uiTicksDuringWorkerCpu": 29,
+          "uiTicksDuringLocalCpu": 0,
+          "lateReply": {
+            "cancelled": true,
+            "nextValue": 6,
+            "correct": true
+          },
+          "workloads": {
+            "sortChecksum": {
+              "dwiMedianMs": 26,
+              "localMedianMs": 17.2,
+              "checksum": 843023398,
+              "correct": true
+            },
+            "jsonChecksum": {
+              "dwiMedianMs": 1.2,
+              "localMedianMs": 1,
+              "checksum": 3003999,
+              "correct": true
+            },
+            "adler32": {
+              "dwiMedianMs": 1.2,
+              "localMedianMs": 1,
+              "checksum": 2025659875,
+              "correct": true
+            },
+            "rleSize": {
+              "dwiMedianMs": 0.5,
+              "localMedianMs": 0.3,
+              "checksum": 14170,
+              "correct": true
+            },
+            "boxBlurSum": {
+              "dwiMedianMs": 3.3,
+              "localMedianMs": 3.1,
+              "checksum": 33045947,
+              "correct": true
+            }
+          },
+          "poolSizing": {
+            "1": {
+              "makespanMs": [
+                1012.8,
+                1001.6,
+                1000
+              ],
+              "medianMs": 1001.6,
+              "correct": true
+            },
+            "2": {
+              "makespanMs": [
+                521.8,
+                499.9,
+                501.1
+              ],
+              "medianMs": 501.1,
+              "correct": true
+            },
+            "4": {
+              "makespanMs": [
+                267.7,
+                251.1,
+                252
+              ],
+              "medianMs": 252,
+              "correct": true
+            },
+            "8": {
+              "makespanMs": [
+                201.8,
+                141.3,
+                157.8
+              ],
+              "medianMs": 157.8,
+              "correct": true
+            }
+          },
+          "status": "ok"
+        }
+      },
+      {
+        "engine": "safari",
+        "version": "26.5",
+        "url": "http://127.0.0.1:49273/",
+        "status": "ok",
+        "data": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15",
+          "hardwareConcurrency": 8,
+          "baseUri": "http://127.0.0.1:49273/",
+          "coldStartMs": 37,
+          "warmDispatch": {
+            "samplesMs": [
+              2,
+              0,
+              1,
+              1,
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            "medianMs": 0
+          },
+          "transfer_1KiB": {
+            "bytes": 1024,
+            "copySamplesMs": [
+              2,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            "copyMedianMs": 0,
+            "transferSamplesMs": [
+              1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            "transferMedianMs": 0
+          },
+          "transfer_100KiB": {
+            "bytes": 102400,
+            "copySamplesMs": [
+              1,
+              0,
+              1,
+              0,
+              0,
+              1,
+              3
+            ],
+            "copyMedianMs": 1,
+            "transferSamplesMs": [
+              0,
+              0,
+              0,
+              0,
+              2,
+              0,
+              0
+            ],
+            "transferMedianMs": 0
+          },
+          "transfer_64KiB": {
+            "bytes": 65536,
+            "copySamplesMs": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            "copyMedianMs": 0,
+            "transferSamplesMs": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "transferMedianMs": 0
+          },
+          "transfer_1MiB": {
+            "bytes": 1048576,
+            "copySamplesMs": [
+              0,
+              1,
+              2,
+              1,
+              0,
+              1,
+              1
+            ],
+            "copyMedianMs": 1,
+            "transferSamplesMs": [
+              1,
+              1,
+              0,
+              0,
+              1,
+              2,
+              1
+            ],
+            "transferMedianMs": 1
+          },
+          "transfer_8MiB": {
+            "bytes": 8388608,
+            "copySamplesMs": [
+              8,
+              7,
+              5,
+              5,
+              5,
+              5,
+              4
+            ],
+            "copyMedianMs": 5,
+            "transferSamplesMs": [
+              4,
+              9,
+              3,
+              4,
+              3,
+              3,
+              4
+            ],
+            "transferMedianMs": 4
+          },
+          "transfer_10MiB": {
+            "bytes": 10485760,
+            "copySamplesMs": [
+              8,
+              5,
+              6,
+              7,
+              7,
+              5,
+              19
+            ],
+            "copyMedianMs": 7,
+            "transferSamplesMs": [
+              18,
+              4,
+              5,
+              5,
+              4,
+              5,
+              4
+            ],
+            "transferMedianMs": 5
+          },
+          "transfer_100MiB": {
+            "bytes": 104857600,
+            "copySamplesMs": [
+              124,
+              81,
+              72,
+              66,
+              67,
+              62,
+              61
+            ],
+            "copyMedianMs": 67,
+            "transferSamplesMs": [
+              40,
+              39,
+              39,
+              43,
+              42,
+              48,
+              42
+            ],
+            "transferMedianMs": 42
+          },
+          "cancelQueued": {
+            "samplesMs": [
+              2,
+              1,
+              0,
+              0,
+              0
+            ],
+            "medianMs": 0
+          },
+          "cancelRunning": {
+            "samplesMs": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "medianMs": 0
+          },
+          "sustained": {
+            "tasks": 100,
+            "settled": 100,
+            "totalMs": 32,
+            "workers": 4,
+            "correct": true
+          },
+          "burst1000": {
+            "tasks": 1000,
+            "settled": 1000,
+            "totalMs": 76,
+            "workers": 4,
+            "correct": true
+          },
+          "leak": {
+            "rounds": 20,
+            "tasksPerRound": 100,
+            "correct": true,
+            "roundMs": [
+              4,
+              4,
+              4,
+              4,
+              5,
+              4,
+              3,
+              4,
+              6,
+              3,
+              4,
+              4,
+              4,
+              3,
+              4,
+              4,
+              3,
+              5,
+              11,
+              4
+            ],
+            "heapStartBytes": null,
+            "heapEndBytes": null,
+            "workers": 4
+          },
+          "crashFirst": "alive",
+          "crashNext": "next",
+          "crashNextMs": 31,
+          "crashWorkers": 1,
+          "uiTicksDuringWorkerCpu": 25,
+          "uiTicksDuringLocalCpu": 0,
+          "lateReply": {
+            "cancelled": true,
+            "nextValue": 6,
+            "correct": true
+          },
+          "workloads": {
+            "sortChecksum": {
+              "dwiMedianMs": 38,
+              "localMedianMs": 25,
+              "checksum": 843023398,
+              "correct": true
+            },
+            "jsonChecksum": {
+              "dwiMedianMs": 4,
+              "localMedianMs": 2,
+              "checksum": 3003999,
+              "correct": true
+            },
+            "adler32": {
+              "dwiMedianMs": 11,
+              "localMedianMs": 4,
+              "checksum": 2025659875,
+              "correct": true
+            },
+            "rleSize": {
+              "dwiMedianMs": 2,
+              "localMedianMs": 2,
+              "checksum": 14170,
+              "correct": true
+            },
+            "boxBlurSum": {
+              "dwiMedianMs": 4,
+              "localMedianMs": 3,
+              "checksum": 33045947,
+              "correct": true
+            }
+          },
+          "poolSizing": {
+            "1": {
+              "makespanMs": [
+                1021,
+                1001,
+                1001
+              ],
+              "medianMs": 1001,
+              "correct": true
+            },
+            "2": {
+              "makespanMs": [
+                525,
+                502,
+                501
+              ],
+              "medianMs": 502,
+              "correct": true
+            },
+            "4": {
+              "makespanMs": [
+                281,
+                258,
+                252
+              ],
+              "medianMs": 258,
+              "correct": true
+            },
+            "8": {
+              "makespanMs": [
+                188,
+                140,
+                148
+              ],
+              "medianMs": 148,
+              "correct": true
+            }
+          },
+          "status": "ok"
+        }
+      },
+      {
+        "engine": "firefox",
+        "version": "Mozilla Firefox 160.0",
+        "url": "http://127.0.0.1:49273/",
+        "status": "ok",
+        "data": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:160.0) Gecko/20100101 Firefox/160.0",
+          "hardwareConcurrency": 8,
+          "baseUri": "http://127.0.0.1:49273/",
+          "coldStartMs": 32,
+          "warmDispatch": {
+            "samplesMs": [
+              1,
+              1,
+              3,
+              2,
+              4,
+              1,
+              0,
+              1,
+              1,
+              1,
+              0,
+              1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              1,
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "medianMs": 0
+          },
+          "transfer_1KiB": {
+            "bytes": 1024,
+            "copySamplesMs": [
+              8,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "copyMedianMs": 0,
+            "transferSamplesMs": [
+              8,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "transferMedianMs": 0
+          },
+          "transfer_100KiB": {
+            "bytes": 102400,
+            "copySamplesMs": [
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            "copyMedianMs": 0,
+            "transferSamplesMs": [
+              1,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "transferMedianMs": 0
+          },
+          "transfer_64KiB": {
+            "bytes": 65536,
+            "copySamplesMs": [
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            "copyMedianMs": 0,
+            "transferSamplesMs": [
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            "transferMedianMs": 0
+          },
+          "transfer_1MiB": {
+            "bytes": 1048576,
+            "copySamplesMs": [
+              2,
+              0,
+              0,
+              2,
+              1,
+              2,
+              2
+            ],
+            "copyMedianMs": 2,
+            "transferSamplesMs": [
+              1,
+              0,
+              2,
+              1,
+              1,
+              1,
+              0
+            ],
+            "transferMedianMs": 1
+          },
+          "transfer_8MiB": {
+            "bytes": 8388608,
+            "copySamplesMs": [
+              11,
+              8,
+              8,
+              8,
+              12,
+              10,
+              10
+            ],
+            "copyMedianMs": 10,
+            "transferSamplesMs": [
+              7,
+              7,
+              7,
+              6,
+              7,
+              6,
+              6
+            ],
+            "transferMedianMs": 7
+          },
+          "transfer_10MiB": {
+            "bytes": 10485760,
+            "copySamplesMs": [
+              12,
+              12,
+              14,
+              12,
+              11,
+              9,
+              12
+            ],
+            "copyMedianMs": 12,
+            "transferSamplesMs": [
+              11,
+              14,
+              8,
+              8,
+              8,
+              8,
+              8
+            ],
+            "transferMedianMs": 8
+          },
+          "transfer_100MiB": {
+            "bytes": 104857600,
+            "copySamplesMs": [
+              142,
+              143,
+              122,
+              175,
+              112,
+              143,
+              187
+            ],
+            "copyMedianMs": 143,
+            "transferSamplesMs": [
+              83,
+              95,
+              95,
+              73,
+              84,
+              81,
+              91
+            ],
+            "transferMedianMs": 84
+          },
+          "cancelQueued": {
+            "samplesMs": [
+              1,
+              0,
+              0,
+              1,
+              0
+            ],
+            "medianMs": 0
+          },
+          "cancelRunning": {
+            "samplesMs": [
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            "medianMs": 0
+          },
+          "sustained": {
+            "tasks": 100,
+            "settled": 100,
+            "totalMs": 28,
+            "workers": 4,
+            "correct": true
+          },
+          "burst1000": {
+            "tasks": 1000,
+            "settled": 1000,
+            "totalMs": 97,
+            "workers": 4,
+            "correct": true
+          },
+          "leak": {
+            "rounds": 20,
+            "tasksPerRound": 100,
+            "correct": true,
+            "roundMs": [
+              5,
+              6,
+              11,
+              9,
+              10,
+              6,
+              6,
+              6,
+              5,
+              8,
+              6,
+              5,
+              5,
+              2,
+              3,
+              7,
+              4,
+              3,
+              3,
+              6
+            ],
+            "heapStartBytes": null,
+            "heapEndBytes": null,
+            "workers": 4
+          },
+          "crashFirst": "alive",
+          "crashNext": "next",
+          "crashNextMs": 31,
+          "crashWorkers": 1,
+          "uiTicksDuringWorkerCpu": 29,
+          "uiTicksDuringLocalCpu": 0,
+          "lateReply": {
+            "cancelled": true,
+            "nextValue": 6,
+            "correct": true
+          },
+          "workloads": {
+            "sortChecksum": {
+              "dwiMedianMs": 31,
+              "localMedianMs": 25,
+              "checksum": 843023398,
+              "correct": true
+            },
+            "jsonChecksum": {
+              "dwiMedianMs": 1,
+              "localMedianMs": 1,
+              "checksum": 3003999,
+              "correct": true
+            },
+            "adler32": {
+              "dwiMedianMs": 1,
+              "localMedianMs": 1,
+              "checksum": 2025659875,
+              "correct": true
+            },
+            "rleSize": {
+              "dwiMedianMs": 0,
+              "localMedianMs": 0,
+              "checksum": 14170,
+              "correct": true
+            },
+            "boxBlurSum": {
+              "dwiMedianMs": 4,
+              "localMedianMs": 4,
+              "checksum": 33045947,
+              "correct": true
+            }
+          },
+          "poolSizing": {
+            "1": {
+              "makespanMs": [
+                1021,
+                1004,
+                1004
+              ],
+              "medianMs": 1004,
+              "correct": true
+            },
+            "2": {
+              "makespanMs": [
+                630,
+                506,
+                502
+              ],
+              "medianMs": 506,
+              "correct": true
+            },
+            "4": {
+              "makespanMs": [
+                287,
+                258,
+                254
+              ],
+              "medianMs": 258,
+              "correct": true
+            },
+            "8": {
+              "makespanMs": [
+                172,
+                133,
+                142
+              ],
+              "medianMs": 142,
+              "correct": true
+            }
+          },
+          "status": "ok"
+        }
+      },
+      {
+        "engine": "edge",
+        "version": "Microsoft Edge 157.0.4341.60",
+        "url": "http://127.0.0.1:49273/",
+        "status": "ok",
+        "data": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
+          "hardwareConcurrency": 8,
+          "baseUri": "http://127.0.0.1:49273/",
+          "coldStartMs": 240,
+          "warmDispatch": {
+            "samplesMs": [
+              1.5,
+              0.8,
+              3.6,
+              5.8,
+              0.9,
+              0.5,
+              0.7,
+              0.6,
+              2,
+              0.6,
+              1.6,
+              0.3,
+              0.3,
+              0.3,
+              0.3,
+              0.3,
+              0,
+              0.2,
+              0.1,
+              0.2,
+              0.2,
+              0,
+              0.2,
+              0.3,
+              0.2,
+              0.2,
+              0.2,
+              0.2,
+              0.1,
+              0.2,
+              0.2,
+              0.1,
+              0.1,
+              0.1,
+              0.1,
+              1,
+              0.8,
+              0.3,
+              0.3,
+              0,
+              1.4,
+              0.1,
+              0.2,
+              0.1,
+              0.1,
+              3.1,
+              0.2,
+              0.4,
+              0.1,
+              0.3
+            ],
+            "medianMs": 0.25
+          },
+          "transfer_1KiB": {
+            "bytes": 1024,
+            "copySamplesMs": [
+              3.7,
+              0.4,
+              0.5,
+              5.1,
+              0.3,
+              0.4,
+              1
+            ],
+            "copyMedianMs": 0.5,
+            "transferSamplesMs": [
+              2.3,
+              0.5,
+              1.5,
+              0.5,
+              0.4,
+              0.2,
+              0.2
+            ],
+            "transferMedianMs": 0.5
+          },
+          "transfer_100KiB": {
+            "bytes": 102400,
+            "copySamplesMs": [
+              0.7,
+              0.5,
+              0.3,
+              0.4,
+              0.6,
+              1.3,
+              0.8
+            ],
+            "copyMedianMs": 0.6,
+            "transferSamplesMs": [
+              1.9,
+              0.4,
+              0.4,
+              0.5,
+              0.6,
+              0.5,
+              0.5
+            ],
+            "transferMedianMs": 0.5
+          },
+          "transfer_64KiB": {
+            "bytes": 65536,
+            "copySamplesMs": [
+              1.7,
+              0.3,
+              0.5,
+              0.7,
+              0.5,
+              0.7,
+              0.7
+            ],
+            "copyMedianMs": 0.7,
+            "transferSamplesMs": [
+              0.2,
+              0.2,
+              0.3,
+              0.5,
+              0.2,
+              0.9,
+              2.7
+            ],
+            "transferMedianMs": 0.3
+          },
+          "transfer_1MiB": {
+            "bytes": 1048576,
+            "copySamplesMs": [
+              3.7,
+              4.8,
+              3.6,
+              2.5,
+              1.9,
+              1.4,
+              2.5
+            ],
+            "copyMedianMs": 2.5,
+            "transferSamplesMs": [
+              2.8,
+              1.1,
+              1,
+              3.2,
+              1.2,
+              0.9,
+              1.3
+            ],
+            "transferMedianMs": 1.2
+          },
+          "transfer_8MiB": {
+            "bytes": 8388608,
+            "copySamplesMs": [
+              13.8,
+              12.4,
+              20.9,
+              9.5,
+              8.7,
+              12.6,
+              16.4
+            ],
+            "copyMedianMs": 12.6,
+            "transferSamplesMs": [
+              9.6,
+              7.5,
+              6.9,
+              6.7,
+              6.5,
+              6.5,
+              6.2
+            ],
+            "transferMedianMs": 6.7
+          },
+          "transfer_10MiB": {
+            "bytes": 10485760,
+            "copySamplesMs": [
+              10.6,
+              10.8,
+              15.3,
+              10.4,
+              9.7,
+              10.5,
+              10.3
+            ],
+            "copyMedianMs": 10.5,
+            "transferSamplesMs": [
+              8.4,
+              8.5,
+              8.4,
+              9.4,
+              7.9,
+              7.7,
+              7.7
+            ],
+            "transferMedianMs": 8.4
+          },
+          "transfer_100MiB": {
+            "bytes": 104857600,
+            "copySamplesMs": [
+              141.3,
+              133,
+              92,
+              123.1,
+              98.2,
+              120.3,
+              102.1
+            ],
+            "copyMedianMs": 120.3,
+            "transferSamplesMs": [
+              304.4,
+              262.2,
+              265,
+              236.7,
+              365.9,
+              242.8,
+              364.9
+            ],
+            "transferMedianMs": 265
+          },
+          "cancelQueued": {
+            "samplesMs": [
+              0.9,
+              0,
+              0.2,
+              0.2,
+              0
+            ],
+            "medianMs": 0.2
+          },
+          "cancelRunning": {
+            "samplesMs": [
+              0.1,
+              0.3,
+              0.1,
+              0.1,
+              0.2
+            ],
+            "medianMs": 0.1
+          },
+          "sustained": {
+            "tasks": 100,
+            "settled": 100,
+            "totalMs": 59,
+            "workers": 4,
+            "correct": true
+          },
+          "burst1000": {
+            "tasks": 1000,
+            "settled": 1000,
+            "totalMs": 176,
+            "workers": 4,
+            "correct": true
+          },
+          "leak": {
+            "rounds": 20,
+            "tasksPerRound": 100,
+            "correct": true,
+            "roundMs": [
+              14,
+              10,
+              7,
+              6,
+              4,
+              5,
+              4,
+              5,
+              8,
+              4,
+              5,
+              3,
+              30,
+              5,
+              4,
+              4,
+              3,
+              2,
+              4,
+              3
+            ],
+            "heapStartBytes": 110110072,
+            "heapEndBytes": 107792241,
+            "workers": 4
+          },
+          "crashFirst": "alive",
+          "crashNext": "next",
+          "crashNextMs": 17,
+          "crashWorkers": 1,
+          "uiTicksDuringWorkerCpu": 29,
+          "uiTicksDuringLocalCpu": 0,
+          "lateReply": {
+            "cancelled": true,
+            "nextValue": 6,
+            "correct": true
+          },
+          "workloads": {
+            "sortChecksum": {
+              "dwiMedianMs": 34.8,
+              "localMedianMs": 29.8,
+              "checksum": 843023398,
+              "correct": true
+            },
+            "jsonChecksum": {
+              "dwiMedianMs": 1.1,
+              "localMedianMs": 0.9,
+              "checksum": 3003999,
+              "correct": true
+            },
+            "adler32": {
+              "dwiMedianMs": 1.3,
+              "localMedianMs": 1.4,
+              "checksum": 2025659875,
+              "correct": true
+            },
+            "rleSize": {
+              "dwiMedianMs": 0.9,
+              "localMedianMs": 0.8,
+              "checksum": 14170,
+              "correct": true
+            },
+            "boxBlurSum": {
+              "dwiMedianMs": 6.1,
+              "localMedianMs": 8.5,
+              "checksum": 33045947,
+              "correct": true
+            }
+          },
+          "poolSizing": {
+            "1": {
+              "makespanMs": [
+                1010,
+                999.8,
+                999.8
+              ],
+              "medianMs": 999.8,
+              "correct": true
+            },
+            "2": {
+              "makespanMs": [
+                524.7,
+                500,
+                500.1
+              ],
+              "medianMs": 500.1,
+              "correct": true
+            },
+            "4": {
+              "makespanMs": [
+                276.6,
+                249.9,
+                256.1
+              ],
+              "medianMs": 256.1,
+              "correct": true
+            },
+            "8": {
+              "makespanMs": [
+                167.9,
+                130.9,
+                131
+              ],
+              "medianMs": 131,
+              "correct": true
+            }
+          },
+          "status": "ok"
+        }
+      }
+    ],
+    [
+      {
+        "engine": "chrome",
+        "version": "Google Chrome 157.0.8103.78",
+        "url": "http://127.0.0.1:49662/",
+        "status": "ok",
+        "data": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+          "hardwareConcurrency": 8,
+          "baseUri": "http://127.0.0.1:49662/",
+          "coldStartMs": 63,
+          "warmDispatch": {
+            "samplesMs": [
+              0.6,
+              0.4,
+              1,
+              0.3,
+              0.4,
+              0.3,
+              0.4,
+              0.199,
+              1.901,
+              0.5,
+              0.2,
+              0.2,
+              0,
+              0.199,
+              0.101,
+              0.2,
+              0.199,
+              0.101,
+              0.1,
+              0.1,
+              0.3,
+              0.1,
+              0.1,
+              0.199,
+              0.101,
+              0,
+              0.1,
+              0.1,
+              0.1,
+              0,
+              0.2,
+              0.1,
+              0.1,
+              0.099,
+              0.101,
+              0.2,
+              0.1,
+              0.3,
+              0.1,
+              0.1,
+              0.099,
+              0.201,
+              0.1,
+              0.1,
+              6.4,
+              0.699,
+              0.201,
+              0.1,
+              0.1,
+              0.099
+            ],
+            "medianMs": 0.101
+          },
+          "transfer_1KiB": {
+            "bytes": 1024,
+            "copySamplesMs": [
+              3.301,
+              0.3,
+              4.8,
+              0.099,
+              0.101,
+              0.1,
+              8.1
+            ],
+            "copyMedianMs": 0.3,
+            "transferSamplesMs": [
+              11.8,
+              0.2,
+              0.3,
+              0.1,
+              0.1,
+              0.099,
+              0
+            ],
+            "transferMedianMs": 0.1
+          },
+          "transfer_100KiB": {
+            "bytes": 102400,
+            "copySamplesMs": [
+              0.4,
+              0.2,
+              0.4,
+              0.199,
+              0.5,
+              0.301,
+              0.3
+            ],
+            "copyMedianMs": 0.301,
+            "transferSamplesMs": [
+              1.4,
+              0.599,
+              0.3,
+              0.3,
+              0.3,
+              0.199,
+              0.4
+            ],
+            "transferMedianMs": 0.3
+          },
+          "transfer_64KiB": {
+            "bytes": 65536,
+            "copySamplesMs": [
+              0.4,
+              0.3,
+              0.2,
+              0.399,
+              0.201,
+              0.5,
+              0.4
+            ],
+            "copyMedianMs": 0.399,
+            "transferSamplesMs": [
+              0.4,
+              0.2,
+              0.301,
+              0.201,
+              0.199,
+              0.1,
+              0.099
+            ],
+            "transferMedianMs": 0.2
+          },
+          "transfer_1MiB": {
+            "bytes": 1048576,
+            "copySamplesMs": [
+              2.1,
+              2.4,
+              2.5,
+              3.1,
+              3.2,
+              2.7,
+              3.6
+            ],
+            "copyMedianMs": 2.7,
+            "transferSamplesMs": [
+              2.899,
+              3,
+              3,
+              2.601,
+              2.5,
+              0.9,
+              1.3
+            ],
+            "transferMedianMs": 2.601
+          },
+          "transfer_8MiB": {
+            "bytes": 8388608,
+            "copySamplesMs": [
+              13.1,
+              14.1,
+              27.9,
+              9.8,
+              8.899,
+              12.101,
+              13.1
+            ],
+            "copyMedianMs": 13.1,
+            "transferSamplesMs": [
+              9.2,
+              6.8,
+              6.299,
+              6.4,
+              6.2,
+              6.5,
+              6.5
+            ],
+            "transferMedianMs": 6.5
+          },
+          "transfer_10MiB": {
+            "bytes": 10485760,
+            "copySamplesMs": [
+              14.4,
+              11.2,
+              14.7,
+              10.399,
+              9.901,
+              10.2,
+              10
+            ],
+            "copyMedianMs": 10.399,
+            "transferSamplesMs": [
+              8.4,
+              8.2,
+              8.5,
+              8.3,
+              8,
+              7.5,
+              7.601
+            ],
+            "transferMedianMs": 8.2
+          },
+          "transfer_100MiB": {
+            "bytes": 104857600,
+            "copySamplesMs": [
+              131.701,
+              412.5,
+              162.5,
+              153,
+              104.2,
+              132.8,
+              99.1
+            ],
+            "copyMedianMs": 132.8,
+            "transferSamplesMs": [
+              92,
+              92.9,
+              113.801,
+              73.1,
+              78,
+              78.7,
+              79.1
+            ],
+            "transferMedianMs": 79.1
+          },
+          "cancelQueued": {
+            "samplesMs": [
+              11.1,
+              0.1,
+              0.099,
+              0.099,
+              0.2
+            ],
+            "medianMs": 0.1
+          },
+          "cancelRunning": {
+            "samplesMs": [
+              0.199,
+              0.199,
+              0.3,
+              0.101,
+              0.2
+            ],
+            "medianMs": 0.199
+          },
+          "sustained": {
+            "tasks": 100,
+            "settled": 100,
+            "totalMs": 68,
+            "workers": 4,
+            "correct": true
+          },
+          "burst1000": {
+            "tasks": 1000,
+            "settled": 1000,
+            "totalMs": 153,
+            "workers": 4,
+            "correct": true
+          },
+          "leak": {
+            "rounds": 20,
+            "tasksPerRound": 100,
+            "correct": true,
+            "roundMs": [
+              4,
+              2,
+              2,
+              3,
+              2,
+              3,
+              2,
+              3,
+              2,
+              2,
+              2,
+              3,
+              2,
+              2,
+              3,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "heapStartBytes": 112741986,
+            "heapEndBytes": 111486898,
+            "workers": 4
+          },
+          "crashFirst": "alive",
+          "crashNext": "next",
+          "crashNextMs": 32,
+          "crashWorkers": 1,
+          "uiTicksDuringWorkerCpu": 29,
+          "uiTicksDuringLocalCpu": 0,
+          "lateReply": {
+            "cancelled": true,
+            "nextValue": 6,
+            "correct": true
+          },
+          "workloads": {
+            "sortChecksum": {
+              "dwiMedianMs": 28,
+              "localMedianMs": 24.2,
+              "checksum": 843023398,
+              "correct": true
+            },
+            "jsonChecksum": {
+              "dwiMedianMs": 1.2,
+              "localMedianMs": 1,
+              "checksum": 3003999,
+              "correct": true
+            },
+            "adler32": {
+              "dwiMedianMs": 1.2,
+              "localMedianMs": 1.1,
+              "checksum": 2025659875,
+              "correct": true
+            },
+            "rleSize": {
+              "dwiMedianMs": 0.5,
+              "localMedianMs": 0.399,
+              "checksum": 14170,
+              "correct": true
+            },
+            "boxBlurSum": {
+              "dwiMedianMs": 3.3,
+              "localMedianMs": 3.1,
+              "checksum": 33045947,
+              "correct": true
+            }
+          },
+          "poolSizing": {
+            "1": {
+              "makespanMs": [
+                1013.201,
+                1002.8,
+                1000
+              ],
+              "medianMs": 1002.8,
+              "correct": true
+            },
+            "2": {
+              "makespanMs": [
+                518.699,
+                500.101,
+                500
+              ],
+              "medianMs": 500.101,
+              "correct": true
+            },
+            "4": {
+              "makespanMs": [
+                280.8,
+                250,
+                252
+              ],
+              "medianMs": 252,
+              "correct": true
+            },
+            "8": {
+              "makespanMs": [
+                194.799,
+                147,
+                146.401
+              ],
+              "medianMs": 147,
+              "correct": true
+            }
+          },
+          "status": "ok"
+        }
+      },
+      {
+        "engine": "safari",
+        "version": "26.5",
+        "url": "http://127.0.0.1:49662/",
+        "status": "ok",
+        "data": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15",
+          "hardwareConcurrency": 8,
+          "baseUri": "http://127.0.0.1:49662/",
+          "coldStartMs": 42,
+          "warmDispatch": {
+            "samplesMs": [
+              1,
+              3,
+              1,
+              1,
+              0,
+              0,
+              1,
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              5,
+              1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0
+            ],
+            "medianMs": 0
+          },
+          "transfer_1KiB": {
+            "bytes": 1024,
+            "copySamplesMs": [
+              3,
+              0,
+              1,
+              1,
+              0,
+              0,
+              0
+            ],
+            "copyMedianMs": 0,
+            "transferSamplesMs": [
+              1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            "transferMedianMs": 0
+          },
+          "transfer_100KiB": {
+            "bytes": 102400,
+            "copySamplesMs": [
+              7,
+              0,
+              1,
+              1,
+              0,
+              0,
+              1
+            ],
+            "copyMedianMs": 1,
+            "transferSamplesMs": [
+              1,
+              1,
+              1,
+              0,
+              3,
+              2,
+              0
+            ],
+            "transferMedianMs": 1
+          },
+          "transfer_64KiB": {
+            "bytes": 65536,
+            "copySamplesMs": [
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0
+            ],
+            "copyMedianMs": 0,
+            "transferSamplesMs": [
+              0,
+              0,
+              1,
+              0,
+              0,
+              1,
+              0
+            ],
+            "transferMedianMs": 0
+          },
+          "transfer_1MiB": {
+            "bytes": 1048576,
+            "copySamplesMs": [
+              1,
+              1,
+              1,
+              2,
+              0,
+              1,
+              1
+            ],
+            "copyMedianMs": 1,
+            "transferSamplesMs": [
+              1,
+              0,
+              1,
+              1,
+              0,
+              2,
+              1
+            ],
+            "transferMedianMs": 1
+          },
+          "transfer_8MiB": {
+            "bytes": 8388608,
+            "copySamplesMs": [
+              10,
+              7,
+              4,
+              5,
+              5,
+              6,
+              4
+            ],
+            "copyMedianMs": 5,
+            "transferSamplesMs": [
+              4,
+              4,
+              3,
+              4,
+              4,
+              4,
+              4
+            ],
+            "transferMedianMs": 4
+          },
+          "transfer_10MiB": {
+            "bytes": 10485760,
+            "copySamplesMs": [
+              8,
+              6,
+              35,
+              8,
+              5,
+              6,
+              5
+            ],
+            "copyMedianMs": 6,
+            "transferSamplesMs": [
+              4,
+              4,
+              4,
+              5,
+              4,
+              6,
+              5
+            ],
+            "transferMedianMs": 4
+          },
+          "transfer_100MiB": {
+            "bytes": 104857600,
+            "copySamplesMs": [
+              122,
+              78,
+              80,
+              80,
+              79,
+              101,
+              84
+            ],
+            "copyMedianMs": 80,
+            "transferSamplesMs": [
+              46,
+              43,
+              49,
+              37,
+              38,
+              44,
+              43
+            ],
+            "transferMedianMs": 43
+          },
+          "cancelQueued": {
+            "samplesMs": [
+              2,
+              0,
+              0,
+              0,
+              0
+            ],
+            "medianMs": 0
+          },
+          "cancelRunning": {
+            "samplesMs": [
+              1,
+              1,
+              0,
+              0,
+              0
+            ],
+            "medianMs": 0
+          },
+          "sustained": {
+            "tasks": 100,
+            "settled": 100,
+            "totalMs": 30,
+            "workers": 4,
+            "correct": true
+          },
+          "burst1000": {
+            "tasks": 1000,
+            "settled": 1000,
+            "totalMs": 76,
+            "workers": 4,
+            "correct": true
+          },
+          "leak": {
+            "rounds": 20,
+            "tasksPerRound": 100,
+            "correct": true,
+            "roundMs": [
+              3,
+              3,
+              6,
+              4,
+              4,
+              4,
+              5,
+              3,
+              4,
+              3,
+              6,
+              3,
+              5,
+              6,
+              4,
+              3,
+              6,
+              6,
+              5,
+              5
+            ],
+            "heapStartBytes": null,
+            "heapEndBytes": null,
+            "workers": 4
+          },
+          "crashFirst": "alive",
+          "crashNext": "next",
+          "crashNextMs": 43,
+          "crashWorkers": 1,
+          "uiTicksDuringWorkerCpu": 24,
+          "uiTicksDuringLocalCpu": 0,
+          "lateReply": {
+            "cancelled": true,
+            "nextValue": 6,
+            "correct": true
+          },
+          "workloads": {
+            "sortChecksum": {
+              "dwiMedianMs": 34,
+              "localMedianMs": 24,
+              "checksum": 843023398,
+              "correct": true
+            },
+            "jsonChecksum": {
+              "dwiMedianMs": 3,
+              "localMedianMs": 2,
+              "checksum": 3003999,
+              "correct": true
+            },
+            "adler32": {
+              "dwiMedianMs": 3,
+              "localMedianMs": 2,
+              "checksum": 2025659875,
+              "correct": true
+            },
+            "rleSize": {
+              "dwiMedianMs": 1,
+              "localMedianMs": 0,
+              "checksum": 14170,
+              "correct": true
+            },
+            "boxBlurSum": {
+              "dwiMedianMs": 3,
+              "localMedianMs": 3,
+              "checksum": 33045947,
+              "correct": true
+            }
+          },
+          "poolSizing": {
+            "1": {
+              "makespanMs": [
+                1018,
+                1000,
+                1001
+              ],
+              "medianMs": 1001,
+              "correct": true
+            },
+            "2": {
+              "makespanMs": [
+                520,
+                500,
+                500
+              ],
+              "medianMs": 500,
+              "correct": true
+            },
+            "4": {
+              "makespanMs": [
+                271,
+                252,
+                257
+              ],
+              "medianMs": 257,
+              "correct": true
+            },
+            "8": {
+              "makespanMs": [
+                197,
+                145,
+                139
+              ],
+              "medianMs": 145,
+              "correct": true
+            }
+          },
+          "status": "ok"
+        }
+      },
+      {
+        "engine": "firefox",
+        "version": "Mozilla Firefox 160.0",
+        "url": "http://127.0.0.1:49662/",
+        "status": "ok",
+        "data": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:160.0) Gecko/20100101 Firefox/160.0",
+          "hardwareConcurrency": 8,
+          "baseUri": "http://127.0.0.1:49662/",
+          "coldStartMs": 27,
+          "warmDispatch": {
+            "samplesMs": [
+              1,
+              0,
+              1,
+              0,
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              2,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              2,
+              0,
+              0
+            ],
+            "medianMs": 0
+          },
+          "transfer_1KiB": {
+            "bytes": 1024,
+            "copySamplesMs": [
+              1,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "copyMedianMs": 0,
+            "transferSamplesMs": [
+              1,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0
+            ],
+            "transferMedianMs": 0
+          },
+          "transfer_100KiB": {
+            "bytes": 102400,
+            "copySamplesMs": [
+              0,
+              0,
+              0,
+              0,
+              1,
+              0,
+              0
+            ],
+            "copyMedianMs": 0,
+            "transferSamplesMs": [
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "transferMedianMs": 0
+          },
+          "transfer_64KiB": {
+            "bytes": 65536,
+            "copySamplesMs": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              1,
+              0
+            ],
+            "copyMedianMs": 0,
+            "transferSamplesMs": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "transferMedianMs": 0
+          },
+          "transfer_1MiB": {
+            "bytes": 1048576,
+            "copySamplesMs": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              2
+            ],
+            "copyMedianMs": 1,
+            "transferSamplesMs": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              0
+            ],
+            "transferMedianMs": 1
+          },
+          "transfer_8MiB": {
+            "bytes": 8388608,
+            "copySamplesMs": [
+              8,
+              8,
+              7,
+              9,
+              14,
+              9,
+              9
+            ],
+            "copyMedianMs": 9,
+            "transferSamplesMs": [
+              10,
+              7,
+              7,
+              12,
+              12,
+              6,
+              6
+            ],
+            "transferMedianMs": 7
+          },
+          "transfer_10MiB": {
+            "bytes": 10485760,
+            "copySamplesMs": [
+              11,
+              12,
+              11,
+              10,
+              9,
+              10,
+              11
+            ],
+            "copyMedianMs": 11,
+            "transferSamplesMs": [
+              8,
+              8,
+              9,
+              8,
+              8,
+              8,
+              7
+            ],
+            "transferMedianMs": 8
+          },
+          "transfer_100MiB": {
+            "bytes": 104857600,
+            "copySamplesMs": [
+              150,
+              135,
+              106,
+              155,
+              123,
+              112,
+              146
+            ],
+            "copyMedianMs": 135,
+            "transferSamplesMs": [
+              100,
+              104,
+              101,
+              244,
+              73,
+              97,
+              73
+            ],
+            "transferMedianMs": 100
+          },
+          "cancelQueued": {
+            "samplesMs": [
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            "medianMs": 0
+          },
+          "cancelRunning": {
+            "samplesMs": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "medianMs": 0
+          },
+          "sustained": {
+            "tasks": 100,
+            "settled": 100,
+            "totalMs": 31,
+            "workers": 4,
+            "correct": true
+          },
+          "burst1000": {
+            "tasks": 1000,
+            "settled": 1000,
+            "totalMs": 69,
+            "workers": 4,
+            "correct": true
+          },
+          "leak": {
+            "rounds": 20,
+            "tasksPerRound": 100,
+            "correct": true,
+            "roundMs": [
+              4,
+              3,
+              6,
+              4,
+              5,
+              3,
+              4,
+              3,
+              4,
+              6,
+              5,
+              4,
+              4,
+              3,
+              2,
+              4,
+              3,
+              5,
+              4,
+              4
+            ],
+            "heapStartBytes": null,
+            "heapEndBytes": null,
+            "workers": 4
+          },
+          "crashFirst": "alive",
+          "crashNext": "next",
+          "crashNextMs": 18,
+          "crashWorkers": 1,
+          "uiTicksDuringWorkerCpu": 29,
+          "uiTicksDuringLocalCpu": 0,
+          "lateReply": {
+            "cancelled": true,
+            "nextValue": 6,
+            "correct": true
+          },
+          "workloads": {
+            "sortChecksum": {
+              "dwiMedianMs": 31,
+              "localMedianMs": 27,
+              "checksum": 843023398,
+              "correct": true
+            },
+            "jsonChecksum": {
+              "dwiMedianMs": 2,
+              "localMedianMs": 1,
+              "checksum": 3003999,
+              "correct": true
+            },
+            "adler32": {
+              "dwiMedianMs": 1,
+              "localMedianMs": 1,
+              "checksum": 2025659875,
+              "correct": true
+            },
+            "rleSize": {
+              "dwiMedianMs": 1,
+              "localMedianMs": 0,
+              "checksum": 14170,
+              "correct": true
+            },
+            "boxBlurSum": {
+              "dwiMedianMs": 5,
+              "localMedianMs": 4,
+              "checksum": 33045947,
+              "correct": true
+            }
+          },
+          "poolSizing": {
+            "1": {
+              "makespanMs": [
+                1025,
+                1003,
+                1010
+              ],
+              "medianMs": 1010,
+              "correct": true
+            },
+            "2": {
+              "makespanMs": [
+                523,
+                503,
+                501
+              ],
+              "medianMs": 503,
+              "correct": true
+            },
+            "4": {
+              "makespanMs": [
+                278,
+                254,
+                258
+              ],
+              "medianMs": 258,
+              "correct": true
+            },
+            "8": {
+              "makespanMs": [
+                192,
+                148,
+                146
+              ],
+              "medianMs": 148,
+              "correct": true
+            }
+          },
+          "status": "ok"
+        }
+      },
+      {
+        "engine": "edge",
+        "version": "Microsoft Edge 157.0.4341.60",
+        "url": "http://127.0.0.1:49662/",
+        "status": "ok",
+        "data": {
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
+          "hardwareConcurrency": 8,
+          "baseUri": "http://127.0.0.1:49662/",
+          "coldStartMs": 50,
+          "warmDispatch": {
+            "samplesMs": [
+              0.4,
+              0.4,
+              0.4,
+              0.2,
+              0.3,
+              0.3,
+              0.2,
+              0.2,
+              0.3,
+              0.3,
+              0.1,
+              0.1,
+              0.1,
+              0.1,
+              0.2,
+              0,
+              0.2,
+              0.1,
+              0.1,
+              0.1,
+              0.9,
+              0.2,
+              0.1,
+              0.6,
+              0.1,
+              0.1,
+              0.2,
+              0,
+              0.1,
+              0.3,
+              0,
+              0.2,
+              0,
+              0.2,
+              0,
+              0.2,
+              0.1,
+              0,
+              0.2,
+              0,
+              0.2,
+              0.2,
+              0.2,
+              0.2,
+              0.2,
+              4.5,
+              0.2,
+              0.2,
+              0.1,
+              0.1
+            ],
+            "medianMs": 0.2
+          },
+          "transfer_1KiB": {
+            "bytes": 1024,
+            "copySamplesMs": [
+              2,
+              0.2,
+              0.2,
+              0.2,
+              0,
+              0.2,
+              1.2
+            ],
+            "copyMedianMs": 0.2,
+            "transferSamplesMs": [
+              1.9,
+              0.9,
+              0.6,
+              1.4,
+              0.3,
+              0.2,
+              0.2
+            ],
+            "transferMedianMs": 0.6
+          },
+          "transfer_100KiB": {
+            "bytes": 102400,
+            "copySamplesMs": [
+              0.7,
+              0.4,
+              0.6,
+              0.4,
+              0.7,
+              0.5,
+              0.5
+            ],
+            "copyMedianMs": 0.5,
+            "transferSamplesMs": [
+              0.8,
+              0.5,
+              0.3,
+              0.2,
+              0.1,
+              0.3,
+              0.3
+            ],
+            "transferMedianMs": 0.3
+          },
+          "transfer_64KiB": {
+            "bytes": 65536,
+            "copySamplesMs": [
+              0.2,
+              0.4,
+              0.1,
+              0.2,
+              0.2,
+              0.4,
+              0.2
+            ],
+            "copyMedianMs": 0.2,
+            "transferSamplesMs": [
+              0.2,
+              0.1,
+              0.1,
+              0.2,
+              0.2,
+              0.2,
+              0.2
+            ],
+            "transferMedianMs": 0.2
+          },
+          "transfer_1MiB": {
+            "bytes": 1048576,
+            "copySamplesMs": [
+              4,
+              6.4,
+              5.3,
+              5.1,
+              3.4,
+              3.3,
+              3.3
+            ],
+            "copyMedianMs": 4,
+            "transferSamplesMs": [
+              2.3,
+              1.9,
+              1.9,
+              4.9,
+              19.4,
+              4.7,
+              4.2
+            ],
+            "transferMedianMs": 4.2
+          },
+          "transfer_8MiB": {
+            "bytes": 8388608,
+            "copySamplesMs": [
+              43.9,
+              30.5,
+              30.5,
+              20.3,
+              23.4,
+              18,
+              17.2
+            ],
+            "copyMedianMs": 23.4,
+            "transferSamplesMs": [
+              16.2,
+              13.5,
+              13.4,
+              12.5,
+              13.8,
+              12.7,
+              13
+            ],
+            "transferMedianMs": 13.4
+          },
+          "transfer_10MiB": {
+            "bytes": 10485760,
+            "copySamplesMs": [
+              152.8,
+              19,
+              21.3,
+              17.9,
+              17.8,
+              17.1,
+              17.8
+            ],
+            "copyMedianMs": 17.9,
+            "transferSamplesMs": [
+              15.9,
+              16.8,
+              15.9,
+              15.7,
+              16,
+              15.7,
+              16.2
+            ],
+            "transferMedianMs": 15.9
+          },
+          "transfer_100MiB": {
+            "bytes": 104857600,
+            "copySamplesMs": [
+              250.7,
+              209.2,
+              172,
+              242.8,
+              171.8,
+              208.4,
+              181.7
+            ],
+            "copyMedianMs": 208.4,
+            "transferSamplesMs": [
+              169,
+              170.5,
+              161.5,
+              147.8,
+              157.6,
+              154.9,
+              177.1
+            ],
+            "transferMedianMs": 161.5
+          },
+          "cancelQueued": {
+            "samplesMs": [
+              1.4,
+              0.2,
+              0.1,
+              0.2,
+              0
+            ],
+            "medianMs": 0.2
+          },
+          "cancelRunning": {
+            "samplesMs": [
+              0.3,
+              0.2,
+              0.1,
+              0.1,
+              0.2
+            ],
+            "medianMs": 0.2
+          },
+          "sustained": {
+            "tasks": 100,
+            "settled": 100,
+            "totalMs": 77,
+            "workers": 4,
+            "correct": true
+          },
+          "burst1000": {
+            "tasks": 1000,
+            "settled": 1000,
+            "totalMs": 130,
+            "workers": 4,
+            "correct": true
+          },
+          "leak": {
+            "rounds": 20,
+            "tasksPerRound": 100,
+            "correct": true,
+            "roundMs": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              26,
+              3,
+              2,
+              2,
+              2,
+              2,
+              2,
+              5,
+              6,
+              2
+            ],
+            "heapStartBytes": 110134188,
+            "heapEndBytes": 108334173,
+            "workers": 4
+          },
+          "crashFirst": "alive",
+          "crashNext": "next",
+          "crashNextMs": 15,
+          "crashWorkers": 1,
+          "uiTicksDuringWorkerCpu": 29,
+          "uiTicksDuringLocalCpu": 0,
+          "lateReply": {
+            "cancelled": true,
+            "nextValue": 6,
+            "correct": true
+          },
+          "workloads": {
+            "sortChecksum": {
+              "dwiMedianMs": 34.5,
+              "localMedianMs": 30.3,
+              "checksum": 843023398,
+              "correct": true
+            },
+            "jsonChecksum": {
+              "dwiMedianMs": 1.2,
+              "localMedianMs": 1,
+              "checksum": 3003999,
+              "correct": true
+            },
+            "adler32": {
+              "dwiMedianMs": 1.3,
+              "localMedianMs": 1.5,
+              "checksum": 2025659875,
+              "correct": true
+            },
+            "rleSize": {
+              "dwiMedianMs": 0.9,
+              "localMedianMs": 0.8,
+              "checksum": 14170,
+              "correct": true
+            },
+            "boxBlurSum": {
+              "dwiMedianMs": 9.1,
+              "localMedianMs": 8.7,
+              "checksum": 33045947,
+              "correct": true
+            }
+          },
+          "poolSizing": {
+            "1": {
+              "makespanMs": [
+                1012.2,
+                999.8,
+                1001
+              ],
+              "medianMs": 1001,
+              "correct": true
+            },
+            "2": {
+              "makespanMs": [
+                548.7,
+                501,
+                501.9
+              ],
+              "medianMs": 501.9,
+              "correct": true
+            },
+            "4": {
+              "makespanMs": [
+                274.9,
+                250.9,
+                250.1
+              ],
+              "medianMs": 250.9,
+              "correct": true
+            },
+            "8": {
+              "makespanMs": [
+                264.8,
+                130,
+                132
+              ],
+              "medianMs": 132,
+              "correct": true
+            }
+          },
+          "status": "ok"
+        }
+      }
+    ]
+  ],
+  "summary": {
+    "chrome": {
+      "version": "Google Chrome 157.0.8103.78",
+      "allOk": true,
+      "lateReplyCorrect": true,
+      "lateReplyNextValue": [
+        6
+      ],
+      "workloads": {
+        "sortChecksum": {
+          "dwiMedianMs": 28,
+          "localMedianMs": 20.401,
+          "correct": true,
+          "checksums": [
+            843023398
+          ]
+        },
+        "jsonChecksum": {
+          "dwiMedianMs": 1.2,
+          "localMedianMs": 1,
+          "correct": true,
+          "checksums": [
+            3003999
+          ]
+        },
+        "adler32": {
+          "dwiMedianMs": 1.2,
+          "localMedianMs": 1.1,
+          "correct": true,
+          "checksums": [
+            2025659875
+          ]
+        },
+        "rleSize": {
+          "dwiMedianMs": 0.5,
+          "localMedianMs": 0.399,
+          "correct": true,
+          "checksums": [
+            14170
+          ]
+        },
+        "boxBlurSum": {
+          "dwiMedianMs": 3.3,
+          "localMedianMs": 3.1,
+          "correct": true,
+          "checksums": [
+            33045947
+          ]
+        }
+      },
+      "poolSizingMedianMs": {
+        "1": 1001.6,
+        "2": 501.1,
+        "4": 252,
+        "8": 147
+      },
+      "poolSizingCorrect": true
+    },
+    "safari": {
+      "version": "26.5",
+      "allOk": true,
+      "lateReplyCorrect": true,
+      "lateReplyNextValue": [
+        6
+      ],
+      "workloads": {
+        "sortChecksum": {
+          "dwiMedianMs": 36,
+          "localMedianMs": 25,
+          "correct": true,
+          "checksums": [
+            843023398
+          ]
+        },
+        "jsonChecksum": {
+          "dwiMedianMs": 3,
+          "localMedianMs": 2,
+          "correct": true,
+          "checksums": [
+            3003999
+          ]
+        },
+        "adler32": {
+          "dwiMedianMs": 3,
+          "localMedianMs": 2,
+          "correct": true,
+          "checksums": [
+            2025659875
+          ]
+        },
+        "rleSize": {
+          "dwiMedianMs": 1,
+          "localMedianMs": 0,
+          "correct": true,
+          "checksums": [
+            14170
+          ]
+        },
+        "boxBlurSum": {
+          "dwiMedianMs": 3,
+          "localMedianMs": 3,
+          "correct": true,
+          "checksums": [
+            33045947
+          ]
+        }
+      },
+      "poolSizingMedianMs": {
+        "1": 1001,
+        "2": 501,
+        "4": 257,
+        "8": 145
+      },
+      "poolSizingCorrect": true
+    },
+    "firefox": {
+      "version": "Mozilla Firefox 160.0",
+      "allOk": true,
+      "lateReplyCorrect": true,
+      "lateReplyNextValue": [
+        6
+      ],
+      "workloads": {
+        "sortChecksum": {
+          "dwiMedianMs": 31,
+          "localMedianMs": 25,
+          "correct": true,
+          "checksums": [
+            843023398
+          ]
+        },
+        "jsonChecksum": {
+          "dwiMedianMs": 1,
+          "localMedianMs": 1,
+          "correct": true,
+          "checksums": [
+            3003999
+          ]
+        },
+        "adler32": {
+          "dwiMedianMs": 1,
+          "localMedianMs": 1,
+          "correct": true,
+          "checksums": [
+            2025659875
+          ]
+        },
+        "rleSize": {
+          "dwiMedianMs": 0,
+          "localMedianMs": 0,
+          "correct": true,
+          "checksums": [
+            14170
+          ]
+        },
+        "boxBlurSum": {
+          "dwiMedianMs": 4,
+          "localMedianMs": 4,
+          "correct": true,
+          "checksums": [
+            33045947
+          ]
+        }
+      },
+      "poolSizingMedianMs": {
+        "1": 1008,
+        "2": 506,
+        "4": 258,
+        "8": 142
+      },
+      "poolSizingCorrect": true
+    },
+    "edge": {
+      "version": "Microsoft Edge 157.0.4341.60",
+      "allOk": true,
+      "lateReplyCorrect": true,
+      "lateReplyNextValue": [
+        6
+      ],
+      "workloads": {
+        "sortChecksum": {
+          "dwiMedianMs": 34.8,
+          "localMedianMs": 30.3,
+          "correct": true,
+          "checksums": [
+            843023398
+          ]
+        },
+        "jsonChecksum": {
+          "dwiMedianMs": 1.2,
+          "localMedianMs": 1,
+          "correct": true,
+          "checksums": [
+            3003999
+          ]
+        },
+        "adler32": {
+          "dwiMedianMs": 1.3,
+          "localMedianMs": 1.5,
+          "correct": true,
+          "checksums": [
+            2025659875
+          ]
+        },
+        "rleSize": {
+          "dwiMedianMs": 0.9,
+          "localMedianMs": 0.8,
+          "correct": true,
+          "checksums": [
+            14170
+          ]
+        },
+        "boxBlurSum": {
+          "dwiMedianMs": 6.6,
+          "localMedianMs": 8.5,
+          "correct": true,
+          "checksums": [
+            33045947
+          ]
+        }
+      },
+      "poolSizingMedianMs": {
+        "1": 1000.7,
+        "2": 500.1,
+        "4": 253,
+        "8": 132
+      },
+      "poolSizingCorrect": true
+    }
+  }
+}

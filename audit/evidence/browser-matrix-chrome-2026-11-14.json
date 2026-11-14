@@ -1,0 +1,500 @@
+{
+  "methodology": "benchmarks/browser_matrix: one page load per run, medians inside a run, three runs aggregated here. Payload sizes are exact byte counts; the transfer path detaches the sender every time.",
+  "engine": "chrome",
+  "browserVersion": "Google Chrome 157.0.8103.78",
+  "environment": {
+    "browserVersion": "Google Chrome 157.0.8103.78",
+    "os": "macos Version 26.5.1 (Build 25F80)",
+    "dartVersion": "3.15.0-133.0.dev (dev) (Mon Nov 9 20:02:43 2026 -0800) on \"macos_arm64\"",
+    "machine": "Apple M2, 8.0 GiB RAM",
+    "cpuCount": 8,
+    "timestamp": "2026-11-14T20:37:16.900114Z",
+    "timezone": "GMT"
+  },
+  "runs": [
+    {
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+      "hardwareConcurrency": 8,
+      "baseUri": "http://127.0.0.1:65182/index.html",
+      "coldStartMs": 38,
+      "warmDispatch": {
+        "samplesMs": [
+          0.301,
+          0.401,
+          0.699,
+          0.3,
+          0.2,
+          0.601,
+          0.299,
+          0.5,
+          0.9,
+          0.1,
+          0.201,
+          0.1,
+          0,
+          0.199,
+          0.1,
+          0.101,
+          0,
+          0.1,
+          0.199,
+          0,
+          0.301,
+          0,
+          0.199,
+          0,
+          0.1,
+          0.201,
+          0,
+          0.099,
+          0.1,
+          0.1,
+          0.101,
+          0.1,
+          0.099,
+          0.1,
+          0,
+          0.201,
+          0,
+          0.199,
+          0,
+          0.1,
+          0.1,
+          0.101,
+          0,
+          0.1,
+          6,
+          0.299,
+          0.101,
+          0.1,
+          0.099,
+          0.1
+        ],
+        "medianMs": 0.1
+      },
+      "transfer_1KiB": {
+        "bytes": 1024,
+        "copySamplesMs": [
+          1.299,
+          0.101,
+          0.1,
+          2.299,
+          0.101,
+          0.1,
+          3.599
+        ],
+        "copyMedianMs": 0.101,
+        "transferSamplesMs": [
+          3.4,
+          0.201,
+          0.299,
+          0.101,
+          0.1,
+          0.199,
+          0.1
+        ],
+        "transferMedianMs": 0.199
+      },
+      "transfer_100KiB": {
+        "bytes": 102400,
+        "copySamplesMs": [
+          0.2,
+          0.3,
+          0.301,
+          0.199,
+          0.301,
+          0.299,
+          0.201
+        ],
+        "copyMedianMs": 0.299,
+        "transferSamplesMs": [
+          0.4,
+          0.301,
+          0.2,
+          0.199,
+          0.199,
+          0.201,
+          0.301
+        ],
+        "transferMedianMs": 0.201
+      },
+      "transfer_64KiB": {
+        "bytes": 65536,
+        "copySamplesMs": [
+          0.199,
+          0.201,
+          0.199,
+          0.301,
+          0.199,
+          0.6,
+          0.301
+        ],
+        "copyMedianMs": 0.201,
+        "transferSamplesMs": [
+          0.301,
+          0.1,
+          0.201,
+          0.199,
+          0.301,
+          0.199,
+          0.201
+        ],
+        "transferMedianMs": 0.201
+      },
+      "transfer_1MiB": {
+        "bytes": 1048576,
+        "copySamplesMs": [
+          3.301,
+          3.899,
+          2,
+          1.5,
+          1.701,
+          2.599,
+          2.1
+        ],
+        "copyMedianMs": 2.1,
+        "transferSamplesMs": [
+          1.301,
+          1,
+          1.1,
+          1,
+          0.9,
+          0.801,
+          1.301
+        ],
+        "transferMedianMs": 1
+      },
+      "transfer_8MiB": {
+        "bytes": 8388608,
+        "copySamplesMs": [
+          13.2,
+          16.8,
+          27.6,
+          8.4,
+          8.2,
+          7.5,
+          9.5
+        ],
+        "copyMedianMs": 9.5,
+        "transferSamplesMs": [
+          7.899,
+          6.399,
+          5.901,
+          6.199,
+          6.099,
+          6.099,
+          6.599
+        ],
+        "transferMedianMs": 6.199
+      },
+      "transfer_10MiB": {
+        "bytes": 10485760,
+        "copySamplesMs": [
+          13.199,
+          12.4,
+          15.401,
+          9.799,
+          9.601,
+          9.699,
+          10
+        ],
+        "copyMedianMs": 10,
+        "transferSamplesMs": [
+          8.201,
+          8.699,
+          9.699,
+          8.701,
+          8.6,
+          8.601,
+          7.9
+        ],
+        "transferMedianMs": 8.601
+      },
+      "transfer_100MiB": {
+        "bytes": 104857600,
+        "copySamplesMs": [
+          130.799,
+          126.4,
+          97,
+          129.9,
+          90.1,
+          127.1,
+          110.601
+        ],
+        "copyMedianMs": 126.4,
+        "transferSamplesMs": [
+          96,
+          89.701,
+          83.5,
+          75.6,
+          85.9,
+          109.701,
+          78.6
+        ],
+        "transferMedianMs": 85.9
+      },
+      "cancelQueued": {
+        "samplesMs": [
+          1.4,
+          0.1,
+          0.101,
+          0.1,
+          0.199
+        ],
+        "medianMs": 0.101
+      },
+      "cancelRunning": {
+        "samplesMs": [
+          0.1,
+          0.1,
+          0.099,
+          0.1,
+          0.1
+        ],
+        "medianMs": 0.1
+      },
+      "sustained": {
+        "tasks": 100,
+        "settled": 100,
+        "totalMs": 159,
+        "workers": 4,
+        "correct": true
+      },
+      "burst1000": {
+        "tasks": 1000,
+        "settled": 1000,
+        "totalMs": 145,
+        "workers": 4,
+        "correct": true
+      },
+      "leak": {
+        "rounds": 20,
+        "tasksPerRound": 100,
+        "correct": true,
+        "roundMs": [
+          20,
+          4,
+          5,
+          9,
+          5,
+          4,
+          4,
+          4,
+          12,
+          5,
+          5,
+          4,
+          2,
+          2,
+          2,
+          1,
+          2,
+          2,
+          3,
+          2
+        ],
+        "heapStartBytes": 110249268,
+        "heapEndBytes": 112245712,
+        "workers": 4
+      },
+      "crashFirst": "alive",
+      "crashNext": "next",
+      "crashNextMs": 12,
+      "crashWorkers": 1,
+      "uiTicksDuringWorkerCpu": 29,
+      "uiTicksDuringLocalCpu": 0,
+      "lateReply": {
+        "cancelled": true,
+        "nextValue": 6,
+        "correct": true
+      },
+      "workloads": {
+        "sortChecksum": {
+          "dwiMedianMs": 25.801,
+          "localMedianMs": 17.101,
+          "checksum": 843023398,
+          "correct": true
+        },
+        "jsonChecksum": {
+          "dwiMedianMs": 1.201,
+          "localMedianMs": 1,
+          "checksum": 3003999,
+          "correct": true
+        },
+        "adler32": {
+          "dwiMedianMs": 1.101,
+          "localMedianMs": 1,
+          "checksum": 2025659875,
+          "correct": true
+        },
+        "rleSize": {
+          "dwiMedianMs": 0.5,
+          "localMedianMs": 0.3,
+          "checksum": 14170,
+          "correct": true
+        },
+        "boxBlurSum": {
+          "dwiMedianMs": 3.3,
+          "localMedianMs": 2.9,
+          "checksum": 33045947,
+          "correct": true
+        }
+      },
+      "poolSizing": {
+        "1": {
+          "makespanMs": [
+            1013,
+            999.9,
+            999.901
+          ],
+          "medianMs": 999.901,
+          "correct": true
+        },
+        "2": {
+          "makespanMs": [
+            516.801,
+            500.299,
+            500.601
+          ],
+          "medianMs": 500.601,
+          "correct": true
+        },
+        "4": {
+          "makespanMs": [
+            267.801,
+            250,
+            250.099
+          ],
+          "medianMs": 250.099,
+          "correct": true
+        },
+        "8": {
+          "makespanMs": [
+            181.801,
+            139.299,
+            136.8
+          ],
+          "medianMs": 139.299,
+          "correct": true
+        }
+      },
+      "status": "ok"
+    }
+  ],
+  "summary": {
+    "runs": 1,
+    "coldStartMs": {
+      "values": [
+        38.0
+      ],
+      "median": 38.0,
+      "min": 38.0,
+      "max": 38.0
+    },
+    "warmDispatch.medianMs": {
+      "values": [
+        0.1
+      ],
+      "median": 0.1,
+      "min": 0.1,
+      "max": 0.1
+    },
+    "transfer_64KiB.copyMedianMs": {
+      "values": [
+        0.201
+      ],
+      "median": 0.201,
+      "min": 0.201,
+      "max": 0.201
+    },
+    "transfer_64KiB.transferMedianMs": {
+      "values": [
+        0.201
+      ],
+      "median": 0.201,
+      "min": 0.201,
+      "max": 0.201
+    },
+    "transfer_1MiB.copyMedianMs": {
+      "values": [
+        2.1
+      ],
+      "median": 2.1,
+      "min": 2.1,
+      "max": 2.1
+    },
+    "transfer_1MiB.transferMedianMs": {
+      "values": [
+        1.0
+      ],
+      "median": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "transfer_8MiB.copyMedianMs": {
+      "values": [
+        9.5
+      ],
+      "median": 9.5,
+      "min": 9.5,
+      "max": 9.5
+    },
+    "transfer_8MiB.transferMedianMs": {
+      "values": [
+        6.199
+      ],
+      "median": 6.199,
+      "min": 6.199,
+      "max": 6.199
+    },
+    "cancelQueued.medianMs": {
+      "values": [
+        0.101
+      ],
+      "median": 0.101,
+      "min": 0.101,
+      "max": 0.101
+    },
+    "cancelRunning.medianMs": {
+      "values": [
+        0.1
+      ],
+      "median": 0.1,
+      "min": 0.1,
+      "max": 0.1
+    },
+    "sustained.totalMs": {
+      "values": [
+        159.0
+      ],
+      "median": 159.0,
+      "min": 159.0,
+      "max": 159.0
+    },
+    "crashNextMs": {
+      "values": [
+        12.0
+      ],
+      "median": 12.0,
+      "min": 12.0,
+      "max": 12.0
+    },
+    "uiTicksDuringWorkerCpu": {
+      "values": [
+        29.0
+      ],
+      "median": 29.0,
+      "min": 29.0,
+      "max": 29.0
+    },
+    "uiTicksDuringLocalCpu": {
+      "values": [
+        0.0
+      ],
+      "median": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "failedRuns": 0
+  }
+}

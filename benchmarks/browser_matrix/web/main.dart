@@ -10,6 +10,28 @@ import 'dart:js_interop_unsafe';
 import 'dart:typed_data';
 
 import 'package:dwi/dwi.dart';
+import 'package:dwi_browser_matrix/tasks.dart';
+
+/// One workload: the worker call and the same work on the main thread.
+class _Case {
+  const _Case(this.name, this.viaDwi, this.local);
+
+  final String name;
+  final Future<int> Function() viaDwi;
+  final int Function() local;
+}
+
+/// Deterministic bytes from a small modular generator. Every intermediate value
+/// stays far below 2^53, so the bytes are identical on dart2js and the VM.
+Uint8List _pseudoBytes(int length, int seed) {
+  final out = Uint8List(length);
+  var state = seed;
+  for (var i = 0; i < length; i++) {
+    state = (state * 75 + 74) % 65537;
+    out[i] = state % 256;
+  }
+  return out;
+}
 
 const String workerScript = 'dwi/worker.dart.js';
 
@@ -296,6 +318,111 @@ Future<void> _run() async {
     while (DateTime.now().isBefore(until)) {}
     localTimer.cancel();
     result['uiTicksDuringLocalCpu'] = localTicks;
+
+    // H: late reply after cancellation (A4). A grace period keeps the worker
+    // alive while the cancelled task finishes, so its reply arrives after the
+    // caller settled. The next call must still get its own result.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        maxWorkers: 1,
+        maxQueuedTasks: 4,
+        cancelGracePeriod: Duration(milliseconds: 500),
+      ),
+    );
+    final late = Dwi.runCancellable<String>('ignoreCancel', 300);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    final lateCancelled = await late.cancel();
+    await _settle(late.result);
+    final afterLate = await Dwi.run<int>('tiny', 5);
+    result['lateReply'] = <String, Object?>{
+      'cancelled': lateCancelled,
+      'nextValue': afterLate,
+      'correct': lateCancelled && afterLate == 6,
+    };
+
+    // I: workloads (A6). Each runs on the worker and on the main thread with
+    // the same input; every checksum must match.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(workerScript: workerScript, maxWorkers: 1, maxQueuedTasks: 4),
+    );
+    final bytes = _pseudoBytes(256 * 1024, 1);
+    final rleInput = Uint8List.fromList(
+      List<int>.generate(256 * 1024, (i) => (i ~/ 37) % 4),
+    );
+    final pixels = _pseudoBytes(blurWidth * blurWidth, 2);
+    final jsonText = jsonEncode(<Map<String, Object?>>[
+      for (var i = 0; i < 2000; i++)
+        <String, Object?>{'id': i, 'v': i * 7 % 1000, 'tags': <int>[i % 5, i % 3]},
+    ]);
+    final cases = <_Case>[
+      _Case('sortChecksum', () => Dwi.run<int>('sortChecksum', bytes),
+          () => sortChecksum(bytes)),
+      _Case('jsonChecksum', () => Dwi.run<int>('jsonChecksum', jsonText),
+          () => jsonChecksum(jsonText)),
+      _Case('adler32', () => Dwi.run<int>('adler32', bytes), () => adler32(bytes)),
+      _Case('rleSize', () => Dwi.run<int>('rleSize', rleInput),
+          () => rleSize(rleInput)),
+      _Case('boxBlurSum', () => Dwi.run<int>('boxBlurSum', pixels),
+          () => boxBlurSum(pixels)),
+    ];
+    final workloads = <String, Object?>{};
+    for (final c in cases) {
+      await c.viaDwi(); // warm-up, unmeasured
+      final dwiMs = <double>[];
+      final localMs = <double>[];
+      var dwiValue = 0;
+      var localValue = 0;
+      for (var i = 0; i < 5; i++) {
+        final watch = Stopwatch()..start();
+        dwiValue = await c.viaDwi();
+        dwiMs.add(watch.elapsedMicroseconds / 1000);
+      }
+      for (var i = 0; i < 5; i++) {
+        final watch = Stopwatch()..start();
+        localValue = c.local();
+        localMs.add(watch.elapsedMicroseconds / 1000);
+      }
+      workloads[c.name] = <String, Object?>{
+        'dwiMedianMs': _median(dwiMs),
+        'localMedianMs': _median(localMs),
+        'checksum': dwiValue,
+        'correct': dwiValue == localValue,
+      };
+    }
+    result['workloads'] = workloads;
+
+    // J: pool sizing (A10). 200 tasks of 5 ms each through maxWorkers 1, 2, 4
+    // and 8. Only the makespan is recorded; all results are checked.
+    final sizing = <String, Object?>{};
+    for (final workers in const <int>[1, 2, 4, 8]) {
+      await Dwi.close();
+      await Dwi.configure(
+        DwiConfig(
+          workerScript: workerScript,
+          maxWorkers: workers,
+          maxQueuedTasks: 1024,
+        ),
+      );
+      final makespans = <double>[];
+      var allCorrect = true;
+      for (var rep = 0; rep < 3; rep++) {
+        final watch = Stopwatch()..start();
+        final values = await Future.wait(<Future<String>>[
+          for (var i = 0; i < 200; i++) Dwi.run<String>('spin', 5),
+        ]);
+        makespans.add(watch.elapsedMicroseconds / 1000);
+        allCorrect = allCorrect && values.every((v) => v == 'spun');
+      }
+      sizing['$workers'] = <String, Object?>{
+        'makespanMs': makespans,
+        'medianMs': _median(makespans),
+        'correct': allCorrect,
+      };
+    }
+    result['poolSizing'] = sizing;
 
     await Dwi.close();
     result['status'] = 'ok';

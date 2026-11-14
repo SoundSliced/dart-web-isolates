@@ -1,5 +1,77 @@
 # Browser Matrix
 
+## Late reply, workloads, pool sizing, four engines (tranche A4, A6, A10, A11, 2026-11-14)
+
+Platform for every number here: macOS 26.5.1, Apple M2 (arm64), 8 cores
+(`navigator.hardwareConcurrency` = 8). No other operating system or device was
+measured. Engines: Chrome 157.0.8103.78, Safari 26.5, Firefox 160.0,
+Edge 157.0.4341.60. Dart 3.15.0-133.0.dev built the page; Flutter is not
+involved. Evidence: `audit/evidence/browser-matrix-extended-four-engines-2026-11-14.json`
+(three passes per engine; Chrome single run in
+`audit/evidence/browser-matrix-chrome-2026-11-14.json`).
+
+**Late reply (A4).** A task ignores cancellation and returns 300 ms after it
+starts. With `cancelGracePeriod` set, the worker keeps running it after the
+caller is cancelled, so its reply arrives after the caller has settled. The next
+call then returns its own value (6). Result: correct on every pass, every engine.
+
+What this does not cover: a *duplicate* reply cannot be produced through the
+public API on any backend, because each request gets one reply, so no test
+reaches that branch. On native the late-reply guard is also unreachable through
+the public API (a timeout fails the handle; cancellation terminates the
+isolate). The web test above is the only reachable late-reply case, and it runs
+only in a browser.
+
+**Workloads (A6).** Each runs once on the worker and once on the main thread with
+the same deterministic input, and the checksums must match. Median ms, DWI vs
+main thread, three passes:
+
+| Workload (input) | Chrome | Safari | Firefox | Edge |
+| --- | --- | --- | --- | --- |
+| sort (256 KiB) | 28 / 20.4 | 36 / 25 | 31 / 25 | 34.8 / 30.3 |
+| JSON parse and walk (≈2,000 objects) | 1.2 / 1 | 3 / 2 | 1 / 1 | 1.2 / 1 |
+| Adler-32 (256 KiB) | 1.2 / 1.1 | 3 / 2 | 1 / 1 | 1.3 / 1.5 |
+| run-length size (256 KiB) | 0.5 / 0.4 | 1 / 0 | 0 / 0 | 0.9 / 0.8 |
+| 3×3 box blur (512×512) | 3.3 / 3.1 | 3 / 3 | 4 / 4 | 6.6 / 8.5 |
+
+All checksums match on every pass and engine. Limits:
+
+- The run-length workload is RLE, not DEFLATE or gzip. It is a compression-shaped
+  scan, not a compressor. No compression library was measured.
+- Timers: Safari and Firefox round to whole milliseconds at this size, so rows
+  under about 3 ms are not comparable between engines.
+- The DWI column includes copying the input to the worker and the result back.
+  Edge's blur row shows DWI below the main thread; that gap is within timer
+  noise, so no conclusion is drawn from it.
+- Inputs are single fixed sizes. Other sizes were not measured.
+
+**Pool sizing (A10).** 200 tasks of 5 ms each, makespan median over three
+passes, through `maxWorkers` 1, 2, 4 and 8. Every result was correct.
+
+| maxWorkers | Chrome (ms) | Safari | Firefox | Edge | Speedup vs 1 (Chrome / Edge) |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 1002 | 1001 | 1008 | 1001 | 1.0 / 1.0 |
+| 2 | 501 | 501 | 506 | 500 | 2.0 / 2.0 |
+| 4 | 252 | 257 | 258 | 253 | 4.0 / 4.0 |
+| 8 | 147 | 145 | 142 | 132 | 6.8 / 7.6 |
+
+Guidance from these numbers, for CPU-bound tasks on this machine:
+
+- Speedup is close to linear up to 4 workers, and 8 workers gave 6.8–7.6×, which
+  is below the core count of 8. Expect less than linear beyond about half the
+  cores.
+- The library default is `maxWorkers = 4` (`packages/dwi_core/lib/src/config.dart`).
+  It is not derived from the core count, and this measurement does not justify
+  changing it. A CPU-bound app that wants more throughput can set `maxWorkers` to
+  `navigator.hardwareConcurrency` and measure its own tasks.
+- Not measured: pools larger than the core count, whether the page's main thread
+  stays responsive with a full pool, and machines with other core counts.
+
+**Compatibility columns (A11).** The matrix is one OS and one architecture. Every
+row above is therefore "macOS 26.5.1 arm64". Windows, Linux, Android and iOS
+browsers are **not measured** (no device or machine available); each is
+unverified until it is run. A cell is never filled from another OS.
+
 ## Strict CSP worker, four engines (tranche A7, 2026-11-14)
 
 The matrix page runs unchanged under this meta policy:
