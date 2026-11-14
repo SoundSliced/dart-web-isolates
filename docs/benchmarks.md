@@ -6,8 +6,10 @@ commit is not a result.
 ## Project toolchain
 
 The project uses the Dart SDK embedded in the Flutter SDK at
-`~/Development/flutter` (`bin/cache/dart-sdk/bin/dart`, **Dart 3.13.5 stable**,
-macOS arm64), with the pub cache at `~/.pub-cache`. On 2026-11-13 the separate
+`~/Development/flutter` (`bin/cache/dart-sdk/bin/dart`, macOS arm64), with the
+pub cache at `~/.pub-cache`. On 2026-11-14 that Flutter SDK was upgraded from
+3.47.6 (Dart 3.13.5) to **Flutter 3.50.0 (Dart 3.14.0)**. Results dated before
+2026-11-14 keep their own Dart version; results from that date on use 3.14.0. On 2026-11-13 the separate
 Dart dev-channel SDK and the other Flutter/Dart SDK and pub-cache copies on this
 machine were removed. The `.research/` folder holds old results and probes only,
 not an SDK.

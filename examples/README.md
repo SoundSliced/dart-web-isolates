@@ -14,10 +14,14 @@ the recommended way to use DWI and must not reach into implementation details.
 | `dispatch_control/` | `Dwi.pause`/`resume` and `DwiWorker.ping` (ADR-028). |
 | `cooperative_cancel/` | `DwiCancelToken` and `DwiConfig.cancelGracePeriod`: a task that stops cleanly when cancelled (ADR-027). |
 
-Earlier revisions of this index listed `json_parser/`, `image_processing/`,
-`worker_pool/`, `flutter_counter/` and `flutter_jank_demo/`. They are **not in
-the tree** and must not be presented as runnable; the Flutter Web path is
-covered by `integration_tests/` and ADR-009 instead.
+Removed on 2026-11-14 (ADR-025 O2): `json_parser/`, `image_processing/` and
+`worker_pool/`. They were empty. The pool is covered by package tests.
+
+Not yet present: `flutter_counter/` and `flutter_jank_demo/` (ADR-025). They
+will be added as runnable Flutter examples of `dwi_flutter`'s `computeParallel`
+when they can be run and measured; until then they are not presented as
+runnable. The Flutter Web build path is covered by `integration_tests/` and
+ADR-009.
 
 Each example has its own `README.md` with run instructions and states which
 backend (native isolate / JS worker / Wasm worker) it exercises.
