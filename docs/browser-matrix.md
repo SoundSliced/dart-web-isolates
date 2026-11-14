@@ -1,5 +1,42 @@
 # Browser Matrix
 
+## Flutter examples, four engines (ADR-025, 2026-11-14)
+
+Flutter 3.50.0, which embeds Dart 3.14.0. Both apps were built with `flutter build
+web` after `dart run dwi_builder:dwi build`, and served from `build/web`. Three
+passes, four engines.
+
+- `examples/flutter_counter`: `computeParallel` over four prime counts (limits
+  100,000 to 400,000). Result on every pass and engine: 9592, 17984, 25997, 33860,
+  which are the correct counts. Evidence: `audit/evidence/flutter-counter-four-engines-2026-11-14.json`.
+- `examples/flutter_jank_demo`: four prime sieves of 3,000,000 each, run three
+  ways. Longest frame gap in milliseconds, medians over three passes, with the
+  total work time. Evidence: `audit/evidence/flutter-jank-demo-four-engines-2026-11-14.json`.
+
+| Engine | Main thread: max gap / total | `computeParallel`: max gap / total | `compute()`: max gap / total |
+| --- | --- | --- | --- |
+| Chrome 157 | 104 / 92 | 18 / 103 | 70 / 70 |
+| Safari 26.5 | 186 / 180 (pass 1 anomalous, see below) | 19 / 177 | 102 / 101 |
+| Firefox 160 | 232 / 232 | 20 / 184 | 223 / 222 |
+| Edge 157 | 97 / 97 | 25 / 156 | 100 / 100 |
+
+Reading:
+
+- The main-thread run blocks frames for the whole of its work in every engine.
+- `computeParallel` keeps the longest frame gap to about 18 to 27 ms; the work
+  runs on the worker pool.
+- `compute()` on web blocks frames for about as long as its work takes in Chrome,
+  Firefox and Edge. On web it does not move the work off the main thread in this
+  build. This is measured, and it matches the position in `critical-review.md`
+  (M10): DWI makes no claim that it is a faster `compute()`.
+- Safari pass 1 recorded a 0 ms gap and a 2,982 ms `computeParallel` total. That
+  looks like a first-run startup cost during which no frame was recorded. It is kept
+  in the evidence file and not removed; the medians above include it only where it
+  falls within the three passes, which is the Safari `computeParallel` row.
+
+The frame gap includes the blocked time: a timestamp is taken before each mode's
+work, so the first frame after a block shows the whole block as one gap.
+
 ## Worker-use strategies and protocol check, four engines (ADR-026 G6, G3, 2026-11-14)
 
 Phase L of the page, three passes, four engines. Evidence:

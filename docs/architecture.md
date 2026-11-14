@@ -1933,11 +1933,10 @@ for existing types.
 
 ## ADR-025 — Flutter surface: `dwi_flutter` and runnable examples (tranche E)
 
-**Status.** Accepted by the maintainer, 2026-11-14. Implementation so far:
-`computeParallel` in `packages/dwi_flutter` with five tests (shipped). Not yet
-done: the two runnable Flutter examples (`flutter_counter`, `flutter_jank_demo`)
-and the Flutter web matrix in four engines. Completion-plan tranche E stays open
-until those land.
+**Status.** Accepted by the maintainer, 2026-11-14. Shipped: `computeParallel`
+in `packages/dwi_flutter` (five tests); the runnable examples
+`examples/flutter_counter` and `examples/flutter_jank_demo`; and the Flutter web
+results in four engines (`docs/browser-matrix.md`, 2026-11-14).
 
 **Problem.** The packages have no Flutter-facing entry point. `dwi` and its
 dependencies are pure Dart, so a Flutter widget tree has to wire `Dwi`

@@ -1,0 +1,24 @@
+name: flutter_jank_demo
+description: "Flutter web example: frame gaps while the same work runs on the main thread, with computeParallel, and with Flutter's compute()."
+publish_to: none
+version: 0.10.0
+
+environment:
+  sdk: ^3.13.0
+  flutter: ">=3.50.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dwi:
+    path: ../../packages/dwi
+  dwi_annotations:
+    path: ../../packages/dwi_annotations
+  dwi_flutter:
+    path: ../../packages/dwi_flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  dwi_builder:
+    path: ../../packages/dwi_builder

@@ -1,0 +1,24 @@
+name: flutter_counter
+description: "Flutter web example: a counter plus computeParallel over a DWI task."
+publish_to: none
+version: 0.10.0
+
+environment:
+  sdk: ^3.13.0
+  flutter: ">=3.50.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dwi:
+    path: ../../packages/dwi
+  dwi_annotations:
+    path: ../../packages/dwi_annotations
+  dwi_flutter:
+    path: ../../packages/dwi_flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  dwi_builder:
+    path: ../../packages/dwi_builder

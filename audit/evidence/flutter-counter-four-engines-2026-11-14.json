@@ -1,0 +1,238 @@
+{
+  "date": "2026-11-14",
+  "method": "examples/flutter_counter build, probe, three passes, four engines; Flutter 3.50.0 (Dart 3.14.0)",
+  "runs": [
+    [
+      {
+        "engine": "chrome",
+        "version": "Google Chrome 157.0.8103.78",
+        "url": "http://127.0.0.1:61148/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "primes": [
+            9592,
+            17984,
+            25997,
+            33860
+          ]
+        }
+      },
+      {
+        "engine": "safari",
+        "version": "26.5",
+        "url": "http://127.0.0.1:61148/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "primes": [
+            9592,
+            17984,
+            25997,
+            33860
+          ]
+        }
+      },
+      {
+        "engine": "firefox",
+        "version": "Mozilla Firefox 160.0",
+        "url": "http://127.0.0.1:61148/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "primes": [
+            9592,
+            17984,
+            25997,
+            33860
+          ]
+        }
+      },
+      {
+        "engine": "edge",
+        "version": "Microsoft Edge 157.0.4341.60",
+        "url": "http://127.0.0.1:61148/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "primes": [
+            9592,
+            17984,
+            25997,
+            33860
+          ]
+        }
+      }
+    ],
+    [
+      {
+        "engine": "chrome",
+        "version": "Google Chrome 157.0.8103.78",
+        "url": "http://127.0.0.1:61347/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "primes": [
+            9592,
+            17984,
+            25997,
+            33860
+          ]
+        }
+      },
+      {
+        "engine": "safari",
+        "version": "26.5",
+        "url": "http://127.0.0.1:61347/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "primes": [
+            9592,
+            17984,
+            25997,
+            33860
+          ]
+        }
+      },
+      {
+        "engine": "firefox",
+        "version": "Mozilla Firefox 160.0",
+        "url": "http://127.0.0.1:61347/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "primes": [
+            9592,
+            17984,
+            25997,
+            33860
+          ]
+        }
+      },
+      {
+        "engine": "edge",
+        "version": "Microsoft Edge 157.0.4341.60",
+        "url": "http://127.0.0.1:61347/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "primes": [
+            9592,
+            17984,
+            25997,
+            33860
+          ]
+        }
+      }
+    ],
+    [
+      {
+        "engine": "chrome",
+        "version": "Google Chrome 157.0.8103.78",
+        "url": "http://127.0.0.1:61503/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "primes": [
+            9592,
+            17984,
+            25997,
+            33860
+          ]
+        }
+      },
+      {
+        "engine": "safari",
+        "version": "26.5",
+        "url": "http://127.0.0.1:61503/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "primes": [
+            9592,
+            17984,
+            25997,
+            33860
+          ]
+        }
+      },
+      {
+        "engine": "firefox",
+        "version": "Mozilla Firefox 160.0",
+        "url": "http://127.0.0.1:61503/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "primes": [
+            9592,
+            17984,
+            25997,
+            33860
+          ]
+        }
+      },
+      {
+        "engine": "edge",
+        "version": "Microsoft Edge 157.0.4341.60",
+        "url": "http://127.0.0.1:61503/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "primes": [
+            9592,
+            17984,
+            25997,
+            33860
+          ]
+        }
+      }
+    ]
+  ],
+  "summary": {
+    "chrome": {
+      "allOk": true,
+      "primes": [
+        [
+          9592,
+          17984,
+          25997,
+          33860
+        ]
+      ]
+    },
+    "safari": {
+      "allOk": true,
+      "primes": [
+        [
+          9592,
+          17984,
+          25997,
+          33860
+        ]
+      ]
+    },
+    "firefox": {
+      "allOk": true,
+      "primes": [
+        [
+          9592,
+          17984,
+          25997,
+          33860
+        ]
+      ]
+    },
+    "edge": {
+      "allOk": true,
+      "primes": [
+        [
+          9592,
+          17984,
+          25997,
+          33860
+        ]
+      ]
+    }
+  }
+}

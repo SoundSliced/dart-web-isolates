@@ -1,0 +1,542 @@
+{
+  "date": "2026-11-14",
+  "method": "examples/flutter_jank_demo build (4 sieves of 3,000,000 per mode), probe, three passes, four engines; Flutter 3.50.0 (Dart 3.14.0). Frame gap includes the block: a timestamp is taken before each mode's work.",
+  "runs": [
+    [
+      {
+        "engine": "chrome",
+        "version": "Google Chrome 157.0.8103.78",
+        "url": "http://127.0.0.1:65454/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "modes": {
+            "mainThread": {
+              "totalMs": 104.3,
+              "frames": 9,
+              "maxFrameGapMs": 104,
+              "medianFrameGapMs": 17
+            },
+            "computeParallel": {
+              "totalMs": 94.699,
+              "frames": 13,
+              "maxFrameGapMs": 18,
+              "medianFrameGapMs": 17
+            },
+            "flutterCompute": {
+              "totalMs": 53.5,
+              "frames": 9,
+              "maxFrameGapMs": 54,
+              "medianFrameGapMs": 17
+            }
+          }
+        }
+      },
+      {
+        "engine": "safari",
+        "version": "26.5",
+        "url": "http://127.0.0.1:65454/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "modes": {
+            "mainThread": {
+              "totalMs": 639,
+              "frames": 1,
+              "maxFrameGapMs": 0,
+              "medianFrameGapMs": 0
+            },
+            "computeParallel": {
+              "totalMs": 2982,
+              "frames": 1,
+              "maxFrameGapMs": 0,
+              "medianFrameGapMs": 0
+            },
+            "flutterCompute": {
+              "totalMs": 311,
+              "frames": 1,
+              "maxFrameGapMs": 0,
+              "medianFrameGapMs": 0
+            }
+          }
+        }
+      },
+      {
+        "engine": "firefox",
+        "version": "Mozilla Firefox 160.0",
+        "url": "http://127.0.0.1:65454/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "modes": {
+            "mainThread": {
+              "totalMs": 197,
+              "frames": 8,
+              "maxFrameGapMs": 197,
+              "medianFrameGapMs": 17
+            },
+            "computeParallel": {
+              "totalMs": 151,
+              "frames": 16,
+              "maxFrameGapMs": 24,
+              "medianFrameGapMs": 17
+            },
+            "flutterCompute": {
+              "totalMs": 197,
+              "frames": 8,
+              "maxFrameGapMs": 197,
+              "medianFrameGapMs": 18
+            }
+          }
+        }
+      },
+      {
+        "engine": "edge",
+        "version": "Microsoft Edge 157.0.4341.60",
+        "url": "http://127.0.0.1:65454/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "modes": {
+            "mainThread": {
+              "totalMs": 83.9,
+              "frames": 9,
+              "maxFrameGapMs": 84,
+              "medianFrameGapMs": 16
+            },
+            "computeParallel": {
+              "totalMs": 152.4,
+              "frames": 15,
+              "maxFrameGapMs": 27,
+              "medianFrameGapMs": 17
+            },
+            "flutterCompute": {
+              "totalMs": 67.2,
+              "frames": 9,
+              "maxFrameGapMs": 67,
+              "medianFrameGapMs": 15
+            }
+          }
+        }
+      }
+    ],
+    [
+      {
+        "engine": "chrome",
+        "version": "Google Chrome 157.0.8103.78",
+        "url": "http://127.0.0.1:49898/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "modes": {
+            "mainThread": {
+              "totalMs": 92,
+              "frames": 9,
+              "maxFrameGapMs": 93,
+              "medianFrameGapMs": 16
+            },
+            "computeParallel": {
+              "totalMs": 130.6,
+              "frames": 15,
+              "maxFrameGapMs": 18,
+              "medianFrameGapMs": 17
+            },
+            "flutterCompute": {
+              "totalMs": 70,
+              "frames": 9,
+              "maxFrameGapMs": 71,
+              "medianFrameGapMs": 17
+            }
+          }
+        }
+      },
+      {
+        "engine": "safari",
+        "version": "26.5",
+        "url": "http://127.0.0.1:49898/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "modes": {
+            "mainThread": {
+              "totalMs": 122,
+              "frames": 9,
+              "maxFrameGapMs": 129,
+              "medianFrameGapMs": 17
+            },
+            "computeParallel": {
+              "totalMs": 253,
+              "frames": 22,
+              "maxFrameGapMs": 25,
+              "medianFrameGapMs": 17
+            },
+            "flutterCompute": {
+              "totalMs": 110,
+              "frames": 9,
+              "maxFrameGapMs": 110,
+              "medianFrameGapMs": 17
+            }
+          }
+        }
+      },
+      {
+        "engine": "firefox",
+        "version": "Mozilla Firefox 160.0",
+        "url": "http://127.0.0.1:49898/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "modes": {
+            "mainThread": {
+              "totalMs": 245,
+              "frames": 9,
+              "maxFrameGapMs": 246,
+              "medianFrameGapMs": 16
+            },
+            "computeParallel": {
+              "totalMs": 209,
+              "frames": 19,
+              "maxFrameGapMs": 19,
+              "medianFrameGapMs": 17
+            },
+            "flutterCompute": {
+              "totalMs": 222,
+              "frames": 8,
+              "maxFrameGapMs": 222,
+              "medianFrameGapMs": 17
+            }
+          }
+        }
+      },
+      {
+        "engine": "edge",
+        "version": "Microsoft Edge 157.0.4341.60",
+        "url": "http://127.0.0.1:49898/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "modes": {
+            "mainThread": {
+              "totalMs": 101,
+              "frames": 9,
+              "maxFrameGapMs": 101,
+              "medianFrameGapMs": 17
+            },
+            "computeParallel": {
+              "totalMs": 161.7,
+              "frames": 17,
+              "maxFrameGapMs": 18,
+              "medianFrameGapMs": 17
+            },
+            "flutterCompute": {
+              "totalMs": 143.1,
+              "frames": 9,
+              "maxFrameGapMs": 143,
+              "medianFrameGapMs": 16
+            }
+          }
+        }
+      }
+    ],
+    [
+      {
+        "engine": "chrome",
+        "version": "Google Chrome 157.0.8103.78",
+        "url": "http://127.0.0.1:50116/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "modes": {
+            "mainThread": {
+              "totalMs": 84.4,
+              "frames": 9,
+              "maxFrameGapMs": 84,
+              "medianFrameGapMs": 17
+            },
+            "computeParallel": {
+              "totalMs": 102.601,
+              "frames": 13,
+              "maxFrameGapMs": 18,
+              "medianFrameGapMs": 17
+            },
+            "flutterCompute": {
+              "totalMs": 70.201,
+              "frames": 9,
+              "maxFrameGapMs": 70,
+              "medianFrameGapMs": 17
+            }
+          }
+        }
+      },
+      {
+        "engine": "safari",
+        "version": "26.5",
+        "url": "http://127.0.0.1:50116/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "modes": {
+            "mainThread": {
+              "totalMs": 180,
+              "frames": 8,
+              "maxFrameGapMs": 186,
+              "medianFrameGapMs": 16
+            },
+            "computeParallel": {
+              "totalMs": 177,
+              "frames": 18,
+              "maxFrameGapMs": 19,
+              "medianFrameGapMs": 17
+            },
+            "flutterCompute": {
+              "totalMs": 101,
+              "frames": 9,
+              "maxFrameGapMs": 102,
+              "medianFrameGapMs": 17
+            }
+          }
+        }
+      },
+      {
+        "engine": "firefox",
+        "version": "Mozilla Firefox 160.0",
+        "url": "http://127.0.0.1:50116/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "modes": {
+            "mainThread": {
+              "totalMs": 232,
+              "frames": 8,
+              "maxFrameGapMs": 232,
+              "medianFrameGapMs": 17
+            },
+            "computeParallel": {
+              "totalMs": 184,
+              "frames": 18,
+              "maxFrameGapMs": 20,
+              "medianFrameGapMs": 17
+            },
+            "flutterCompute": {
+              "totalMs": 222,
+              "frames": 8,
+              "maxFrameGapMs": 223,
+              "medianFrameGapMs": 17
+            }
+          }
+        }
+      },
+      {
+        "engine": "edge",
+        "version": "Microsoft Edge 157.0.4341.60",
+        "url": "http://127.0.0.1:50116/",
+        "status": "ok",
+        "data": {
+          "status": "ok",
+          "modes": {
+            "mainThread": {
+              "totalMs": 97.2,
+              "frames": 9,
+              "maxFrameGapMs": 97,
+              "medianFrameGapMs": 16
+            },
+            "computeParallel": {
+              "totalMs": 155.799,
+              "frames": 17,
+              "maxFrameGapMs": 25,
+              "medianFrameGapMs": 16
+            },
+            "flutterCompute": {
+              "totalMs": 99.9,
+              "frames": 9,
+              "maxFrameGapMs": 100,
+              "medianFrameGapMs": 17
+            }
+          }
+        }
+      }
+    ]
+  ],
+  "summary": {
+    "chrome": {
+      "mainThread": {
+        "maxFrameGapMs": [
+          104,
+          93,
+          84
+        ],
+        "maxFrameGapMedianMs": 93,
+        "totalMs": [
+          104.3,
+          92,
+          84.4
+        ],
+        "totalMedianMs": 92
+      },
+      "computeParallel": {
+        "maxFrameGapMs": [
+          18,
+          18,
+          18
+        ],
+        "maxFrameGapMedianMs": 18,
+        "totalMs": [
+          94.7,
+          130.6,
+          102.6
+        ],
+        "totalMedianMs": 102.601
+      },
+      "flutterCompute": {
+        "maxFrameGapMs": [
+          54,
+          71,
+          70
+        ],
+        "maxFrameGapMedianMs": 70,
+        "totalMs": [
+          53.5,
+          70,
+          70.2
+        ],
+        "totalMedianMs": 70
+      },
+      "allOk": true
+    },
+    "safari": {
+      "mainThread": {
+        "maxFrameGapMs": [
+          0,
+          129,
+          186
+        ],
+        "maxFrameGapMedianMs": 129,
+        "totalMs": [
+          639,
+          122,
+          180
+        ],
+        "totalMedianMs": 180
+      },
+      "computeParallel": {
+        "maxFrameGapMs": [
+          0,
+          25,
+          19
+        ],
+        "maxFrameGapMedianMs": 19,
+        "totalMs": [
+          2982,
+          253,
+          177
+        ],
+        "totalMedianMs": 253
+      },
+      "flutterCompute": {
+        "maxFrameGapMs": [
+          0,
+          110,
+          102
+        ],
+        "maxFrameGapMedianMs": 102,
+        "totalMs": [
+          311,
+          110,
+          101
+        ],
+        "totalMedianMs": 110
+      },
+      "allOk": true
+    },
+    "firefox": {
+      "mainThread": {
+        "maxFrameGapMs": [
+          197,
+          246,
+          232
+        ],
+        "maxFrameGapMedianMs": 232,
+        "totalMs": [
+          197,
+          245,
+          232
+        ],
+        "totalMedianMs": 232
+      },
+      "computeParallel": {
+        "maxFrameGapMs": [
+          24,
+          19,
+          20
+        ],
+        "maxFrameGapMedianMs": 20,
+        "totalMs": [
+          151,
+          209,
+          184
+        ],
+        "totalMedianMs": 184
+      },
+      "flutterCompute": {
+        "maxFrameGapMs": [
+          197,
+          222,
+          223
+        ],
+        "maxFrameGapMedianMs": 222,
+        "totalMs": [
+          197,
+          222,
+          222
+        ],
+        "totalMedianMs": 222
+      },
+      "allOk": true
+    },
+    "edge": {
+      "mainThread": {
+        "maxFrameGapMs": [
+          84,
+          101,
+          97
+        ],
+        "maxFrameGapMedianMs": 97,
+        "totalMs": [
+          83.9,
+          101,
+          97.2
+        ],
+        "totalMedianMs": 97.2
+      },
+      "computeParallel": {
+        "maxFrameGapMs": [
+          27,
+          18,
+          25
+        ],
+        "maxFrameGapMedianMs": 25,
+        "totalMs": [
+          152.4,
+          161.7,
+          155.8
+        ],
+        "totalMedianMs": 155.799
+      },
+      "flutterCompute": {
+        "maxFrameGapMs": [
+          67,
+          143,
+          100
+        ],
+        "maxFrameGapMedianMs": 100,
+        "totalMs": [
+          67.2,
+          143.1,
+          99.9
+        ],
+        "totalMedianMs": 99.9
+      },
+      "allOk": true
+    }
+  }
+}

@@ -17,11 +17,17 @@ the recommended way to use DWI and must not reach into implementation details.
 Removed on 2026-11-14 (ADR-025 O2): `json_parser/`, `image_processing/` and
 `worker_pool/`. They were empty. The pool is covered by package tests.
 
-Not yet present: `flutter_counter/` and `flutter_jank_demo/` (ADR-025). They
-will be added as runnable Flutter examples of `dwi_flutter`'s `computeParallel`
-when they can be run and measured; until then they are not presented as
-runnable. The Flutter Web build path is covered by `integration_tests/` and
-ADR-009.
+Flutter examples (ADR-025, run on Flutter 3.50.0 / Dart 3.14.0):
+
+| Example | Shows |
+| --- | --- |
+| `flutter_counter/` | `computeParallel` over a DWI task, in a Flutter web app. |
+| `flutter_jank_demo/` | Frame gaps while the same work runs on the main thread, with `computeParallel`, and with Flutter's `compute()`. |
+
+Both Flutter examples write their result to `document.title` for the browser
+probe. They keep the title `pending` until the run finishes, because Flutter
+otherwise replaces the placeholder with the app title. The visible heading names
+the app.
 
 Each example has its own `README.md` with run instructions and states which
 backend (native isolate / JS worker / Wasm worker) it exercises.
