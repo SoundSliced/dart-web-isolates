@@ -27,6 +27,9 @@ export 'package:dwi_core/dwi_core.dart'
         DwiCapabilities,
         DwiConfig,
         DwiException,
+        DwiMetrics,
+        DwiPoolState,
+        DwiPoolWorker,
         DwiRemoteException,
         DwiResultTypeException,
         DwiSerializationException,
@@ -197,12 +200,74 @@ abstract final class Dwi {
   /// on failure. There is no main-thread fallback.
   static Future<R> run<R>(String task, [Object? input]) async {
     _refuseWhileClosing(task);
-    final result = await _track(
-      _dispatch(task, () => _active.run(task, input)),
-    );
-    if (result is R) return result;
-    throw DwiResultTypeException(
-      'task "$task" returned ${result.runtimeType}, expected $R',
+    final watch = _config.metrics ? (Stopwatch()..start()) : null;
+    if (watch != null) {
+      _callsStarted++;
+      if (input is DwiTransferableBytes) {
+        _transferableBytes += input.lengthInBytes;
+      }
+    }
+    try {
+      final result = await _track(
+        _dispatch(task, () => _active.run(task, input)),
+      );
+      if (result is R) {
+        _settleCall(watch, failed: false);
+        return result;
+      }
+      throw DwiResultTypeException(
+        'task "$task" returned ${result.runtimeType}, expected $R',
+      );
+    } catch (_) {
+      _settleCall(watch, failed: true);
+      rethrow;
+    }
+  }
+
+  // Call metrics (ADR-026 G1). Changed only by calls made with metrics on.
+  static int _callsStarted = 0;
+  static int _callsCompleted = 0;
+  static int _callsFailed = 0;
+  static Duration _totalCallTime = Duration.zero;
+  static Duration _maxCallTime = Duration.zero;
+  static int _transferableBytes = 0;
+
+  static void _settleCall(Stopwatch? watch, {required bool failed}) {
+    if (watch == null) return;
+    watch.stop();
+    final elapsed = watch.elapsed;
+    if (failed) {
+      _callsFailed++;
+    } else {
+      _callsCompleted++;
+    }
+    _totalCallTime += elapsed;
+    if (elapsed > _maxCallTime) _maxCallTime = elapsed;
+  }
+
+  /// Snapshot of call metrics (ADR-026 G1). Cumulative from the first call made
+  /// with `DwiConfig(metrics: true)`; all zero before that. See [DwiMetrics]
+  /// for what is and is not counted.
+  static DwiMetrics metrics() => DwiMetrics(
+    callsStarted: _callsStarted,
+    callsCompleted: _callsCompleted,
+    callsFailed: _callsFailed,
+    totalCallTime: _totalCallTime,
+    maxCallTime: _maxCallTime,
+    transferableBytes: _transferableBytes,
+  );
+
+  /// Snapshot of the worker pool (ADR-026 G2). Before the first [configure] it
+  /// reports an empty pool and does not create a backend.
+  static DwiPoolState poolState() {
+    final backend = _backend;
+    if (backend case final DwiPoolInspector inspector) {
+      return inspector.poolState();
+    }
+    return DwiPoolState(
+      maxWorkers: _config.maxWorkers,
+      queued: 0,
+      workers: const <DwiPoolWorker>[],
     );
   }
 

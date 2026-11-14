@@ -88,10 +88,15 @@ Object? _decodeFromIsolate(Object? value) {
 /// Each call spawns one isolate and keeps its handle, so a running task can be
 /// cancelled with `Isolate.kill` instead of being abandoned (ADR-010 §10.1).
 /// Timeouts terminate the isolate for the same reason.
-class NativeBackend implements DwiBackend {
+class NativeBackend implements DwiBackend, DwiPoolInspector {
   NativeBackend(this.registry);
 
   final DwiTaskRegistry registry;
+
+  /// Calls whose isolate is running or being spawned (ADR-026 G2).
+  final Set<_NativeState> _running = <_NativeState>{};
+  int _nextWorkerId = 1;
+  final Map<_NativeState, int> _workerIds = <_NativeState, int>{};
   DwiConfig _config = const DwiConfig();
   final Set<NativeWorkerHandle> _handles = <NativeWorkerHandle>{};
   bool _closed = false;
@@ -118,6 +123,8 @@ class NativeBackend implements DwiBackend {
     final handle = state.handle;
     final task = state.task;
     ReceivePort? port;
+    _running.add(state);
+    _workerIds[state] = _nextWorkerId++;
     try {
       if (_closed) {
         throw const DwiUnsupportedException('backend is closed');
@@ -208,6 +215,8 @@ class NativeBackend implements DwiBackend {
         );
       }
     } finally {
+      _running.remove(state);
+      _workerIds.remove(state);
       state.isolate = null;
       state.reply = null;
       state.control = null;
@@ -252,6 +261,21 @@ class NativeBackend implements DwiBackend {
       isolate.kill(priority: Isolate.immediate);
       port?.close();
     });
+  }
+
+  /// Each running call is one isolate; there is no queue on this path, so
+  /// `queued` is always 0 (ADR-026 G2).
+  @override
+  DwiPoolState poolState() {
+    final workers = <DwiPoolWorker>[
+      for (final state in _running)
+        DwiPoolWorker(id: _workerIds[state] ?? 0, busy: true, failed: false),
+    ]..sort((a, b) => a.id.compareTo(b.id));
+    return DwiPoolState(
+      maxWorkers: _config.maxWorkers,
+      queued: 0,
+      workers: workers,
+    );
   }
 
   @override

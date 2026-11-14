@@ -2011,10 +2011,10 @@ recorded in `docs/browser-matrix.md` with the Flutter version.
 
 ## ADR-026 — Diagnostics and architecture decisions (tranche G)
 
-**Status.** Proposed, 2026-11-14. Not accepted. Each item below is either
-shipped with tests or closed with a dated decision, as completion-plan
-tranche G requires. Items are independent; accepting one does not accept the
-others.
+**Status.** Proposed, 2026-11-14. G1 and G2 are implemented on 2026-11-14 at
+the maintainer's request ("G1 and G2 code"); they are not accepted as ADR text
+until the maintainer says so. G3 to G8 remain Proposed. Items are independent;
+implementing one does not accept the others.
 
 **Current state, from code.** No metrics exist (no `metric` symbol in
 `packages/*/lib`). Protocol version is reported, not negotiated:
@@ -2026,14 +2026,26 @@ exists (zero `negotiat` hits in `packages/*/lib`).
 
 **Decisions proposed.**
 
-1. **Opt-in metrics (G1).** `DwiConfig(metrics: true)` enables a snapshot
-   `Dwi.metrics()` with worker count, queue depth, startup time, task time,
-   transfer size and failure counts. Off by default: no cost when unused.
-   Decided (O4): snapshot only. A stream would add a subscription lifecycle
-   that nothing yet needs; it can be added later as a separate ADR.
-2. **Public pool state (G2).** `Dwi.poolState()` returns the state of each
-   worker (`ready`, `running`, `closing`, `failed`) and its queue depth. It
-   reads existing state; it adds no new states.
+1. **Opt-in metrics (G1), implemented.** `DwiConfig(metrics: true)` makes
+   `Dwi.run` count calls: started, completed, failed, total and maximum call
+   duration, and bytes sent as `DwiTransferableBytes`. `Dwi.metrics()` returns
+   a snapshot (`DwiMetrics`, `packages/dwi_core/lib/src/metrics.dart`). Off by
+   default; when off, a call does no counting.
+   Not implemented, and removed from this item: **startup time** (the facade
+   does not see worker readiness), **queue depth** (reported by G2 instead) and
+   **copied-input size** (would need serialising the input). Decided (O4):
+   snapshot only.
+   Only `Dwi.run` is counted. `runCancellable`, `runStream`, `runFresh` and
+   handle calls are not.
+2. **Public pool state (G2), implemented.** `Dwi.poolState()` returns
+   `DwiPoolState`: the configured `maxWorkers`, the number of calls waiting for
+   a worker, and each live worker's `id`, `busy` and `failed` flags. The web
+   backend reports its shared pool. The native backend runs each `Dwi.run` call
+   in its own isolate with no queue, so its workers are the running calls and
+   `queued` is always 0. Backends report through the optional
+   `DwiPoolInspector` interface, so `DwiBackend` itself did not change. States
+   `ready`, `running`, `closing` and `failed` from the first draft were not
+   added: the pool reports `busy` and `failed`, which is what the pool tracks.
 3. **Protocol version negotiation (G3).** The host sends its version in the
    `ready` handshake. A worker reporting a different version fails the
    handle with a typed protocol error, not a silent mismatch. Decided (O5):

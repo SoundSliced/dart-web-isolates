@@ -31,6 +31,7 @@ class DwiConfig {
     this.channelBufferSize = 64,
     this.idleTimeout,
     this.cancelGracePeriod,
+    this.metrics = false,
   });
 
   /// Conventional served path for the generated worker.
@@ -117,6 +118,12 @@ class DwiConfig {
   /// does not is terminated. A native call's isolate is killed when the period
   /// ends if it has not exited. Dedicated handles ignore this setting.
   final Duration? cancelGracePeriod;
+
+  /// Whether `Dwi.run` calls are counted for `Dwi.metrics()` (ADR-026 G1).
+  ///
+  /// Off by default, so an application that never reads metrics pays nothing
+  /// per call.
+  final bool metrics;
 
   /// Returns a copy with validated values or throws [ArgumentError].
   DwiConfig validated() {

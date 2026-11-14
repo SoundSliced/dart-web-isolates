@@ -710,12 +710,14 @@ Future<List<O>> computeParallel<I, O>(
 `task` is a generated typed proxy. No name-based overload and no concurrency
 parameter (O1, decided in ADR-025).
 
-## Diagnostics (ADR-026, proposed 2026-11-14, not accepted)
+## Diagnostics (ADR-026, proposed 2026-11-14; G1 and G2 implemented, not accepted)
 
-- `DwiConfig(metrics: true)` and `Dwi.metrics()`: opt-in snapshot (G1). Snapshot
-  only, no stream (O4, decided).
-- `Dwi.poolState()`: per-worker state and queue depth (G2). Reads existing
-  states only.
+- `DwiConfig(metrics: true)` and `Dwi.metrics()` returning `DwiMetrics`:
+  opt-in snapshot (G1, implemented 2026-11-14). Counts `Dwi.run` calls only.
+  Snapshot only, no stream (O4, decided).
+- `Dwi.poolState()` returning `DwiPoolState` and `DwiPoolWorker` (G2,
+  implemented 2026-11-14). Web reports the shared pool; native reports running
+  calls and `queued` 0. Optional backend interface `DwiPoolInspector`.
 - Protocol version checked against the `ready` handshake (G3). No wire change
   (O5, decided).
 - G4 closed: no `DwiFallback` option (O6, decided). Unavailable workers fail.

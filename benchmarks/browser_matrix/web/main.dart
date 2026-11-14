@@ -346,7 +346,11 @@ Future<void> _run() async {
     // the same input; every checksum must match.
     await Dwi.close();
     await Dwi.configure(
-      const DwiConfig(workerScript: workerScript, maxWorkers: 1, maxQueuedTasks: 4),
+      const DwiConfig(
+        workerScript: workerScript,
+        maxWorkers: 1,
+        maxQueuedTasks: 4,
+      ),
     );
     final bytes = _pseudoBytes(256 * 1024, 1);
     final rleInput = Uint8List.fromList(
@@ -355,18 +359,38 @@ Future<void> _run() async {
     final pixels = _pseudoBytes(blurWidth * blurWidth, 2);
     final jsonText = jsonEncode(<Map<String, Object?>>[
       for (var i = 0; i < 2000; i++)
-        <String, Object?>{'id': i, 'v': i * 7 % 1000, 'tags': <int>[i % 5, i % 3]},
+        <String, Object?>{
+          'id': i,
+          'v': i * 7 % 1000,
+          'tags': <int>[i % 5, i % 3],
+        },
     ]);
     final cases = <_Case>[
-      _Case('sortChecksum', () => Dwi.run<int>('sortChecksum', bytes),
-          () => sortChecksum(bytes)),
-      _Case('jsonChecksum', () => Dwi.run<int>('jsonChecksum', jsonText),
-          () => jsonChecksum(jsonText)),
-      _Case('adler32', () => Dwi.run<int>('adler32', bytes), () => adler32(bytes)),
-      _Case('rleSize', () => Dwi.run<int>('rleSize', rleInput),
-          () => rleSize(rleInput)),
-      _Case('boxBlurSum', () => Dwi.run<int>('boxBlurSum', pixels),
-          () => boxBlurSum(pixels)),
+      _Case(
+        'sortChecksum',
+        () => Dwi.run<int>('sortChecksum', bytes),
+        () => sortChecksum(bytes),
+      ),
+      _Case(
+        'jsonChecksum',
+        () => Dwi.run<int>('jsonChecksum', jsonText),
+        () => jsonChecksum(jsonText),
+      ),
+      _Case(
+        'adler32',
+        () => Dwi.run<int>('adler32', bytes),
+        () => adler32(bytes),
+      ),
+      _Case(
+        'rleSize',
+        () => Dwi.run<int>('rleSize', rleInput),
+        () => rleSize(rleInput),
+      ),
+      _Case(
+        'boxBlurSum',
+        () => Dwi.run<int>('boxBlurSum', pixels),
+        () => boxBlurSum(pixels),
+      ),
     ];
     final workloads = <String, Object?>{};
     for (final c in cases) {
@@ -423,6 +447,48 @@ Future<void> _run() async {
       };
     }
     result['poolSizing'] = sizing;
+
+    // K: metrics and pool state on the web backend (ADR-026 G1, G2). A small
+    // pool, 20 calls, one failing call, then a busy snapshot and an idle one.
+    await Dwi.close();
+    await Dwi.configure(
+      const DwiConfig(
+        workerScript: workerScript,
+        maxWorkers: 2,
+        maxQueuedTasks: 32,
+        metrics: true,
+      ),
+    );
+    final beforeCalls = Dwi.metrics();
+    final kValues = await Future.wait(<Future<int>>[
+      for (var i = 0; i < 20; i++) Dwi.run<int>('tiny', i),
+    ]);
+    var unknownFailed = false;
+    try {
+      await Dwi.run<Object?>('noSuchTask');
+    } catch (_) {
+      unknownFailed = true;
+    }
+    final afterCalls = Dwi.metrics();
+    final spinning = Dwi.run<String>('spin', 200);
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    final busyPool = Dwi.poolState();
+    await spinning;
+    final idlePool = Dwi.poolState();
+    result['metricsWeb'] = <String, Object?>{
+      'started': afterCalls.callsStarted - beforeCalls.callsStarted,
+      'completed': afterCalls.callsCompleted - beforeCalls.callsCompleted,
+      'failed': afterCalls.callsFailed - beforeCalls.callsFailed,
+      'correct':
+          kValues.indexed.every((pair) => pair.$2 == pair.$1 + 1) &&
+          unknownFailed,
+      'maxWorkers': busyPool.maxWorkers,
+      'busyWorkersDuringSpin': busyPool.workers.where((w) => w.busy).length,
+      'workersDuringSpin': busyPool.workers.length,
+      'queuedDuringSpin': busyPool.queued,
+      'busyWorkersIdle': idlePool.workers.where((w) => w.busy).length,
+      'workersIdle': idlePool.workers.length,
+    };
 
     await Dwi.close();
     result['status'] = 'ok';

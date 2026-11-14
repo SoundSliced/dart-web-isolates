@@ -64,7 +64,7 @@ class _CancelState {
 /// receives [DwiCancelledException]. With `DwiConfig.cancelGracePeriod`
 /// (ADR-027) a running request's worker is first asked to stop and is kept
 /// when the task returns within the period.
-class WebBackend implements DwiBackend {
+class WebBackend implements DwiBackend, DwiPoolInspector {
   /// How many startups may fail in a row before the queued callers are failed.
   static const int _maxConsecutiveSpawnFailures = 3;
 
@@ -291,6 +291,18 @@ class WebBackend implements DwiBackend {
     _handles.add(handle);
     return handle;
   }
+
+  /// The shared pool: every live slot and the callers waiting for one. A
+  /// waiter whose queue deadline has passed is not counted (ADR-026 G2).
+  @override
+  DwiPoolState poolState() => DwiPoolState(
+    maxWorkers: _config.maxWorkers,
+    queued: _waiters.where((waiter) => !waiter.timedOut).length,
+    workers: <DwiPoolWorker>[
+      for (final slot in _slots)
+        DwiPoolWorker(id: slot.id, busy: slot.busy, failed: slot.failed),
+    ],
+  );
 
   @override
   Future<DwiCapabilities> capabilities() async {

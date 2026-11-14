@@ -1,5 +1,24 @@
 # Browser Matrix
 
+## Metrics and pool state, four engines (ADR-026 G1, G2, 2026-11-14)
+
+The page's phase K runs with `DwiConfig(metrics: true, maxWorkers: 2)`: 20
+`tiny` calls, one call to an unknown task, then one 200 ms `spin` with a
+snapshot taken 60 ms in and another after it settles. Evidence:
+`audit/evidence/metrics-pool-state-four-engines-2026-11-14.json` (three passes,
+four engines; every pass and engine matched).
+
+| Engine | started / completed / failed | busy workers during spin / workers | busy / workers when idle | queued |
+| --- | --- | --- | --- | --- |
+| Chrome 157 | 21 / 20 / 1 | 1 / 2 | 0 / 2 | 0 |
+| Safari 26.5 | 21 / 20 / 1 | 1 / 2 | 0 / 2 | 0 |
+| Firefox 160 | 21 / 20 / 1 | 1 / 2 | 0 / 2 | 0 |
+| Edge 157 | 21 / 20 / 1 | 1 / 2 | 0 / 2 | 0 |
+
+Limits: startup time and copied-input size are not in `DwiMetrics`. The native
+backend has no queue, so its snapshot is only the running calls; it is covered
+by the VM test `packages/dwi/test/metrics_test.dart`, not by this browser run.
+
 ## Late reply, workloads, pool sizing, four engines (tranche A4, A6, A10, A11, 2026-11-14)
 
 Platform for every number here: macOS 26.5.1, Apple M2 (arm64), 8 cores

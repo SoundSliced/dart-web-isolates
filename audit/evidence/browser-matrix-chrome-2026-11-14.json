@@ -8,262 +8,262 @@
     "dartVersion": "3.15.0-133.0.dev (dev) (Mon Nov 9 20:02:43 2026 -0800) on \"macos_arm64\"",
     "machine": "Apple M2, 8.0 GiB RAM",
     "cpuCount": 8,
-    "timestamp": "2026-11-14T20:37:16.900114Z",
+    "timestamp": "2026-11-14T20:52:13.683149Z",
     "timezone": "GMT"
   },
   "runs": [
     {
       "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
       "hardwareConcurrency": 8,
-      "baseUri": "http://127.0.0.1:65182/index.html",
-      "coldStartMs": 38,
+      "baseUri": "http://127.0.0.1:51668/index.html",
+      "coldStartMs": 242,
       "warmDispatch": {
         "samplesMs": [
-          0.301,
-          0.401,
-          0.699,
+          0.5,
+          0.4,
+          0.9,
+          0.3,
+          0.1,
+          0.3,
+          1,
+          1,
+          0.5,
+          0.1,
+          0.1,
+          0.2,
+          0.1,
+          0,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.2,
+          0,
+          0.1,
+          0.1,
+          0.1,
+          0.1,
+          0.3,
+          0.1,
+          0.1,
+          0,
+          0.1,
+          0.2,
+          0.1,
+          0.1,
+          0.1,
+          5.3,
+          7.6,
           0.3,
           0.2,
-          0.601,
-          0.299,
-          0.5,
-          0.9,
-          0.1,
-          0.201,
-          0.1,
-          0,
-          0.199,
-          0.1,
-          0.101,
-          0,
-          0.1,
-          0.199,
-          0,
-          0.301,
-          0,
-          0.199,
-          0,
-          0.1,
-          0.201,
-          0,
-          0.099,
           0.1,
           0.1,
-          0.101,
           0.1,
-          0.099,
-          0.1,
-          0,
-          0.201,
-          0,
-          0.199,
-          0,
-          0.1,
-          0.1,
-          0.101,
-          0,
-          0.1,
-          6,
-          0.299,
-          0.101,
-          0.1,
-          0.099,
-          0.1
+          0.2
         ],
         "medianMs": 0.1
       },
       "transfer_1KiB": {
         "bytes": 1024,
         "copySamplesMs": [
-          1.299,
-          0.101,
+          4.5,
+          0.2,
           0.1,
-          2.299,
-          0.101,
+          4.7,
           0.1,
-          3.599
+          0.2,
+          9.1
         ],
-        "copyMedianMs": 0.101,
+        "copyMedianMs": 0.2,
         "transferSamplesMs": [
-          3.4,
-          0.201,
-          0.299,
-          0.101,
-          0.1,
-          0.199,
-          0.1
+          6.5,
+          0.4,
+          0.4,
+          0.2,
+          0.2,
+          0.2,
+          0.2
         ],
-        "transferMedianMs": 0.199
+        "transferMedianMs": 0.2
       },
       "transfer_100KiB": {
         "bytes": 102400,
         "copySamplesMs": [
+          0.7,
+          0.8,
+          0.5,
           0.2,
-          0.3,
-          0.301,
-          0.199,
-          0.301,
-          0.299,
-          0.201
+          0.5,
+          0.2,
+          0.6
         ],
-        "copyMedianMs": 0.299,
+        "copyMedianMs": 0.5,
         "transferSamplesMs": [
-          0.4,
-          0.301,
-          0.2,
-          0.199,
-          0.199,
-          0.201,
-          0.301
+          0.7,
+          0.7,
+          0.6,
+          0.3,
+          0.7,
+          0.5,
+          1.9
         ],
-        "transferMedianMs": 0.201
+        "transferMedianMs": 0.7
       },
       "transfer_64KiB": {
         "bytes": 65536,
         "copySamplesMs": [
-          0.199,
-          0.201,
-          0.199,
-          0.301,
-          0.199,
-          0.6,
-          0.301
+          0.2,
+          0.4,
+          0.4,
+          0.4,
+          0.2,
+          0.2,
+          0.4
         ],
-        "copyMedianMs": 0.201,
+        "copyMedianMs": 0.4,
         "transferSamplesMs": [
-          0.301,
+          0.5,
+          0.2,
           0.1,
-          0.201,
-          0.199,
-          0.301,
-          0.199,
-          0.201
+          0.5,
+          0.5,
+          0.3,
+          0.3
         ],
-        "transferMedianMs": 0.201
+        "transferMedianMs": 0.3
       },
       "transfer_1MiB": {
         "bytes": 1048576,
         "copySamplesMs": [
-          3.301,
-          3.899,
-          2,
+          3.8,
+          3.7,
+          3.8,
+          2.1,
           1.5,
-          1.701,
-          2.599,
-          2.1
+          2.1,
+          1.8
         ],
         "copyMedianMs": 2.1,
         "transferSamplesMs": [
-          1.301,
-          1,
-          1.1,
-          1,
-          0.9,
-          0.801,
-          1.301
+          1.7,
+          3.4,
+          2.1,
+          1.6,
+          1.6,
+          1.3,
+          1.6
         ],
-        "transferMedianMs": 1
+        "transferMedianMs": 1.6
       },
       "transfer_8MiB": {
         "bytes": 8388608,
         "copySamplesMs": [
-          13.2,
-          16.8,
-          27.6,
-          8.4,
-          8.2,
-          7.5,
-          9.5
+          17,
+          20.4,
+          37.6,
+          11.6,
+          14,
+          13.1,
+          15.1
         ],
-        "copyMedianMs": 9.5,
+        "copyMedianMs": 15.1,
         "transferSamplesMs": [
-          7.899,
-          6.399,
-          5.901,
-          6.199,
-          6.099,
-          6.099,
-          6.599
+          10.4,
+          7.1,
+          7.3,
+          6.8,
+          8.5,
+          7.3,
+          7.5
         ],
-        "transferMedianMs": 6.199
+        "transferMedianMs": 7.3
       },
       "transfer_10MiB": {
         "bytes": 10485760,
         "copySamplesMs": [
-          13.199,
-          12.4,
-          15.401,
-          9.799,
-          9.601,
-          9.699,
-          10
+          11.5,
+          12.3,
+          15.6,
+          10.4,
+          10,
+          10.8,
+          10.9
         ],
-        "copyMedianMs": 10,
+        "copyMedianMs": 10.9,
         "transferSamplesMs": [
-          8.201,
-          8.699,
-          9.699,
-          8.701,
-          8.6,
-          8.601,
-          7.9
+          8.1,
+          8.3,
+          8.2,
+          9,
+          8.3,
+          12.5,
+          10.7
         ],
-        "transferMedianMs": 8.601
+        "transferMedianMs": 8.3
       },
       "transfer_100MiB": {
         "bytes": 104857600,
         "copySamplesMs": [
-          130.799,
-          126.4,
-          97,
-          129.9,
-          90.1,
-          127.1,
-          110.601
+          159.7,
+          171,
+          105.9,
+          140.5,
+          115.7,
+          148.8,
+          96
         ],
-        "copyMedianMs": 126.4,
+        "copyMedianMs": 140.5,
         "transferSamplesMs": [
-          96,
-          89.701,
-          83.5,
-          75.6,
-          85.9,
-          109.701,
+          85.3,
+          83,
+          89.7,
+          71.7,
+          73.9,
+          79.8,
           78.6
         ],
-        "transferMedianMs": 85.9
+        "transferMedianMs": 79.8
       },
       "cancelQueued": {
         "samplesMs": [
-          1.4,
-          0.1,
-          0.101,
-          0.1,
-          0.199
-        ],
-        "medianMs": 0.101
-      },
-      "cancelRunning": {
-        "samplesMs": [
+          2.2,
           0.1,
           0.1,
-          0.099,
           0.1,
           0.1
         ],
         "medianMs": 0.1
       },
+      "cancelRunning": {
+        "samplesMs": [
+          0.1,
+          0.2,
+          0.1,
+          0.2,
+          0.2
+        ],
+        "medianMs": 0.2
+      },
       "sustained": {
         "tasks": 100,
         "settled": 100,
-        "totalMs": 159,
+        "totalMs": 62,
         "workers": 4,
         "correct": true
       },
       "burst1000": {
         "tasks": 1000,
         "settled": 1000,
-        "totalMs": 145,
+        "totalMs": 114,
         "workers": 4,
         "correct": true
       },
@@ -272,34 +272,34 @@
         "tasksPerRound": 100,
         "correct": true,
         "roundMs": [
-          20,
-          4,
-          5,
-          9,
-          5,
-          4,
-          4,
-          4,
-          12,
-          5,
-          5,
-          4,
+          3,
           2,
           2,
           2,
-          1,
+          2,
+          2,
+          2,
+          2,
+          2,
+          5,
+          4,
+          2,
           2,
           2,
           3,
+          2,
+          2,
+          2,
+          2,
           2
         ],
-        "heapStartBytes": 110249268,
-        "heapEndBytes": 112245712,
+        "heapStartBytes": 110355030,
+        "heapEndBytes": 112370506,
         "workers": 4
       },
       "crashFirst": "alive",
       "crashNext": "next",
-      "crashNextMs": 12,
+      "crashNextMs": 16,
       "crashWorkers": 1,
       "uiTicksDuringWorkerCpu": 29,
       "uiTicksDuringLocalCpu": 0,
@@ -310,19 +310,19 @@
       },
       "workloads": {
         "sortChecksum": {
-          "dwiMedianMs": 25.801,
-          "localMedianMs": 17.101,
+          "dwiMedianMs": 24.7,
+          "localMedianMs": 16.7,
           "checksum": 843023398,
           "correct": true
         },
         "jsonChecksum": {
-          "dwiMedianMs": 1.201,
-          "localMedianMs": 1,
+          "dwiMedianMs": 1.1,
+          "localMedianMs": 0.9,
           "checksum": 3003999,
           "correct": true
         },
         "adler32": {
-          "dwiMedianMs": 1.101,
+          "dwiMedianMs": 1.2,
           "localMedianMs": 1,
           "checksum": 2025659875,
           "correct": true
@@ -334,8 +334,8 @@
           "correct": true
         },
         "boxBlurSum": {
-          "dwiMedianMs": 3.3,
-          "localMedianMs": 2.9,
+          "dwiMedianMs": 3.2,
+          "localMedianMs": 3,
           "checksum": 33045947,
           "correct": true
         }
@@ -343,40 +343,52 @@
       "poolSizing": {
         "1": {
           "makespanMs": [
-            1013,
-            999.9,
-            999.901
+            1010.3,
+            1000.8,
+            1001
           ],
-          "medianMs": 999.901,
+          "medianMs": 1001,
           "correct": true
         },
         "2": {
           "makespanMs": [
-            516.801,
-            500.299,
-            500.601
+            513.8,
+            501,
+            500
           ],
-          "medianMs": 500.601,
+          "medianMs": 501,
           "correct": true
         },
         "4": {
           "makespanMs": [
-            267.801,
+            267.9,
             250,
-            250.099
+            250
           ],
-          "medianMs": 250.099,
+          "medianMs": 250,
           "correct": true
         },
         "8": {
           "makespanMs": [
-            181.801,
-            139.299,
-            136.8
+            184.9,
+            139.9,
+            132
           ],
-          "medianMs": 139.299,
+          "medianMs": 139.9,
           "correct": true
         }
+      },
+      "metricsWeb": {
+        "started": 21,
+        "completed": 20,
+        "failed": 1,
+        "correct": true,
+        "maxWorkers": 2,
+        "busyWorkersDuringSpin": 1,
+        "workersDuringSpin": 2,
+        "queuedDuringSpin": 0,
+        "busyWorkersIdle": 0,
+        "workersIdle": 2
       },
       "status": "ok"
     }
@@ -385,11 +397,11 @@
     "runs": 1,
     "coldStartMs": {
       "values": [
-        38.0
+        242.0
       ],
-      "median": 38.0,
-      "min": 38.0,
-      "max": 38.0
+      "median": 242.0,
+      "min": 242.0,
+      "max": 242.0
     },
     "warmDispatch.medianMs": {
       "values": [
@@ -401,19 +413,19 @@
     },
     "transfer_64KiB.copyMedianMs": {
       "values": [
-        0.201
+        0.4
       ],
-      "median": 0.201,
-      "min": 0.201,
-      "max": 0.201
+      "median": 0.4,
+      "min": 0.4,
+      "max": 0.4
     },
     "transfer_64KiB.transferMedianMs": {
       "values": [
-        0.201
+        0.3
       ],
-      "median": 0.201,
-      "min": 0.201,
-      "max": 0.201
+      "median": 0.3,
+      "min": 0.3,
+      "max": 0.3
     },
     "transfer_1MiB.copyMedianMs": {
       "values": [
@@ -425,37 +437,29 @@
     },
     "transfer_1MiB.transferMedianMs": {
       "values": [
-        1.0
+        1.6
       ],
-      "median": 1.0,
-      "min": 1.0,
-      "max": 1.0
+      "median": 1.6,
+      "min": 1.6,
+      "max": 1.6
     },
     "transfer_8MiB.copyMedianMs": {
       "values": [
-        9.5
+        15.1
       ],
-      "median": 9.5,
-      "min": 9.5,
-      "max": 9.5
+      "median": 15.1,
+      "min": 15.1,
+      "max": 15.1
     },
     "transfer_8MiB.transferMedianMs": {
       "values": [
-        6.199
+        7.3
       ],
-      "median": 6.199,
-      "min": 6.199,
-      "max": 6.199
+      "median": 7.3,
+      "min": 7.3,
+      "max": 7.3
     },
     "cancelQueued.medianMs": {
-      "values": [
-        0.101
-      ],
-      "median": 0.101,
-      "min": 0.101,
-      "max": 0.101
-    },
-    "cancelRunning.medianMs": {
       "values": [
         0.1
       ],
@@ -463,21 +467,29 @@
       "min": 0.1,
       "max": 0.1
     },
+    "cancelRunning.medianMs": {
+      "values": [
+        0.2
+      ],
+      "median": 0.2,
+      "min": 0.2,
+      "max": 0.2
+    },
     "sustained.totalMs": {
       "values": [
-        159.0
+        62.0
       ],
-      "median": 159.0,
-      "min": 159.0,
-      "max": 159.0
+      "median": 62.0,
+      "min": 62.0,
+      "max": 62.0
     },
     "crashNextMs": {
       "values": [
-        12.0
+        16.0
       ],
-      "median": 12.0,
-      "min": 12.0,
-      "max": 12.0
+      "median": 16.0,
+      "min": 16.0,
+      "max": 16.0
     },
     "uiTicksDuringWorkerCpu": {
       "values": [
