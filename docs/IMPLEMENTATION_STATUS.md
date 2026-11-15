@@ -97,8 +97,8 @@ text is the older intent.
 | --- | --- | --- | --- | --- |
 | 1, 14 | No worker file, registry, JS, manual compile, copy, path or manifest | limited | all true except one pre-build command for a fresh typed-proxy Flutter app | I |
 | 2, 3A | Build-time pipeline | complete | ADR-008, ADR-009 | — |
-| 3B | Annotation-free function discovery | open | analyzer can resolve static targets (R016); nothing generates from a call site | F |
-| 3C, 15 | Closures, `Isolate.run` | SDK | R016 | F, I |
+| 3B | Annotation-free function discovery | complete | `DwiFunctions` call sites with a top-level or static target (ADR-030) | — |
+| 3C, 15 | Closures, `Isolate.run` | closures: no-go (ADR-030); `Isolate.run`: SDK | R016, ADR-030 | I |
 | 4–5 | Runtime compilation decision | complete | R013: rejected | — |
 | 6 | Ordinary Flutter commands | limited | as §50 above | I |
 | 7 | Generated manifest | complete | `.dwi/worker_manifest.json` | — |

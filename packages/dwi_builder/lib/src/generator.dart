@@ -173,7 +173,7 @@ abstract final class DwiGenerator {
       if (task.returnsStream) {
         final call = task.takesInput
             ? "Dwi.runStream('${_dartString(task.name)}', "
-                  "${_encodeCall(task.input!, 'input', ids)})"
+                  "${_inputArgument(task, ids)})"
             : "Dwi.runStream('${_dartString(task.name)}')";
         buffer
           ..writeln(
@@ -198,7 +198,7 @@ abstract final class DwiGenerator {
         ..writeln('    _dwiRegisterGeneratedTasks();');
       final call = task.takesInput
           ? "Dwi.run<Object?>('${_dartString(task.name)}', "
-                "${_encodeCall(task.input!, 'input', ids)})"
+                "${_inputArgument(task, ids)})"
           : "Dwi.run<Object?>('${_dartString(task.name)}')";
       if (task.returnsVoid) {
         buffer
@@ -293,7 +293,13 @@ abstract final class DwiGenerator {
     DwiTaskDescriptor task,
     Map<String, String> prefixes,
   ) {
-    final parameter = task.takesInput
+    final parameter = task.takesRecordInput
+        ? [
+            for (var index = 0; index < task.inputNames.length; index++)
+              '${task.input!.positional[index].render(prefixes)} '
+                  '${task.inputNames[index]}',
+          ].join(', ')
+        : task.takesInput
         ? '${task.input!.render(prefixes)} input'
         : '';
     final output = task.returnsVoid ? 'void' : task.output.render(prefixes);
@@ -404,11 +410,58 @@ abstract final class DwiGenerator {
     return '_dwiEncode${ids[type.codecKey]}($value)';
   }
 
+  /// The encoded argument for `Dwi.run`: one value, or a record of the
+  /// separate parameters of a multi-parameter task (ADR-029).
+  static String _inputArgument(DwiTaskDescriptor task, Map<String, int> ids) {
+    if (!task.takesRecordInput) {
+      return _encodeCall(task.input!, 'input', ids);
+    }
+    return _encodeCall(task.input!, '(${task.inputNames.join(', ')})', ids);
+  }
+
+  /// Worker entry for a multi-parameter task: unpacks the record into the
+  /// positional arguments of the declared function.
+  static String _recordLambda(
+    DwiTaskDescriptor task,
+    String prefix,
+    Map<String, int> ids,
+  ) {
+    final decode = _decodeCall(task.input!, 'input', "'input'", ids);
+    final args = [
+      for (var index = 1; index <= task.inputNames.length; index++)
+        'record.\$$index',
+    ].join(', ');
+    final call = '$prefix.${task.qualifiedName}($args)';
+    final unpack = 'final record = $decode;';
+    if (task.returnsStream) {
+      final items = task.output.needsEncoding
+          ? "$call.map((item) => ${_encodeCall(task.output, 'item', ids)})"
+          : call;
+      return '(Object? request) => DwiStreamTask.serve(request, '
+          '(Object? input) { $unpack return $items; })';
+    }
+    if (!task.returnsVoid) {
+      if (!task.output.needsEncoding) {
+        return '(Object? input) { $unpack return $call; }';
+      }
+      return task.returnsFuture
+          ? '(Object? input) async { $unpack return '
+                '${_encodeCall(task.output, 'await $call', ids)}; }'
+          : '(Object? input) { $unpack return '
+                '${_encodeCall(task.output, call, ids)}; }';
+    }
+    if (task.returnsFuture) {
+      return '(Object? input) async { $unpack await $call; return null; }';
+    }
+    return '(Object? input) { $unpack $call; return null; }';
+  }
+
   static String _lambda(
     DwiTaskDescriptor task,
     String prefix,
     Map<String, int> ids,
   ) {
+    if (task.takesRecordInput) return _recordLambda(task, prefix, ids);
     final input = task.takesInput
         ? _decodeCall(task.input!, 'input', "'input'", ids)
         : '';

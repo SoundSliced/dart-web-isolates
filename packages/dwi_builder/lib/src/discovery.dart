@@ -314,6 +314,26 @@ Future<void> _scanFile({
     );
   }
 
+  // ADR-030: a function passed by name to `DwiFunctions` is a task without an
+  // annotation. Each call is resolved against its declaration in this package.
+  final references = _DwiFunctionCallVisitor();
+  result.unit.accept(references);
+  for (final call in references.calls) {
+    await _scanFunctionReference(
+      call: call,
+      collection: collection,
+      root: root,
+      packageName: packageName,
+      config: config,
+      tasks: tasks,
+      diagnostics: diagnostics,
+      dependencyFiles: dependencyFiles,
+      visitedLibraries: visitedLibraries,
+      display: display,
+      lineInfo: result.lineInfo,
+    );
+  }
+
   if (errors.isNotEmpty) {
     // The analyzer also reports unresolved imports in ordinary application
     // code (for example a file that imports the not-yet-generated proxy file).
@@ -346,6 +366,197 @@ Future<void> _scanFile({
       diagnostics: diagnostics,
     );
   }
+}
+
+/// Calls to `DwiFunctions.run`, `run0`, `stream` and `stream0` (ADR-030).
+class _DwiFunctionCallVisitor extends RecursiveAstVisitor<void> {
+  final List<MethodInvocation> calls = <MethodInvocation>[];
+
+  static const Set<String> _methods = <String>{
+    'run',
+    'run0',
+    'stream',
+    'stream0',
+  };
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    final target = node.target;
+    final isFunctions = switch (target) {
+      SimpleIdentifier(:final name) => name == 'DwiFunctions',
+      PrefixedIdentifier(:final identifier) =>
+        identifier.name == 'DwiFunctions',
+      _ => false,
+    };
+    if (isFunctions && _methods.contains(node.methodName.name)) {
+      calls.add(node);
+    }
+    super.visitMethodInvocation(node);
+  }
+}
+
+/// Discovers the function named by one `DwiFunctions` call (ADR-030).
+///
+/// The target must be a top-level or static function of a public, non-generic
+/// class, declared in this package. Anything else is reported as a warning so
+/// that code passing a function value through (for example a generic helper)
+/// still builds; the runtime keeps its typed `DwiUnknownTaskException`.
+Future<void> _scanFunctionReference({
+  required MethodInvocation call,
+  required AnalysisContextCollection collection,
+  required String root,
+  required String packageName,
+  required DwiBuildConfig config,
+  required List<DwiTaskDescriptor> tasks,
+  required List<DwiDiagnostic> diagnostics,
+  required Set<String> dependencyFiles,
+  required Set<String> visitedLibraries,
+  required String display,
+  required LineInfo lineInfo,
+}) async {
+  final arguments = call.argumentList.arguments;
+  if (arguments.isEmpty) return;
+  final argument = arguments.first;
+  final location = lineInfo.getLocation(argument.offset);
+
+  void warn(String message, {required String hint}) {
+    diagnostics.add(
+      DwiDiagnostic(
+        code: 'DWI003',
+        severity: DwiDiagnosticSeverity.warning,
+        message: message,
+        file: display,
+        line: location.lineNumber,
+        column: location.columnNumber,
+        hint: hint,
+      ),
+    );
+  }
+
+  final element = switch (argument) {
+    SimpleIdentifier() => argument.element,
+    PrefixedIdentifier() => argument.identifier.element,
+    _ => null,
+  };
+  if (element is! ExecutableElement) {
+    warn(
+      'DwiFunctions target is not a named function, so it cannot be discovered.',
+      hint:
+          'Pass a top-level or static function by name, or annotate the '
+          'function with @DwiTask.',
+    );
+    return;
+  }
+  final enclosing = element.enclosingElement;
+  final isStatic = enclosing is ClassElement && element.isStatic;
+  if (enclosing is! LibraryElement && !isStatic) {
+    warn(
+      'DwiFunctions target `${element.name}` is not a top-level or static '
+      'function.',
+      hint:
+          'Pass a top-level or static function, or annotate it with @DwiTask.',
+    );
+    return;
+  }
+  final targetFile = p.normalize(
+    element.library.fragments.first.source.fullName,
+  );
+  if (!p.isWithin(root, targetFile)) {
+    warn(
+      'DwiFunctions target `${element.name}` is declared outside this package.',
+      hint: 'Annotate it with @DwiTask in the package that declares it.',
+    );
+    return;
+  }
+  final owner = enclosing is ClassElement && isStatic ? enclosing : null;
+  final className = owner?.name;
+  if (owner != null &&
+      (owner.name!.startsWith('_') || owner.typeParameters.isNotEmpty)) {
+    warn(
+      'DwiFunctions target `$className.${element.name}` must be a public '
+      'static method of a non-generic class.',
+      hint: 'Make the class public and non-generic, or annotate a function.',
+    );
+    return;
+  }
+
+  final resolved = await collection
+      .contextFor(targetFile)
+      .currentSession
+      .getResolvedUnit(targetFile);
+  if (resolved is! ResolvedUnitResult) {
+    warn(
+      'Could not resolve `${element.name}` for DwiFunctions.',
+      hint: 'Make sure the file and its imports resolve without errors.',
+    );
+    return;
+  }
+
+  AnnotatedNode? declaration;
+  for (final unitDeclaration in resolved.unit.declarations) {
+    if (className == null &&
+        unitDeclaration is FunctionDeclaration &&
+        unitDeclaration.name.lexeme == element.name) {
+      declaration = unitDeclaration;
+    }
+    if (className != null &&
+        unitDeclaration is ClassDeclaration &&
+        unitDeclaration.declaredFragment?.element.name == className) {
+      final body = unitDeclaration.body;
+      if (body is BlockClassBody) {
+        for (final member in body.members) {
+          if (member is MethodDeclaration &&
+              member.name.lexeme == element.name) {
+            declaration = member;
+          }
+        }
+      }
+    }
+  }
+  if (declaration == null) {
+    warn(
+      'Could not find the declaration of `${element.name}` for DwiFunctions.',
+      hint: 'Declare the function in a file under the package include paths.',
+    );
+    return;
+  }
+  // An annotated target is discovered when its own file is scanned.
+  if (_hasDwiTask(declaration.metadata)) return;
+
+  final qualified = className == null
+      ? element.name!
+      : '$className.${element.name}';
+  if (tasks.any(
+    (task) =>
+        p.normalize(task.sourcePath) == targetFile &&
+        task.qualifiedName == qualified,
+  )) {
+    return;
+  }
+
+  final targetDisplay = _displayPath(targetFile, root);
+  final descriptor = _readFunction(
+    declaration: declaration,
+    declaringType: className,
+    library: resolved.libraryElement,
+    file: targetFile,
+    display: targetDisplay,
+    root: root,
+    packageName: packageName,
+    config: config,
+    lineInfo: resolved.lineInfo,
+    diagnostics: diagnostics,
+  );
+  if (descriptor == null) return;
+  tasks.add(descriptor);
+  _collectDependencies(
+    resolved.libraryElement,
+    display: targetDisplay,
+    root: root,
+    dependencyFiles: dependencyFiles,
+    visitedLibraries: visitedLibraries,
+    diagnostics: diagnostics,
+  );
 }
 
 /// Collects `@DwiTask` annotations on declarations that [_scanFile] does not
@@ -549,21 +760,12 @@ DwiTaskDescriptor? _readFunction({
   final parameters =
       (expression?.parameters ?? method?.parameters)?.parameters ??
       const <FormalParameter>[];
-  if (parameters.length > 1) {
-    error(
-      'DWI003',
-      '@DwiTask function `$functionName` has ${parameters.length} parameters.',
-      hint: 'A task accepts at most one required positional input.',
-    );
-    return null;
-  }
-  if (parameters.length == 1) {
-    final parameter = parameters.single;
+  for (final parameter in parameters) {
     if (parameter.isNamed) {
       error(
         'DWI003',
         '@DwiTask function `$functionName` uses a named parameter.',
-        hint: 'Use one required positional parameter instead.',
+        hint: 'Use required positional parameters instead.',
       );
       return null;
     }
@@ -571,7 +773,7 @@ DwiTaskDescriptor? _readFunction({
       error(
         'DWI003',
         '@DwiTask function `$functionName` has an optional parameter.',
-        hint: 'Use one required positional parameter instead.',
+        hint: 'Use required positional parameters instead.',
       );
       return null;
     }
@@ -609,12 +811,28 @@ DwiTaskDescriptor? _readFunction({
     );
     return null;
   }
-  final parameterElement = element.formalParameters.isNotEmpty
-      ? element.formalParameters.first
+  final parameterElements = element.formalParameters;
+  final parameterElement = parameterElements.isNotEmpty
+      ? parameterElements.first
       : null;
-  final input = parameterElement == null
+  // Several parameters travel as one positional record (ADR-029).
+  final input = parameterElements.length > 1
+      ? DwiTypeDescriptor(
+          name: 'Record',
+          kind: DwiTypeKind.record,
+          positional: <DwiTypeDescriptor>[
+            for (final parameter in parameterElements)
+              _describeType(parameter.type),
+          ],
+        )
+      : parameterElement == null
       ? null
       : _describeType(parameterElement.type);
+  final inputNames = parameterElements.length > 1
+      ? <String>[
+          for (final parameter in parameterElements) parameter.name ?? '',
+        ]
+      : const <String>[];
   final returnsStream = element.returnType.isDartAsyncStream;
   final returnType = _unwrapReturnType(element.returnType);
   final output = _describeType(returnType);
@@ -630,10 +848,10 @@ DwiTaskDescriptor? _readFunction({
     );
   }
 
-  if (parameterElement != null) {
+  for (final parameter in parameterElements) {
     final issues = <_TypeIssue>[];
     _collectTypeIssues(
-      parameterElement.type,
+      parameter.type,
       isReturn: false,
       label: 'input',
       issues: issues,
@@ -690,6 +908,7 @@ DwiTaskDescriptor? _readFunction({
     line: line,
     column: column,
     input: input,
+    inputNames: inputNames,
     output: output,
     returnsFuture: returnsFuture,
     returnsStream: returnsStream,

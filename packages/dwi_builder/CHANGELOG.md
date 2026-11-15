@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Tasks with several required positional parameters are sent as one record
+  (ADR-029).
+- Functions passed by name to `DwiFunctions` are discovered without
+  `@DwiTask` (ADR-030). Closures stay unsupported.
+
 ## 0.10.0
 
 - Version bump to match 0.10.0. Formatting only; no behaviour change.

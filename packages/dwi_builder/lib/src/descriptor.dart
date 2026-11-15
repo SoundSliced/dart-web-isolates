@@ -213,6 +213,7 @@ class DwiTaskDescriptor {
     required this.line,
     required this.column,
     this.input,
+    this.inputNames = const <String>[],
     required this.output,
     required this.returnsFuture,
     this.returnsStream = false,
@@ -265,6 +266,13 @@ class DwiTaskDescriptor {
 
   /// Whether the task accepts an input value.
   bool get takesInput => input != null;
+
+  /// Parameter names when the task has several positional parameters; empty
+  /// for zero or one parameter. The input is then a record of these fields.
+  final List<String> inputNames;
+
+  /// Whether the task takes several positional parameters, sent as a record.
+  bool get takesRecordInput => inputNames.length > 1;
 
   /// Canonical input type text, or `null` for a zero-argument task.
   String? get inputType => input?.canonical;

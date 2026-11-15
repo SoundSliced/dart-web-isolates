@@ -1545,6 +1545,83 @@ and worker compilation in each measured browser; actual worker realm and
 independent task state; clean builds, cache invalidation and cleanup. Prototype
 identity or worker-only compilation cannot satisfy that gate.
 
+## ADR-030 — Function references without an annotation (tranche F)
+
+**Status.** Accepted 2026-11-15 under the maintainer's standing decision to
+close the open tranche items (O1–O7). Implemented in `dwi_builder` with tests.
+Closures are a recorded no-go.
+
+**Context.** `DwiFunctions.run(fn, input)` binds a function to a generated task
+by identity. Until now every such function needed `@DwiTask`. Tranche F asks
+whether the builder can find the statically named targets itself, and whether
+closures can be bound the same way.
+
+**Decision.**
+- A function passed by name to `DwiFunctions.run`, `run0`, `stream` or `stream0`
+  is discovered as a task, with the same signature rules as `@DwiTask`, when it is
+  a top-level function or a static method of a public, non-generic class declared
+  under the package's include paths.
+- An annotated target is discovered once, through its annotation.
+- Any other first argument (a closure, a variable, an instance method, a function
+  declared in another package) produces a `DWI003` **warning**, not an error, and
+  no task. A generic helper that forwards a function value still builds; at run
+  time it keeps the typed `DwiUnknownTaskException`.
+
+**Closures: no-go.** A closure has no name that the generated worker can bind to,
+and its identity is not stable across the boundary. The build phase cannot rewrite
+a call site before compilation (R016), so nothing can turn `Dwi.run(() => …)` into
+a worker task without an SDK or build-contract change. That change belongs to
+tranche I (DWI-5/6). The decision holds on dart2js and dart2wasm alike, because
+neither compiler offers the builder a hook.
+
+**Evidence.** `packages/dwi_builder/test/function_reference_discovery_test.dart`:
+discovery of three unannotated targets (top-level, async top-level, static
+method); a closure yields a warning and no task; an annotated target is not
+discovered twice; native execution returns `4|label:x|9`; the generated code
+compiles with `compile js` and `compile wasm`.
+
+**Consequences.** `DwiFunctions.run` and `DwiTasks` keep their signatures. Users no
+longer need `@DwiTask` on a function they call by name in the same package. Code
+outside the include paths still needs the annotation.
+
+## ADR-029 — Tasks with several positional parameters (tranche B follow-up)
+
+**Status.** Accepted 2026-11-15 under the maintainer's standing decision. Implemented
+in `dwi_builder` with tests. Single-parameter tasks are unchanged.
+
+**Context.** A task took at most one required positional input (`DWI003` for
+two or more). ADR-021 left "tasks with more than one parameter" open.
+
+**Decision.** A task with several required positional parameters takes them as one
+positional **record**, which uses the existing record codec (ADR-021):
+- The generated proxy keeps the separate parameters, for example
+  `Future<int> add(int left, int right)`, and sends `(left, right)` through
+  `Dwi.run`.
+- The worker unpacks the record and calls the declared function with positional
+  arguments.
+- Named, optional and generic parameters stay `DWI003` errors. A parameter type
+  that cannot cross the boundary stays `DWI001`.
+
+**Alternatives rejected.** A generated input class per task would add public types
+for every multi-parameter function. Passing a `List<Object?>` would lose static
+types.
+
+**Consequences.** The wire format of single-parameter tasks is unchanged, so
+protocol version 2 is unchanged. `DwiFunctions.run`, which is typed for one input,
+does not accept a multi-parameter task; a call to it does not compile, and the
+`DwiTasks` proxy is the way to call one.
+
+**Evidence.**
+- `test/multi_parameter_task_test.dart`: discovery of a two-parameter task, one-parameter
+  tasks unchanged, optional parameters still rejected, generated proxy and worker
+  text.
+- `test/generated_integration_test.dart`: `joinParts(int, String)`,
+  `spread(int, int)` and `countBetween(int, int)` run on native isolates and compile
+  for dart2js.
+- `test/browser_multi_parameter_test.dart`: the same three tasks in every cell of
+  host (js, wasm) × worker (dart2js, dart2wasm) × engine (Chrome, Safari, Firefox,
+  Edge). Every cell reports `x3`, `[1, 2, 3]` and `[1, 2, 3]`.
+
 ## ADR-028 — Pausing dispatch and pinging a worker (lifecycle, increment 3)
 
 **Status.** Accepted, 2026-11-13. Completion-plan tranche D, third increment

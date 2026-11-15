@@ -49,13 +49,13 @@ All eight packages are published on pub.dev at **0.10.0** (2026-11-15).
 
 | Package | What it does | Status |
 | --- | --- | --- |
-| `dwi` | Public API: `Dwi.configure`, `Dwi.run`, `Dwi.runFresh`, `DwiWorker` (tasks, scoped lifetime, channels, termination observation), `Dwi.capabilities`, re-exported `@DwiTask` | implemented, 38 tests |
-| `dwi_annotations` | `@DwiTask` marker | implemented, 2 tests |
-| `dwi_builder` | Analyzer discovery, worker/proxy/manifest generation, compile CLI, cache | implemented, 57 tests |
-| `dwi_core` | Config, capabilities, task registry, exceptions, channel endpoint, backend and handle interfaces | implemented, 32 tests |
+| `dwi` | Public API: `Dwi.configure`, `Dwi.run`, `Dwi.runFresh`, `DwiWorker` (tasks, scoped lifetime, channels, termination observation), `Dwi.capabilities`, re-exported `@DwiTask` | implemented, 56 tests |
+| `dwi_annotations` | `@DwiTask` marker | implemented, 3 tests |
+| `dwi_builder` | Analyzer discovery, worker/proxy/manifest generation, compile CLI, cache | implemented, 152 tests, browser-tested |
+| `dwi_core` | Config, capabilities, task registry, exceptions, channel endpoint, backend and handle interfaces | implemented, 41 tests |
 | `dwi_protocol` | Protocol v2 envelopes (tasks and channels), error payloads, validation | implemented, 14 tests |
-| `dwi_native` | Isolate backend plus dedicated persistent-isolate handles and channels | implemented, 62 tests |
-| `dwi_web` | Pooled Web Worker backend, dedicated-handle and channel backend, generated-worker runtime | implemented, 23 tests, browser-tested |
+| `dwi_native` | Isolate backend plus dedicated persistent-isolate handles and channels | implemented, 72 tests |
+| `dwi_web` | Pooled Web Worker backend, dedicated-handle and channel backend, generated-worker runtime | implemented, 30 tests, browser-tested |
 
 ## Zero-boilerplate workers (v0.3)
 

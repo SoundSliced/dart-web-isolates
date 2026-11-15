@@ -131,8 +131,6 @@ class Public {
   @DwiTask()
   static int named({required int value}) => value;
   @DwiTask()
-  static int many(int a, int b) => a + b;
-  @DwiTask()
   static int task(int value) => value;
 }
 @DwiTask()
@@ -152,7 +150,6 @@ int Public$task(int value) => value;
           contains('optional'),
           contains('private'),
           contains('named parameter'),
-          contains('2 parameters'),
           contains('collide'),
         ]),
       );
@@ -169,9 +166,6 @@ class Holder {
   @DwiTask()
   int method(int value) => value;
 }
-
-@DwiTask()
-int many(int a, int b) => a + b;
 
 @DwiTask()
 int named({int? value}) => value ?? 0;
@@ -200,7 +194,6 @@ int main() => 1;
       signatureErrors.map((item) => item.message).join('\n'),
       allOf(
         contains('not a method'),
-        contains('2 parameters'),
         contains('named parameter'),
         contains('optional parameter'),
         contains('private'),

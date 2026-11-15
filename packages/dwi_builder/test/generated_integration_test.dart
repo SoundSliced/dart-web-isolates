@@ -50,6 +50,20 @@ List<int>? echoNullable(List<int>? input) => input;
 
 @DwiTask()
 int explode(int value) => throw StateError('boom');
+
+@DwiTask()
+String joinParts(int count, String label) => '$label$count';
+
+@DwiTask()
+Future<List<int>> spread(int start, int count) async =>
+    List<int>.generate(count, (index) => start + index);
+
+@DwiTask()
+Stream<int> countBetween(int from, int to) async* {
+  for (var value = from; value <= to; value++) {
+    yield value;
+  }
+}
 ''';
 
 const String nativeCheck = r'''
@@ -80,6 +94,9 @@ Future<void> main() async {
   final nullable = await DwiTasks.echoNullable(null);
   await DwiTasks.fireAndForget(1);
   await DwiTasks.fireLater(1);
+  final joined = await DwiTasks.joinParts(3, 'x');
+  final spread = await DwiTasks.spread(1, 3);
+  final streamed = await DwiTasks.countBetween(1, 3).toList();
 
   String remote = 'none';
   try {
@@ -102,6 +119,9 @@ Future<void> main() async {
     'nullable': nullable,
     'remote': remote,
     'reused': reused,
+    'joined': joined,
+    'spread': spread,
+    'streamed': streamed,
   }));
 }
 ''';
@@ -124,10 +144,15 @@ void main() {
       final workerSource = project.read('.dwi/generated_worker.dart');
       expect(workerSource, contains("import 'dart:typed_data' as dwi_t0;"));
       expect(workerSource, contains('dwi_t0.Uint8List _dwiDecode'));
+      expect(workerSource, contains('record.\$1, record.\$2'));
 
       final proxies = project.read('lib/dwi_tasks.g.dart');
       expect(proxies, contains("Dwi.registerTask('echoBytes'"));
       expect(proxies, contains('static Future<dwi_t0.Uint8List> echoBytes('));
+      expect(
+        proxies,
+        contains('Future<String> joinParts(int count, String label)'),
+      );
 
       final result = await Process.run(
         Platform.resolvedExecutable,
@@ -164,6 +189,9 @@ void main() {
       expect(decoded['nullable'], isNull);
       expect(decoded['remote'], 'StateError:true:true');
       expect(decoded['reused'], 8);
+      expect(decoded['joined'], 'x3');
+      expect(decoded['spread'], <int>[1, 2, 3]);
+      expect(decoded['streamed'], <int>[1, 2, 3]);
     },
     timeout: const Timeout(Duration(minutes: 3)),
   );

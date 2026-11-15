@@ -66,7 +66,10 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
    Nothing else is: static methods of extensions and extension types,
    `external` functions, constructors, fields, local functions and annotated
    type declarations are build errors (`DWI003`), not tasks, and are never
-   skipped silently. Generated
+   skipped silently. A task may take several required positional parameters;
+   they travel as one record (ADR-029). A function passed by name to
+   `DwiFunctions` in the package is discovered without an annotation (ADR-030);
+   a closure there is a `DWI003` warning, not a task. Generated
    `DwiFunctions.run(task, input)` / `run0(task)` select their existing typed
    proxies (ADR-020, since 0.9.0). Unregistered functions,
    closures and instance tear-offs fail with `DwiUnknownTaskException` before
@@ -185,7 +188,7 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
     compiler matrix are Chrome-only; the v0.4 runtime benchmark covers Chrome and
     Safari; the v0.5 handle matrix covers Chrome, Safari, Firefox and Edge.
     `docs/browser-matrix.md` records which engine each cell came from.
-19. **No Flutter `compute()` integration.** Changing Flutter's web `compute()`
+56. **No Flutter `compute()` integration.** Changing Flutter's web `compute()`
     is an upstream proposal, not a package feature.
 
 ## Operational limitations
@@ -269,7 +272,7 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
     not an error, when its peer fails. There are no `SendPort`/`ReceivePort`
     objects and no direct worker-to-worker path. Native and all sixteen
     browser cells pass (`audit/evidence/worker-link-acceptance-2026-11-13T100732.json`).
-29. **dart2wasm host support is measured in all four engines.** A dart2wasm
+57. **dart2wasm host support is measured in all four engines.** A dart2wasm
     application (`flutter build web --wasm`) can host DWI since the 2026-11-05
     integral-double fix. A 2026-11-10 Flutter 3.47.6 matrix measured, at `/`:
     dart2wasm host + dart2js worker (control), dart2wasm host + dart2wasm

@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Tasks with several required positional parameters. They travel as one record
+  and the generated proxy keeps the separate parameters (ADR-029).
+- Functions passed by name to `DwiFunctions.run`, `run0`, `stream` and `stream0`
+  are discovered without `@DwiTask` when they are top-level or static functions
+  of this package. Closures are a recorded no-go (ADR-030).
+
+### Changed
+
+- `docs/limitations.md` numbering: duplicate items 19 and 29 renumbered to 56
+  and 57; limitation 8 describes the new discovery and parameter rules.
+
 ## [0.10.0] - 2026-11-14
 
 ### Toolchain
