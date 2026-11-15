@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:js_interop';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
+
 import 'package:flutter/scheduler.dart';
 import 'package:web/web.dart' as web;
 
@@ -168,10 +169,7 @@ class _PocHomePageState extends State<PocHomePage>
     };
     final body = jsonEncode(payload);
     await web.window
-        .fetch(
-          '/result'.toJS,
-          web.RequestInit(method: 'POST', body: body.toJS),
-        )
+        .fetch('/result'.toJS, web.RequestInit(method: 'POST', body: body.toJS))
         .toDart;
     _status = 'auto: results posted';
   }
@@ -213,8 +211,9 @@ class _PocHomePageState extends State<PocHomePage>
     stopwatch.stop();
     _snapshotTicker();
     if (mounted) {
-      setState(() =>
-          _status = 'main: computed in ${stopwatch.elapsedMilliseconds} ms');
+      setState(
+        () => _status = 'main: computed in ${stopwatch.elapsedMilliseconds} ms',
+      );
     }
     // Let the frame timings for the blocked period arrive before finalising.
     await Future<void>.delayed(const Duration(milliseconds: 400));
@@ -253,7 +252,8 @@ class _PocHomePageState extends State<PocHomePage>
         }
       }).toJS;
       worker.onmessage = onMessage;
-      if (mounted) setState(() => _status = 'worker: constructed, awaiting ready');
+      if (mounted)
+        setState(() => _status = 'worker: constructed, awaiting ready');
 
       final errorEvent = Completer<Object?>();
       worker.onerror = ((web.ErrorEvent event) {
@@ -285,12 +285,14 @@ class _PocHomePageState extends State<PocHomePage>
       }).toJS;
 
       final messageStopwatch = Stopwatch()..start();
-      worker.postMessage(<String, Object?>{
-        'op': 'primes',
-        'id': id,
-        'n': _taskLimit,
-        'rounds': _taskRounds,
-      }.jsify());
+      worker.postMessage(
+        <String, Object?>{
+          'op': 'primes',
+          'id': id,
+          'n': _taskLimit,
+          'rounds': _taskRounds,
+        }.jsify(),
+      );
       final payload = await response.future.timeout(
         const Duration(seconds: 60),
         onTimeout: () => throw TimeoutException('worker task did not finish'),
@@ -482,13 +484,18 @@ class _AnimatingBanner extends StatelessWidget {
                         color: theme.colorScheme.primary,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.directions_run, color: Colors.white),
+                      child: const Icon(
+                        Icons.directions_run,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   const Positioned(
                     left: 16,
                     bottom: 10,
-                    child: Text('This animation must stay smooth during the task.'),
+                    child: Text(
+                      'This animation must stay smooth during the task.',
+                    ),
                   ),
                 ],
               );
@@ -515,16 +522,23 @@ class _LiveFrameStats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final jankPercent =
-        totalFrames == 0 ? 0.0 : (totalJanky * 100 / totalFrames);
+    final jankPercent = totalFrames == 0
+        ? 0.0
+        : (totalJanky * 100 / totalFrames);
     return Wrap(
       spacing: 24,
       runSpacing: 8,
       children: [
         _Stat(label: 'live FPS', value: fps.toStringAsFixed(0)),
         _Stat(label: 'frames', value: '$totalFrames'),
-        _Stat(label: 'janky frames', value: '${jankPercent.toStringAsFixed(1)}%'),
-        _Stat(label: 'last frame', value: '${lastFrameMs.toStringAsFixed(1)} ms'),
+        _Stat(
+          label: 'janky frames',
+          value: '${jankPercent.toStringAsFixed(1)}%',
+        ),
+        _Stat(
+          label: 'last frame',
+          value: '${lastFrameMs.toStringAsFixed(1)} ms',
+        ),
       ],
     );
   }
@@ -567,23 +581,33 @@ class _ResultCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Last run: ${result.mode}',
-                style: theme.textTheme.titleMedium),
+            Text(
+              'Last run: ${result.mode}',
+              style: theme.textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             if (result.error != null)
               Text('ERROR: ${result.error}')
             else ...[
               Text('primes found: ${result.primes}'),
               Text('task wall time: ${result.taskMs.toStringAsFixed(1)} ms'),
-              Text('frames during task: ${result.framesDuring} '
-                  '(${result.droppedFrames} dropped at 60 Hz)'),
-              Text('worst frame around task: '
-                  '${result.worstFrameMs.toStringAsFixed(1)} ms'),
+              Text(
+                'frames during task: ${result.framesDuring} '
+                '(${result.droppedFrames} dropped at 60 Hz)',
+              ),
+              Text(
+                'worst frame around task: '
+                '${result.worstFrameMs.toStringAsFixed(1)} ms',
+              ),
               if (result.startupMs != null)
-                Text('worker startup: ${result.startupMs!.toStringAsFixed(1)} ms'),
+                Text(
+                  'worker startup: ${result.startupMs!.toStringAsFixed(1)} ms',
+                ),
               if (result.messageMs != null)
-                Text('message round trip: '
-                    '${result.messageMs!.toStringAsFixed(1)} ms'),
+                Text(
+                  'message round trip: '
+                  '${result.messageMs!.toStringAsFixed(1)} ms',
+                ),
             ],
           ],
         ),
@@ -621,16 +645,45 @@ class _ComparisonTable extends StatelessWidget {
               },
               children: [
                 _row('metric', 'main thread', 'dwi worker', header: true),
-                _row('task time', cell(main, (r) => '${r.taskMs.toStringAsFixed(1)} ms'),
-                    cell(worker, (r) => '${r.taskMs.toStringAsFixed(1)} ms')),
-                _row('janky frames', cell(main, (r) => '${r.droppedFrames}'),
-                    cell(worker, (r) => '${r.droppedFrames}')),
-                _row('frames rendered', cell(main, (r) => '${r.framesDuring}'),
-                    cell(worker, (r) => '${r.framesDuring}')),
-                _row('worst frame', cell(main, (r) => '${r.worstFrameMs.toStringAsFixed(1)} ms'),
-                    cell(worker, (r) => '${r.worstFrameMs.toStringAsFixed(1)} ms')),
-                _row('startup', '—', cell(worker, (r) => '${r.startupMs?.toStringAsFixed(1) ?? '—'} ms')),
-                _row('message RTT', '—', cell(worker, (r) => '${r.messageMs?.toStringAsFixed(1) ?? '—'} ms')),
+                _row(
+                  'task time',
+                  cell(main, (r) => '${r.taskMs.toStringAsFixed(1)} ms'),
+                  cell(worker, (r) => '${r.taskMs.toStringAsFixed(1)} ms'),
+                ),
+                _row(
+                  'janky frames',
+                  cell(main, (r) => '${r.droppedFrames}'),
+                  cell(worker, (r) => '${r.droppedFrames}'),
+                ),
+                _row(
+                  'frames rendered',
+                  cell(main, (r) => '${r.framesDuring}'),
+                  cell(worker, (r) => '${r.framesDuring}'),
+                ),
+                _row(
+                  'worst frame',
+                  cell(main, (r) => '${r.worstFrameMs.toStringAsFixed(1)} ms'),
+                  cell(
+                    worker,
+                    (r) => '${r.worstFrameMs.toStringAsFixed(1)} ms',
+                  ),
+                ),
+                _row(
+                  'startup',
+                  '—',
+                  cell(
+                    worker,
+                    (r) => '${r.startupMs?.toStringAsFixed(1) ?? '—'} ms',
+                  ),
+                ),
+                _row(
+                  'message RTT',
+                  '—',
+                  cell(
+                    worker,
+                    (r) => '${r.messageMs?.toStringAsFixed(1) ?? '—'} ms',
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -661,7 +714,9 @@ class _ComparisonTable extends StatelessWidget {
       padding: const EdgeInsets.all(8),
       child: Text(
         text,
-        style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal),
+        style: TextStyle(
+          fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+        ),
       ),
     );
   }
