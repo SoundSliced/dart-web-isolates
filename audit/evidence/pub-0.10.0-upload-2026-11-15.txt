@@ -1,0 +1,24 @@
+DWI 0.10.0 publication to pub.dev (2026-11-15)
+
+Environment
+  Dart SDK 3.15.0-133.0.dev (dev) at ~/Development/dart-sdk-3.15.0-dev/dart-sdk/bin/dart
+  Publish command per package: dart pub publish --force
+  Login: dart pub login (account must be an uploader of each existing package)
+
+Uploads (in order)
+  1. dwi_annotations 0.10.0  Successfully uploaded
+  2. dwi_protocol 0.10.0  Successfully uploaded
+  3. dwi_core 0.10.0  Successfully uploaded
+  4. dwi_native 0.10.0  Successfully uploaded
+  5. dwi_web 0.10.0  Successfully uploaded
+  6. dwi_builder 0.10.0  Successfully uploaded
+  7. dwi 0.10.0  Successfully uploaded
+  8. dwi_flutter 0.10.0  Successfully uploaded (new package)
+
+Notes
+  dwi_annotations first attempts were refused with "insufficient permissions to
+  upload new versions" until the logged-in account was changed to an uploader.
+
+Verification
+  https://pub.dev/api/packages/<name> reported latest.version == 0.10.0 for all
+  eight packages after the uploads.

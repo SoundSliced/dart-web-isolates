@@ -1,7 +1,7 @@
 # DWI 0.10.0 — release review
 
-Status: **prepared 2026-11-14; not yet published to pub.dev.** The upload needs a
-pub.dev login on the maintainer's machine (see "Publication" below). Minor release
+Status: **published to pub.dev on 2026-11-15** in the upload order below, each
+package verified on pub.dev. Minor release
 with additive features only. Existing APIs, protocol version 2 and the generated
 code for previously supported types are unchanged. Rebuild worker artefacts with
 `dart run dwi_builder:dwi build`.
@@ -55,14 +55,10 @@ before a dependent package is uploaded.
 
 ## Publication
 
-Pub.dev upload needs `dart pub login` on the maintainer's machine. Run, for each
-package in the order above:
-
-```bash
-cd packages/<package>
-dart pub publish
-```
+Uploaded on 2026-11-15 with `dart pub publish --force` from each package, in the
+order above. pub.dev reported `latest` 0.10.0 for all eight packages after the
+uploads. The upload needed a login by a maintainer account listed as an uploader
+on each existing package.
 
 Dry runs pass for all eight packages. `dwi_flutter` needed its LICENSE, README and
-CHANGELOG, which are now present. The root `README.md` still states the 0.9.0
-publication until the upload is done.
+CHANGELOG, which are now present.
