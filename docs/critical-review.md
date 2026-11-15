@@ -9,7 +9,7 @@ for v0.2.
 
 | # | Objection | Status |
 | --- | --- | --- |
-| S1 | CSP: the worker URL must satisfy `worker-src`; a strict policy can block the backend entirely. The API must surface this as a typed startup error, not a hang. | Mitigated by `DwiStartupException` + `startupTimeout`; CSP behaviour per engine unverified. |
+| S1 | CSP: the worker URL must satisfy `worker-src`; a strict policy can block the backend entirely. The API must surface this as a typed startup error, not a hang. | Mitigated by `DwiStartupException` + `startupTimeout`; closed 2026-11-15: strict CSP measured in four engines (`audit/evidence/browser-matrix-csp-2026-11-14.json`). |
 | S2 | `task` must never become code. If a future generator emits `Function('...')` or maps names to imports dynamically, it becomes an injection surface. | Protocol forbids it (security rule 1). Generator must be reviewed again when it exists. |
 | S3 | Untrusted payloads: same-origin does not mean trusted. A compromised page can send arbitrary structures. Dispatch must validate shape, cap size and cap queue depth. | Specified; **Open** until implemented and tested. |
 | S4 | Resource exhaustion: unbounded in-flight requests or 100 MB payloads can freeze the worker and the host. | Limits are specified, defaults not yet chosen; **Open**. |
@@ -17,7 +17,7 @@ for v0.2.
 | S6 | Cross-origin isolation: any future shared-memory path requires COOP/COEP and changes deployment. Must remain opt-in and never required by the JS backend. | Recorded in ADR-007; shared memory is out of scope. |
 | S7 | Error text and stack traces cross a boundary; they must be treated as data, never injected into HTML or logs without escaping. | Documented; implementation must not render HTML from them. |
 | S8 | Generated code must be deterministic and reviewed; generated entrypoints are executable code in the user's app. | AGENTS.md rule 11; generator review is a precondition for v0.3. |
-| S9 | Blob/data URL workers under a permissive policy can bypass origin assumptions. DWI should require a real served URL. | ADR-006 and R003 §2; enforced by configuration (workerScript is a path). |
+| S9 | Blob/data URL workers under a permissive policy can bypass origin assumptions. DWI should require a real served URL. | ADR-006 and R003 §2; closed 2026-11-15: `DwiConfig.requireWorkerScript` refuses `blob:`, `data:` and `javascript:` (`packages/dwi_core/test/worker_script_test.dart`). |
 | S10 | Denial of service through a task that never returns: `terminate()` is the only reliable stop and it kills queued work too. | Accepted and documented; cancellation is cooperative where possible. |
 
 ## Upstream-maintainer review (Agent 12)
@@ -56,10 +56,10 @@ The table above is kept as raised. Current state of the open items:
 | S3 payload and dispatch validation | closed | `packages/dwi_web/test/payload_test.dart`, `worker_dispatcher_test.dart`, lifecycle case `f` |
 | S4 resource exhaustion | closed | `maxPayloadBytes`, `maxQueuedTasks`, `queueTimeout`; lifecycle cases `b`, `c`, `k` in four engines |
 | S5 worker leaks | closed for pool and handles (termination on timeout, close and failed startup, four engines); page unload relies on the browser ending dedicated workers with their document and is not separately measured | `audit/evidence/pool-lifecycle-four-engines-2026-11-13T104143.json`, idle retirement and drain: `pool-idle-drain-acceptance-2026-11-13T104143.json` |
-| Gate 2 browser matrix | closed for desktop engines; mobile unverified | `docs/browser-matrix.md` |
-| Gate 3 cooperative cancellation | open | `docs/completion-plan.md` tranche D |
-| Gate 4 pool-sizing guidance | open | tranche A10 |
-| Gate 5 tree shaking for every shape | open (tested shapes measured, see `docs/limitations.md` 13) | tranche A8 |
+| Gate 2 browser matrix | closed for the four desktop engines; mobile browsers unverified (limitation, `docs/browser-matrix.md` A11) | `docs/browser-matrix.md` |
+| Gate 3 cooperative cancellation | closed: ADR-027, sixteen browser cells, native `cooperative_cancel_test` | `docs/architecture.md` ADR-027 |
+| Gate 4 pool-sizing guidance | closed: measured `maxWorkers` 1, 2, 4, 8 in four engines, with guidance | `docs/browser-matrix.md` (pool sizing, A10) |
+| Gate 5 tree shaking for every shape | closed by decision 2026-11-15: the 1.0 claim is the seven measured shapes; other shapes are limitation 13 | `docs/limitations.md` 13 |
 
 ## What this review changed
 

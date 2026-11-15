@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0
+
+- Version 1.0.0: the stable API of this package; see `docs/release-notes-1.0.0.md`. No behaviour change in this package at 1.0.0.
+
 ## 0.11.0
 
 - Tasks with several required positional parameters are sent as one record

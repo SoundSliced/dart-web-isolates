@@ -68,3 +68,32 @@ v0.3 unless marked proposed.** No cell claims parity.
   number of deployments. It keeps working only while its generation is retained
   by the deployment or still in the browser cache; otherwise it gets a typed
   `DwiStartupException` (ADR-018, limitations §14).
+
+## Platform columns for 1.0
+
+The master plan (§10) requires one column per platform. Each cell is backed by
+the evidence named, or marked **not measured** on this machine. "Four engines"
+means Chrome, Safari, Firefox and Edge on macOS 26.5.1 arm64; no other operating
+system or device was measured. Nothing is copied between engines or platforms.
+
+| Feature | Dart VM (native) | Flutter native | Dart Web JS | Flutter Web JS | Dart/Wasm worker |
+| --- | --- | --- | --- | --- | --- |
+| Named task through `Dwi.run` and `DwiTasks` | yes; `generated_integration_test` | not measured | yes, four engines; `audit/evidence/browser-matrix-extended-four-engines-2026-11-14.json` | yes, four engines; `audit/evidence/flutter-counter-four-engines-2026-11-14.json` | yes, four engines; `browser_payload_types_test` (16 cells) |
+| Payload types (ADR-021) | yes; `native_payload_types_test` | not measured | yes, 16 cells | not measured | yes, 16 cells |
+| Several positional parameters (ADR-029) | yes; `generated_integration_test` | not measured | yes, four engines; `browser_multi_parameter_test` | not measured | yes, four engines; `browser_multi_parameter_test` |
+| Function references without annotation (ADR-030) | yes; `function_reference_discovery_test` | not measured | compiles (dart2js); not run in a browser | not measured | compiles (dart2wasm); not run in a browser |
+| Stream tasks (ADR-022) | yes; `native_stream_tasks_test` | not measured | yes; `browser_stream_tasks_test` | not measured | not measured |
+| Dedicated handles and channels (ADR-013, ADR-014) | yes; `native_worker_handle_test` | not measured | yes, four engines; `browser_handle_test` | not measured | not measured |
+| Metrics and pool state (ADR-026) | yes; `metrics_test` | not measured | yes, four engines; `audit/evidence/metrics-pool-state-four-engines-2026-11-14.json` | not measured | not measured |
+| Cooperative cancellation (ADR-027) | yes; `cooperative_cancel_test` | not measured | yes, sixteen cells | not measured | not measured |
+| Pause, resume and ping (ADR-028) | ping only; `native_ping_test`; pause not measured on VM | not measured | yes, sixteen cells | not measured | not measured |
+| `Isolate.run` on the closure form | no closure registry; named form only | not measured | **not supported** (ADR-030, closures no-go) | **not supported** | **not supported** |
+| `SendPort` / `ReceivePort` objects | not implemented | not measured | **not implemented** | **not implemented** | **not implemented** |
+
+Limits of this table:
+
+- Flutter native was not run anywhere in this project. Every Flutter native cell
+  is **not measured**.
+- Mobile browsers and other operating systems are not measured (see
+  `docs/browser-matrix.md`, section A11).
+- A "not measured" cell is not a claim that the feature works or fails there.

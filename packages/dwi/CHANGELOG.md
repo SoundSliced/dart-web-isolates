@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0
+
+- Version 1.0.0: the stable API of this package; see `docs/release-notes-1.0.0.md`. No behaviour change in this package at 1.0.0.
+
 ## 0.11.0
 
 - Version bump to match 0.11.0. No behaviour change in this package.

@@ -35,9 +35,9 @@ text is the older intent.
 | 6–7 | Repository and package structure | complete | seven packages; `dwi_flutter` not created | E |
 | 8 | Platform architecture | limited | native, JS worker, opt-in Wasm worker | — |
 | 9 | API levels A, A1 | complete | ADR-002, ADR-011 | — |
-| 9 | Level B function references | limited | annotated top-level, class-static and enum-static functions (ADR-020, 0.9.0) | H, F |
+| 9 | Level B function references | limited | annotated top-level, class-static and enum-static functions (ADR-020, 0.9.0) and same-package `DwiFunctions` call sites (ADR-030, 0.11.0); closures are not supported | H, F |
 | 9 | Level C closures, Level D `Isolate.run` | SDK | R016, ADR-019 | F, I |
-| 10 | Compatibility contract | limited | `compatibility-matrix.md` has no separate columns for Flutter native, Flutter web and Dart/Wasm | A |
+| 10 | Compatibility contract | complete | `docs/compatibility-matrix.md` has the five platform columns for 1.0 (native, Flutter native, Dart Web JS, Flutter Web JS, Dart/Wasm); Flutter native is not measured | — |
 | 11–17 | Phase 0 research | complete | R001–R010 | — |
 | 18–21 | M001 proof of concept | complete | `experiments/dart_worker_poc`, M001 | — |
 | 19 | Flutter main-thread vs worker demonstration | complete | `examples/flutter_jank_demo` measured in four engines (`audit/evidence/flutter-jank-demo-four-engines-2026-11-14.json`) | — |
@@ -55,41 +55,41 @@ text is the older intent.
 | 37–41 | Annotations, discovery, registry, proxies, entrypoint | complete | `dwi_builder` tests; ADR-020 audit corrections | — |
 | 42 | Automatic compilation | limited | Flutter build hook (ADR-009); first build of a fresh typed-proxy app still fails | I |
 | 43 | Build caching | complete | `build_test.dart` | — |
-| 44 | Development workflow | partial | `dwi watch`; a running worker is not replaced on hot reload | G |
+| 44 | Development workflow | limited | `dwi watch`; a running worker is not replaced on hot reload (limitation 16) | — |
 | 45 | Compiler-assisted APIs | SDK | R016 | F, I |
 | 46–47 | Wasm worker backend and architecture decision | limited | ADR-018 (separate instances); no written comparison with shared memory and Wasm threads | G |
 | 48 | Backend selection | limited | explicit selection, typed failure, never a silent fallback; no opt-in fallback policy | G |
 | 49 | Flutter integration layer, `computeParallel` | complete | `dwi_flutter` 0.10.0 (ADR-025) | — |
 | 50 | `flutter run` / `flutter build web` with no manual step | limited | works except the first build of a fresh typed-proxy app | I |
-| 51 | Cross-platform test suites | partial | VM, browser JS, browser Wasm, Flutter web measured; CI runs format, analyze and VM tests; no Flutter native run | A |
-| 52 | Browser compatibility | partial | four desktop engines for every shipped level and for the benchmark harness; no mobile browser | A |
-| 53 | Security | partial | limits implemented and tested; CSP measured for the Wasm worker; no review since `critical-review.md` (2026-11-03) | A |
+| 51 | Cross-platform test suites | limited | VM, browser JS, browser Wasm, Flutter web measured; CI runs format, analyze and VM tests; Flutter native not run (`docs/compatibility-matrix.md`) | — |
+| 52 | Browser compatibility | limited | four desktop engines (macOS arm64) for every shipped level and for the benchmark harness; mobile browsers and other operating systems not measured (`docs/browser-matrix.md`, section A11) | — |
+| 53 | Security | complete | limits implemented and tested; strict CSP in four engines; blob, data and javascript workers refused (ADR-006); review in `docs/FINAL_SECURITY_REVIEW.md` | — |
 | 54 | Benchmarks | complete | primes, transfer, startup, dispatch, sorting, JSON, hashing, compression and image blur in four engines (`audit/evidence/browser-matrix-extended-four-engines-2026-11-14.json`) | — |
 | 55 | Diagnostics and observability | complete | metrics, public pool state and protocol check (ADR-026; `audit/evidence/metrics-pool-state-four-engines-2026-11-14.json`) | — |
-| 56 | Documentation and examples | partial | troubleshooting guide (`docs/troubleshooting.md`) and empty example directories removed; example coverage limited (section 3, row 54) | E, H |
+| 56 | Documentation and examples | complete | docs maintained; troubleshooting guide (`docs/troubleshooting.md`); empty directories removed; example coverage is limited (row 54) | — |
 | 57–58 | Agent organisation and workflow | complete | `AGENTS.md` | — |
-| 59 | Release roadmap to v1.0 | partial | 0.9.0 published 2026-11-13 | H |
-| 60 | Upstream strategy | partial | two proposals written, one follow-up posted, hook-ordering proposal not posted | I |
-| 61 | Final definition of success | partial | this file is the required classification | H |
+| 59 | Release roadmap to v1.0 | complete | 0.11.0 published 2026-11-15; v1.0 release recorded in `docs/release-notes-1.0.0.md` once published | — |
+| 60 | Upstream strategy | limited | two comments posted on dart-lang/sdk#56512 on 2026-11-10 (hook ordering, and the DataAsset follow-up, `docs/upstream/`); the function-lowering proposal is research only and is not posted; no SDK fork; further posting waits for the maintainer after 1.0 | I |
+| 61 | Final definition of success | complete | classification in this file; the FINAL_* reports in `docs/` | — |
 
 ## 3. Engineering handoff (items not already covered above)
 
 | § | Objective | Class | Evidence or gap | Tranche |
 | --- | --- | --- | --- | --- |
 | 4–7 | Integrity, package, research and M001 audits as separate reports | superseded | `audit/V030_VERIFICATION_REPORT.md` | — |
-| 8 | Protocol audit | partial | malformed messages, unknown types and version mismatch are tested; late and duplicate task replies on the host have no dedicated test | A |
-| 9, 51 | Stress with 1–1,000 tasks, sustained leak testing | partial | 1,000-task burst and a 20×100 leak run pass in four engines (`docs/browser-matrix.md`, burst section); heap growth is measured only where `performance.memory` exists (Chromium) | A |
+| 8 | Protocol audit | limited | malformed messages, unknown types and version mismatch are tested; late replies are measured in four engines (A4); a duplicate reply cannot be produced through the public API on any backend, so it has no test (`docs/browser-matrix.md`, late-reply section) | — |
+| 9, 51 | Stress with 1–1,000 tasks, sustained leak testing | limited | 1,000-task burst and a 20×100 leak run pass in four engines (`docs/browser-matrix.md`, burst section); heap growth is measured only where `performance.memory` exists (Chromium), limitation recorded | — |
 | 14 | Tree-shaking audit | limited | tested shapes only | A |
 | 17 | Clean external consumer | complete | `tooling/hosted_consumer` | — |
 | 18 | Continuous integration | complete | `.github/workflows/ci.yml`: format, analyze and VM tests per package; green on `main` (run for `a412266`, 2026-11-15) | — |
 | 30 | Scheduling strategies evaluated with benchmarks | complete | FIFO, least-loaded, round-robin and priority compared (`audit/evidence/scheduling-policies-2026-11-13.json`); no policy added | — |
 | 31–32 | Backpressure, crash recovery | complete | `browser_lifecycle_test.dart`, heartbeat tests | — |
-| 34 | CSP configurations | limited | strict CSP measured in Chrome only (`audit/evidence/browser-matrix-csp-2026-11-14.json`); the other engines are not measured under CSP | A |
+| 34 | CSP configurations | complete | strict same-origin CSP in four engines, three passes, inline-script control blocked (`audit/evidence/browser-matrix-csp-2026-11-14.json`); `blob:` workers not measured | — |
 | 39–40 | `dwi_flutter`, responsiveness demo including `compute()` | complete | `dwi_flutter` 0.10.0 (ADR-025); jank demo in four engines | — |
 | 44–47 | Experimental Dart and Flutter SDK forks, `Isolate.run`, `compute()` | SDK | one disposable-SDK hook-ordering prototype; forks need the maintainer's approval | I |
-| 48–50 | Benchmark suite, message sizes, worker counts | partial | see master plan §35, §54 | A |
-| 54 | Examples for transfers, pools, cancellation, streaming, Flutter, Wasm | partial | basic, automatic, stateful, scoped, stop-observer, Wasm exist | E |
-| 60 | `FINAL_*` reports and `UPSTREAM_PROPOSAL.md` | open | written at v1.0 | H |
+| 48–50 | Benchmark suite, message sizes, worker counts | complete | see `docs/FINAL_BENCHMARK_REPORT.md`; sections 35 and 54 of the master plan are measured in four engines (Wasm vs JS only in Chrome) | — |
+| 54 | Examples for transfers, pools, cancellation, streaming, Flutter, Wasm | limited | basic, automatic, stateful, scoped, stop-observer, cooperative cancel, dispatch control, worker link, Wasm and Flutter examples exist; no dedicated example for transfers, pool sizing or streaming (covered by tests) | E |
+| 60 | `FINAL_*` reports and `UPSTREAM_PROPOSAL.md` | complete | `docs/FINAL_IMPLEMENTATION_REPORT.md`, `FINAL_ARCHITECTURE.md`, `FINAL_BROWSER_MATRIX.md`, `FINAL_BENCHMARK_REPORT.md`, `FINAL_SECURITY_REVIEW.md`, `FINAL_SDK_FEASIBILITY_REPORT.md`, `UPSTREAM_PROPOSAL.md` | H |
 
 ## 4. Zero-boilerplate addendum
 
@@ -102,13 +102,13 @@ text is the older intent.
 | 4–5 | Runtime compilation decision | complete | R013: rejected | — |
 | 6 | Ordinary Flutter commands | limited | as §50 above | I |
 | 7 | Generated manifest | complete | `.dwi/worker_manifest.json` | — |
-| 8 | Change → regenerate → recompile → restart worker | partial | steps 1–4 (`dwi watch`, hook); steps 5–6 need a page reload | G |
+| 8 | Change → regenerate → recompile → restart worker | limited | steps 1–4 (`dwi watch`, hook); steps 5–6 need a page reload (limitation 16) | — |
 | 9 | Content-hash caching | complete | `hash_test.dart`, `build_test.dart` | — |
 | 10 | Lazy worker startup | complete | pool spawns on first call | — |
 | 11 | Universal vs per-task vs chunked workers, measured | complete | measured in four engines (`audit/evidence/worker-strategies-and-protocol-check-2026-11-14.json`) | — |
 | 12 | Dependency discovery | complete | import-closure hashing and `DWI002` | — |
 | 13 | Build-time diagnostics | complete | DWI001–DWI010 | — |
-| 16–17 | Roadmap, "complex internally, simple externally" | partial | through 0.9.0 | H |
+| 16–17 | Roadmap, "complex internally, simple externally" | complete | through 0.11.0; 1.0 recorded at release | — |
 
 ## 5. Defects found while classifying
 

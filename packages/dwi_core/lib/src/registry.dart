@@ -8,6 +8,7 @@ typedef DwiTaskFunction = Object? Function(Object? input);
 ///
 /// Registration is explicit; a task name is never turned into code.
 class DwiTaskRegistry {
+  /// Creates an empty registry.
   DwiTaskRegistry();
 
   final Map<String, DwiTaskFunction> _tasks = <String, DwiTaskFunction>{};
@@ -25,6 +26,7 @@ class DwiTaskRegistry {
     tasks.forEach(register);
   }
 
+  /// Whether a task named [name] is registered.
   bool contains(String name) => _tasks.containsKey(name);
 
   /// Returns the task or throws [DwiUnknownTaskException].
@@ -39,7 +41,9 @@ class DwiTaskRegistry {
   /// Runs a registered task synchronously in the current isolate.
   Object? invoke(String name, Object? input) => lookup(name)(input);
 
+  /// The registered task names.
   Iterable<String> get names => _tasks.keys;
 
+  /// Removes every registered task.
   void clear() => _tasks.clear();
 }

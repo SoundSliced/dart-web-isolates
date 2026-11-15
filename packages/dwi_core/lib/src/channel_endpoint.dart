@@ -31,6 +31,7 @@ void validateDwiChannelName(String name) {
 /// backend only supplies transport callbacks. Native and web share this class
 /// so both enforce identical bounds and settlement rules.
 class DwiChannelEndpoint implements DwiChannel {
+  /// Creates the endpoint for one named channel. Backends create these; applications do not.
   DwiChannelEndpoint({
     required this.name,
     required this.bufferSize,

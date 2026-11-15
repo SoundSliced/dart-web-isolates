@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-11-15
+
+First stable release. The supported API and its compatibility promise are in
+`docs/architecture.md` (ADR-031) and `docs/release-notes-1.0.0.md`.
+
+### Added
+
+- `dartdoc` on every exported member of `dwi` and `dwi_core`.
+- `DwiConfig.requireWorkerScript` refuses `blob:`, `data:` and `javascript:` worker
+  URLs with a typed startup error (ADR-006, critical review S9).
+- Platform compatibility columns and the final reports in `docs/FINAL_*.md`.
+
 ## [0.11.0] - 2026-11-15
 
 ### Added

@@ -1,5 +1,14 @@
 /// Which concurrency mechanism a backend uses.
-enum DwiBackendKind { isolate, worker, unsupported }
+enum DwiBackendKind {
+  /// A Dart isolate backend (native Dart VM and Flutter native).
+  isolate,
+
+  /// A Web Worker backend (Dart Web JavaScript and Dart/Wasm workers).
+  worker,
+
+  /// No backend is available on this platform.
+  unsupported,
+}
 
 /// How much cancellation a backend actually implements (ADR-010 §10.1).
 enum DwiCancellation {
@@ -16,6 +25,7 @@ enum DwiCancellation {
 
 /// Runtime capabilities reported by the selected backend.
 class DwiCapabilities {
+  /// Creates a capabilities snapshot. Backends fill it in; applications only read it.
   const DwiCapabilities({
     required this.backend,
     required this.protocolVersion,
@@ -25,9 +35,16 @@ class DwiCapabilities {
     this.workerBackend,
   });
 
+  /// The concurrency mechanism in use.
   final DwiBackendKind backend;
+
+  /// The wire protocol version this build speaks.
   final int protocolVersion;
+
+  /// Whether transferable bytes are supported by the backend.
   final bool transferables;
+
+  /// The number of workers the backend may use.
   final int workerCount;
 
   /// The cancellation contract this backend honours.
@@ -38,6 +55,7 @@ class DwiCapabilities {
   /// configuration (ADR-018).
   final String? workerBackend;
 
+  /// Returns the capabilities as plain values, for logs and diagnostics.
   Map<String, Object?> toMap() => <String, Object?>{
     'backend': backend.name,
     'protocolVersion': protocolVersion,

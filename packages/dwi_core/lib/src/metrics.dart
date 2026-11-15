@@ -4,6 +4,7 @@
 /// first call made with metrics enabled. Only `Dwi.run` calls are counted;
 /// `runCancellable`, `runStream`, `runFresh` and handle calls are not.
 final class DwiMetrics {
+  /// Creates a metrics snapshot. Counts and times are cumulative since the metrics were enabled.
   const DwiMetrics({
     required this.callsStarted,
     required this.callsCompleted,
@@ -46,6 +47,7 @@ final class DwiMetrics {
 
 /// One worker in a [DwiPoolState] snapshot.
 final class DwiPoolWorker {
+  /// Creates the state of one pool worker.
   const DwiPoolWorker({
     required this.id,
     required this.busy,
@@ -71,6 +73,7 @@ final class DwiPoolWorker {
 /// `Dwi.run` call in its own isolate with no queue, so its [workers] are the
 /// calls currently running and [queued] is always 0.
 final class DwiPoolState {
+  /// Creates a snapshot of the worker pool.
   const DwiPoolState({
     required this.maxWorkers,
     required this.queued,

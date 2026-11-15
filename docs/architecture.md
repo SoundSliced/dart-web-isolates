@@ -1545,6 +1545,53 @@ and worker compilation in each measured browser; actual worker realm and
 independent task state; clean builds, cache invalidation and cleanup. Prototype
 identity or worker-only compilation cannot satisfy that gate.
 
+## ADR-031 — Scope and stability of the 1.0 release
+
+**Status.** Proposed for the maintainer's acceptance with the 1.0.0 release (2026-11-15).
+Nothing here changes the code; it fixes what 1.0 promises and what it does not.
+
+**Supported API.** The stable 1.0 surface is:
+- `package:dwi/dwi.dart`: `Dwi` (`configure`, `run`, `runFresh`, `runStream`, `runCancellable`,
+  `spawn` and handles, `pause`, `resume`, `metrics`, `poolState`, `capabilities`, `close`),
+  `DwiConfig`, `DwiWorker`, `DwiCancelToken`, `DwiCancellation`, `DwiCancellableTask`,
+  `DwiStreamTask`, `DwiTaskFunction`, `DwiBackendKind`, `DwiCapabilities`, `DwiMetrics`,
+  `DwiPoolState`, `DwiPoolWorker`, the exception types, and `DwiTask`.
+- The generated `DwiTasks` proxies and `DwiFunctions` adapters (the shape is fixed by ADR-020 to
+  ADR-022 and ADR-029 to ADR-030).
+- `package:dwi_annotations/dwi_annotations.dart`: `DwiTask`, `DwiPayload`.
+- `package:dwi_flutter/dwi_flutter.dart`: `computeParallel`.
+- The `dwi_builder` command line (`dwi build`, `dwi check`, `dwi watch`).
+
+Everything in `dwi_core`, `dwi_native`, `dwi_web`, `dwi_protocol` and the `src/` directories is
+internal, even where a type is re-exported.
+
+**Stability promise.** From 1.0.0: breaking changes to the supported surface need a new major
+version and an ADR. Protocol version 2 stays; a change to the wire format bumps the protocol
+version and is refused at startup, never silently accepted (ADR-026 G3).
+
+**Support matrix.** Supported means "measured and tested" in the table in
+`docs/compatibility-matrix.md`:
+- Dart VM (native), the native isolate backend.
+- Dart Web JavaScript and Dart/Wasm workers, in Chrome, Safari, Firefox and Edge on macOS arm64.
+- Flutter web (JavaScript), in the same four engines, through `dwi_flutter`.
+
+Not supported in 1.0: mobile browsers and other operating systems (not measured), Flutter native
+(not run), closures and `Isolate.run` with closures (ADR-030, no-go), `SendPort` objects and
+`spawnUri` (not planned).
+
+**Tranche status.** Tranches A to H are complete or complete with recorded limits
+(`docs/IMPLEMENTATION_STATUS.md`). Tranche I (SDK fork, prototypes) is approved and deferred
+until after 1.0; upstream comments already posted are listed in `docs/UPSTREAM_PROPOSAL.md`.
+
+**DWI-4.** The completion plan (section 4) raises DWI-4 when tranches B to D pass. Tranches B, C
+and D passed by 2026-11-15 (ADR-021 to ADR-024, ADR-027, ADR-028, ADR-029). DWI-4 is raised with
+this ADR.
+
+**DWI-5 and DWI-6 are not raised.** They depend on the SDK (ADR-030, `docs/FINAL_SDK_FEASIBILITY_REPORT.md`).
+
+**Consequences.** `docs/FINAL_*` reports and `docs/UPSTREAM_PROPOSAL.md` are the 1.0 record. Mobile
+and Flutter native stay unverified until a device or machine is available; the release notes say so.
+
 ## ADR-030 — Function references without an annotation (tranche F)
 
 **Status.** Accepted 2026-11-15 under the maintainer's standing decision to

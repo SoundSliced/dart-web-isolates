@@ -17,6 +17,7 @@ enum DwiWorkerBackend {
 /// Timeouts are mandatory: a worker that never becomes ready, or a task that
 /// never returns, must fail instead of hanging (docs/protocol.md).
 class DwiConfig {
+  /// Creates a configuration. Every parameter has a documented default; see the fields.
   const DwiConfig({
     this.workerScript = defaultWorkerScript,
     this.workerBackend = DwiWorkerBackend.js,
@@ -199,6 +200,17 @@ class DwiConfig {
     if (script == null || script.trim().isEmpty) {
       throw const DwiStartupException(
         'workerScript is not configured; call Dwi.configure first',
+      );
+    }
+    // Critical review S9 and ADR-006: a worker must be a served, same-origin
+    // URL. Inline and script-URL workers defeat the origin and CSP assumptions.
+    final scheme = script.trim().toLowerCase();
+    if (scheme.startsWith('blob:') ||
+        scheme.startsWith('data:') ||
+        scheme.startsWith('javascript:')) {
+      throw DwiStartupException(
+        'workerScript "$script" is refused: use a served same-origin URL, '
+        'not blob:, data: or javascript: (ADR-006).',
       );
     }
   }

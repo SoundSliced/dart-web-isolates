@@ -50,7 +50,8 @@ before a dependent package is uploaded.
 
 ## Known limits
 
-- Strict CSP is measured in Chrome only (`audit/evidence/browser-matrix-csp-2026-11-14.json`).
+- Strict CSP covers same-origin workers only; `blob:` workers are not measured
+  (`audit/evidence/browser-matrix-csp-2026-11-14.json`, four engines).
 - Heap-growth checks are available only where `performance.memory` exists.
 - No mobile browser has been measured.
 - No Flutter native run.

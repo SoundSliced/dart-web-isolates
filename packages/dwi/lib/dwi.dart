@@ -61,6 +61,7 @@ export 'package:dwi_core/dwi_core.dart'
 /// final count = await Dwi.run<int>('primes', 5000000);
 /// ```
 abstract final class Dwi {
+  /// The tasks registered with [Dwi.registerTask] in this isolate or worker.
   static final DwiTaskRegistry registry = DwiTaskRegistry();
   static DwiConfig _config = const DwiConfig();
   static DwiBackend? _backend;

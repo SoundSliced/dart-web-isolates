@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.0
+
+- Refuses `blob:`, `data:` and `javascript:` worker URLs with a typed startup error
+  (`DwiConfig.requireWorkerScript`, ADR-006). Version 1.0.0 is the stable API.
+
 ## 0.11.0
 
 - Version bump to match 0.11.0. No behaviour change in this package.
