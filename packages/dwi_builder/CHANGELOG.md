@@ -1,11 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.11.0
 
 - Tasks with several required positional parameters are sent as one record
-  (ADR-029).
+  and the generated proxy keeps the separate parameters (ADR-029).
 - Functions passed by name to `DwiFunctions` are discovered without
-  `@DwiTask` (ADR-030). Closures stay unsupported.
+  `@DwiTask` when they are top-level or static functions of this package
+  (ADR-030). Closures stay unsupported.
 
 ## 0.10.0
 

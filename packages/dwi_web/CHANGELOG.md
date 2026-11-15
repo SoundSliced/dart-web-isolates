@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.11.0
+
+- Version bump to match 0.11.0. No behaviour change in this package.
+
 ## 0.10.0
 
 - Checks the protocol version in the worker's `ready` message and fails the

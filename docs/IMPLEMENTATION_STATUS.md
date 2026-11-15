@@ -40,17 +40,17 @@ text is the older intent.
 | 10 | Compatibility contract | limited | `compatibility-matrix.md` has no separate columns for Flutter native, Flutter web and Dart/Wasm | A |
 | 11–17 | Phase 0 research | complete | R001–R010 | — |
 | 18–21 | M001 proof of concept | complete | `experiments/dart_worker_poc`, M001 | — |
-| 19 | Flutter main-thread vs worker demonstration | partial | measured in `integration_tests/`; `examples/flutter_jank_demo` is an empty directory | E |
+| 19 | Flutter main-thread vs worker demonstration | complete | `examples/flutter_jank_demo` measured in four engines (`audit/evidence/flutter-jank-demo-four-engines-2026-11-14.json`) | — |
 | 22–24 | Protocol, correlation, error propagation | complete | `dwi_protocol`, protocol tests | — |
 | 25–26 | Native and browser backends | complete | package tests, browser matrices | — |
-| 27 | Worker pools | partial | pool size, queue, limits, replacement, idle retirement (ADR-024, unreleased) and draining close done; alternative scheduling policies not yet compared | D |
-| 28 | Timeouts and cancellation | partial | timeouts, queued cancellation, termination-based running cancellation; no cooperative cancellation | D |
+| 27 | Worker pools | complete | pool size, queue, limits, replacement, idle retirement (ADR-024, 0.10.0) and draining close; scheduling policies compared (section 3, row 30) | — |
+| 28 | Timeouts and cancellation | complete | timeouts, queued cancellation, cooperative cancellation for yielding tasks (ADR-027), termination as the documented fallback | — |
 | 29 | Worker lifecycle states | limited | handle states and `stopReason` (ADR-013, ADR-017); pool slots have no public state | G |
-| 30 | Port-like messaging | limited | named bounded channels (ADR-014); handle-to-handle links relayed by the host (ADR-023, unreleased; native + 16 cells); no `SendPort` objects or direct worker-to-worker path | — |
+| 30 | Port-like messaging | limited | named bounded channels (ADR-014); handle-to-handle links relayed by the host (ADR-023, 0.10.0; native + 16 cells); no `SendPort` objects or direct worker-to-worker path | — |
 | 31 | Streaming and progress | limited | `Stream<T>` tasks (ADR-022, 0.9.0): fresh context per listen, credit flow control, cancel terminates | — |
 | 32–33 | Serialization contract, typed serializers | limited | primitives, collections, typed data; enums, `DateTime`, `Duration`, `BigInt`, `Uri`, records and `@DwiPayload` classes through generated codecs (ADR-021, 0.9.0; native + 16 cells, `payload-types-acceptance-2026-11-13T012032.json`); payload classes must opt in and be trees | — |
 | 34 | Transferable data | complete | `DwiTransferableBytes` (ADR-010) | — |
-| 35 | Large-payload benchmarks 1 KB–100 MB | partial | 64 KiB, 1 MiB, 8 MiB in Chrome and Safari only | A |
+| 35 | Large-payload benchmarks 1 KB–100 MB | complete | 1 KiB–100 MiB payloads in four engines (`audit/evidence/browser-matrix-extended-four-engines-2026-11-14.json`) | — |
 | 36 | Protocol evolution | limited | version check rejects a mismatch; no negotiation | G |
 | 37–41 | Annotations, discovery, registry, proxies, entrypoint | complete | `dwi_builder` tests; ADR-020 audit corrections | — |
 | 42 | Automatic compilation | limited | Flutter build hook (ADR-009); first build of a fresh typed-proxy app still fails | I |
@@ -59,14 +59,14 @@ text is the older intent.
 | 45 | Compiler-assisted APIs | SDK | R016 | F, I |
 | 46–47 | Wasm worker backend and architecture decision | limited | ADR-018 (separate instances); no written comparison with shared memory and Wasm threads | G |
 | 48 | Backend selection | limited | explicit selection, typed failure, never a silent fallback; no opt-in fallback policy | G |
-| 49 | Flutter integration layer, `computeParallel` | open | — | E |
+| 49 | Flutter integration layer, `computeParallel` | complete | `dwi_flutter` 0.10.0 (ADR-025) | — |
 | 50 | `flutter run` / `flutter build web` with no manual step | limited | works except the first build of a fresh typed-proxy app | I |
-| 51 | Cross-platform test suites | partial | VM, browser JS, browser Wasm, Flutter web measured; no Flutter native run; **no CI** | A |
-| 52 | Browser compatibility | partial | four desktop engines for every shipped level; benchmark harness is Chrome and Safari only; no mobile browser | A |
+| 51 | Cross-platform test suites | partial | VM, browser JS, browser Wasm, Flutter web measured; CI runs format, analyze and VM tests; no Flutter native run | A |
+| 52 | Browser compatibility | partial | four desktop engines for every shipped level and for the benchmark harness; no mobile browser | A |
 | 53 | Security | partial | limits implemented and tested; CSP measured for the Wasm worker; no review since `critical-review.md` (2026-11-03) | A |
-| 54 | Benchmarks | partial | primes, transfer, startup, dispatch; no sorting, JSON, hashing, compression or image workloads | A |
-| 55 | Diagnostics and observability | open | `Dwi.capabilities()` only | G |
-| 56 | Documentation and examples | partial | docs maintained; five listed example directories are empty; no troubleshooting guide | E, H |
+| 54 | Benchmarks | complete | primes, transfer, startup, dispatch, sorting, JSON, hashing, compression and image blur in four engines (`audit/evidence/browser-matrix-extended-four-engines-2026-11-14.json`) | — |
+| 55 | Diagnostics and observability | complete | metrics, public pool state and protocol check (ADR-026; `audit/evidence/metrics-pool-state-four-engines-2026-11-14.json`) | — |
+| 56 | Documentation and examples | partial | troubleshooting guide (`docs/troubleshooting.md`) and empty example directories removed; example coverage limited (section 3, row 54) | E, H |
 | 57–58 | Agent organisation and workflow | complete | `AGENTS.md` | — |
 | 59 | Release roadmap to v1.0 | partial | 0.9.0 published 2026-11-13 | H |
 | 60 | Upstream strategy | partial | two proposals written, one follow-up posted, hook-ordering proposal not posted | I |
@@ -78,14 +78,14 @@ text is the older intent.
 | --- | --- | --- | --- | --- |
 | 4–7 | Integrity, package, research and M001 audits as separate reports | superseded | `audit/V030_VERIFICATION_REPORT.md` | — |
 | 8 | Protocol audit | partial | malformed messages, unknown types and version mismatch are tested; late and duplicate task replies on the host have no dedicated test | A |
-| 9, 51 | Stress with 1–1,000 tasks, sustained leak testing | partial | 100 tasks through 4 workers; no 1,000-task or heap-growth run | A |
+| 9, 51 | Stress with 1–1,000 tasks, sustained leak testing | partial | 1,000-task burst and a 20×100 leak run pass in four engines (`docs/browser-matrix.md`, burst section); heap growth is measured only where `performance.memory` exists (Chromium) | A |
 | 14 | Tree-shaking audit | limited | tested shapes only | A |
 | 17 | Clean external consumer | complete | `tooling/hosted_consumer` | — |
-| 18 | Continuous integration | open | no `.github/` | A |
-| 30 | Scheduling strategies evaluated with benchmarks | open | FIFO only, no comparison | D |
+| 18 | Continuous integration | complete | `.github/workflows/ci.yml`: format, analyze and VM tests per package; green on `main` (run for `a412266`, 2026-11-15) | — |
+| 30 | Scheduling strategies evaluated with benchmarks | complete | FIFO, least-loaded, round-robin and priority compared (`audit/evidence/scheduling-policies-2026-11-13.json`); no policy added | — |
 | 31–32 | Backpressure, crash recovery | complete | `browser_lifecycle_test.dart`, heartbeat tests | — |
-| 34 | CSP configurations | limited | measured for the Wasm worker; JS worker under a strict CSP not measured per engine | A |
-| 39–40 | `dwi_flutter`, responsiveness demo including `compute()` | open | — | E |
+| 34 | CSP configurations | limited | strict CSP measured in Chrome only (`audit/evidence/browser-matrix-csp-2026-11-14.json`); the other engines are not measured under CSP | A |
+| 39–40 | `dwi_flutter`, responsiveness demo including `compute()` | complete | `dwi_flutter` 0.10.0 (ADR-025); jank demo in four engines | — |
 | 44–47 | Experimental Dart and Flutter SDK forks, `Isolate.run`, `compute()` | SDK | one disposable-SDK hook-ordering prototype; forks need the maintainer's approval | I |
 | 48–50 | Benchmark suite, message sizes, worker counts | partial | see master plan §35, §54 | A |
 | 54 | Examples for transfers, pools, cancellation, streaming, Flutter, Wasm | partial | basic, automatic, stateful, scoped, stop-observer, Wasm exist | E |
@@ -105,7 +105,7 @@ text is the older intent.
 | 8 | Change → regenerate → recompile → restart worker | partial | steps 1–4 (`dwi watch`, hook); steps 5–6 need a page reload | G |
 | 9 | Content-hash caching | complete | `hash_test.dart`, `build_test.dart` | — |
 | 10 | Lazy worker startup | complete | pool spawns on first call | — |
-| 11 | Universal vs per-task vs chunked workers, measured | open | universal only, no measurement | G |
+| 11 | Universal vs per-task vs chunked workers, measured | complete | measured in four engines (`audit/evidence/worker-strategies-and-protocol-check-2026-11-14.json`) | — |
 | 12 | Dependency discovery | complete | import-closure hashing and `DWI002` | — |
 | 13 | Build-time diagnostics | complete | DWI001–DWI010 | — |
 | 16–17 | Roadmap, "complex internally, simple externally" | partial | through 0.9.0 | H |
@@ -116,9 +116,9 @@ text is the older intent.
 | --- | --- |
 | Cancelling a pooled web call while its worker is starting was ignored | fixed 2026-11-11, regression case in `browser_lifecycle_test.dart`; passes in four engines |
 | Unsupported `@DwiTask` placements were silently ignored; `external` functions accepted | fixed 2026-11-11 (ADR-020 audit) |
-| `docs/README.md` lists `vision.md`, which does not exist | open (H) |
-| Five example directories and three benchmark directories are empty | open (E, A) |
-| `tooling/README.md` lists three tools as planned with empty directories | open (H) |
+| `docs/README.md` lists `vision.md`, which does not exist | closed 2026-11-15: the row now points to `MASTER_PLAN.md` §1 |
+| Five example directories and three benchmark directories are empty | closed 2026-11-15: the empty directories were removed |
+| `tooling/README.md` lists three tools as planned with empty directories | closed: the table was corrected in 79c2f0b |
 
 ## Verified / not verified / could not determine
 

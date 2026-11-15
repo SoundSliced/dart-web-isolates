@@ -5,7 +5,7 @@ directory holds the maintained reference material.
 
 | Document | Purpose |
 | --- | --- |
-| `vision.md` | Problem statement, target developer experience, non-goals. |
+| `MASTER_PLAN.md` | Problem statement, target developer experience and non-goals (section 1, project vision). |
 | `current-state-2026.md` | Ground truth: what the current Dart/Flutter web toolchain does. |
 | `architecture.md` | Architecture and decision record (ADR-001 onward). |
 | `api-proposal.md` | Proposed public API and its compatibility levels. |
