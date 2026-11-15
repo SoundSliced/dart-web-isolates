@@ -1,7 +1,7 @@
 # DWI 0.11.0 — release notes
 
-Status: **prepared 2026-11-15; publication recorded in the section "Publication"
-below once the upload is verified on pub.dev.** Minor release with additive
+Status: **published to pub.dev on 2026-11-15**; each version was verified on pub.dev
+in the order below. Minor release with additive
 features only. Existing APIs, protocol version 2 and the generated code for
 previously supported single-parameter tasks are unchanged. Rebuild worker
 artefacts with `dart run dwi_builder:dwi build`.
@@ -58,6 +58,6 @@ before a dependent package is uploaded.
 
 ## Publication
 
-Pending. The upload will use `dart pub publish --force` from each package, in the
-order above, with a maintainer login listed as an uploader on each existing
-package. Each version is checked on pub.dev before the next upload.
+Uploaded on 2026-11-15 with `dart pub publish --force` from each package, in the
+order above. pub.dev reports `latest` 0.11.0 for all eight packages. Evidence:
+`audit/evidence/pub-0.11.0-upload-2026-11-15.txt`.

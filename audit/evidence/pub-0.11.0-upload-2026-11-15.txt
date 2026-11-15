@@ -1,0 +1,30 @@
+DWI 0.11.0 publication to pub.dev (2026-11-15)
+
+Environment
+  Dart SDK 3.15.0-133.0.dev (dev) at ~/Development/dart-sdk-3.15.0-dev/dart-sdk/bin/dart
+  Publish command per package: dart pub publish --force
+  Login: dart pub login, account listed as an uploader on each existing package
+  Release commit: 1795769 (pushed to origin/main)
+
+Gates before upload
+  format --set-exit-if-changed: 0 for all eight packages
+  analyze --fatal-infos: no issues for all eight packages
+  full test suite, serial (-j 1): all eight packages exit 0
+    dwi_annotations 3, dwi_protocol 14, dwi_core 41, dwi_native 72,
+    dwi_web 30, dwi 56, dwi_flutter 5, dwi_builder 152 (0 failures)
+  publish --dry-run: 0 warnings for all eight; hints only about the local
+    pubspec_overrides.yaml, which is not published
+
+Uploads (in order)
+  1. dwi_annotations 0.11.0  Successfully uploaded
+  2. dwi_protocol 0.11.0  Successfully uploaded
+  3. dwi_core 0.11.0  Successfully uploaded
+  4. dwi_native 0.11.0  Successfully uploaded
+  5. dwi_web 0.11.0  Successfully uploaded
+  6. dwi_builder 0.11.0  Successfully uploaded
+  7. dwi 0.11.0  Successfully uploaded
+  8. dwi_flutter 0.11.0  Successfully uploaded
+
+Verification
+  https://pub.dev/api/packages/<name> reported latest.version == 0.11.0 for all
+  eight packages after the uploads.
