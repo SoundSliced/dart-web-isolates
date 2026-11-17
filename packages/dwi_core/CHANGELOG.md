@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1
+
+- Documentation: the pub.dev README shows the basic and advanced examples inline, so the features can be read without running the example files.
+
 ## 1.1.0
 
 - Named port core: `DwiPort`, `DwiPortBinding`, `DwiPortEndpoint` (ADR-032). Internal to the package boundary.

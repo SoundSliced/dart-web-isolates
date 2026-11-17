@@ -16,14 +16,69 @@ Import `lib/dwi_tasks.g.dart` from the app and deploy `web/dwi/` with a
 web build. Use `generate` for source-only output, `watch` for the
 development loop and `clean` to remove generated outputs. Check flags with
 `dart run dwi_builder:dwi build --help`. Restart or reload the host to
-start workers from a rebuilt script.
+start workers from a rebuilt script. Choose the Wasm target with
+`build --target=wasm` or project config, then match the host's worker
+configuration.
 
-The basic programmatic example generates sources and prints discovered
-tasks and output paths. The advanced example compiles and reports the
-cache result. Pass an annotated project directory when running it from
-this package checkout. Choose the Wasm target with `build --target=wasm`
-or project config, then match the host's worker configuration.
+## Basic example
 
-[Advanced example source](https://github.com/SoundSliced/dart-web-isolates/tree/main/packages/dwi_builder/example/dwi_builder_advanced.dart)
+Generates the worker entrypoint and typed proxies from code, without the CLI.
+`compile: false` generates sources only. Pass the annotated project directory
+as the first argument, or `.` for the current directory.
+
+
+```dart
+/// Builds a project's worker entrypoint programmatically.
+///
+/// Equivalent to `dart run dwi_builder:dwi generate`. The
+/// `compile: false` setting generates sources without compiling a worker.
+
+import 'package:dwi_builder/dwi_builder.dart';
+
+Future<void> main(List<String> args) async {
+  final builder = DwiBuilder(
+    DwiBuildConfig(
+      projectRoot: args.isEmpty ? '.' : args.single,
+      compile: false,
+    ),
+  );
+
+  final result = await builder.build();
+  print('package: ${result.discovery.packageName}');
+  print('tasks: ${result.discovery.tasks.map((task) => task.name).join(', ')}');
+  print('generated worker: ${result.workerSourcePath}');
+  print('generated proxies: ${result.proxiesPath}');
+  print('content hash: ${result.hash}');
+  print('compiled: ${result.compiled}, cache hit: ${result.cacheHit}');
+  print('took ${result.duration.inMilliseconds} ms');
+}
+```
+
+## Advanced example
+
+Builds the project twice. The second build reports a cache hit when nothing
+has changed. Pass the annotated project directory as the only argument.
+
+
+```dart
+import 'package:dwi_builder/dwi_builder.dart';
+
+Future<void> main(List<String> args) async {
+  if (args.length != 1) {
+    throw ArgumentError('Pass the directory containing your annotated project');
+  }
+  final builder = DwiBuilder(DwiBuildConfig(projectRoot: args.single));
+  final first = await builder.build();
+  final second = await builder.build();
+  print('First build compiled: ${first.compiled}');
+  print('Second build cache hit: ${second.cacheHit}');
+}
+```
+
+## Programmatic build options
+
+`DwiBuildConfig(projectRoot: ...)` selects the project. `compile: false`
+generates sources without compiling the worker. The CLI commands above call
+the same build.
 
 [Source and issue tracker](https://github.com/SoundSliced/dart-web-isolates)

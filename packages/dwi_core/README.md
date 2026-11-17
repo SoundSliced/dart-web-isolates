@@ -5,12 +5,6 @@ Platform-independent contracts shared by DWI and its backends.
 Most apps import [dwi](https://pub.dev/packages/dwi). Add `dwi_core`
 directly for custom backends, worker-side APIs and standalone tooling.
 
-Run `dart run example/dwi_core_example.dart` from the package checkout for
-a registry lookup, a validated configuration and capability reporting.
-Registry invocation runs in the current context. A backend supplies
-parallel execution.
-
-The advanced example shows a native-independent named-port round trip.
 For custom integrations start with the `DwiBackend` and `DwiWorkerHandle`
 contracts. Use `DwiConfig` for bounds, deadlines and worker selection,
 `DwiException` subclasses for failures, and `DwiCapabilities` to surface
@@ -18,6 +12,83 @@ supported operations. Worker code can import `dwi_worker.dart` for
 channels and cooperative cancellation. See the dwi guide for stream
 tasks, transferable bytes, worker stops and metrics.
 
-[Advanced example source](https://github.com/SoundSliced/dart-web-isolates/tree/main/packages/dwi_core/example/dwi_core_advanced.dart)
+## Basic example
+
+A task registry, a validated configuration and the capabilities a backend
+reports. Registry invocation runs in the current context; a backend supplies
+parallel execution.
+
+
+```dart
+/// Uses the platform-independent pieces directly: the task registry, validated
+/// configuration and the capabilities a backend reports.
+///
+/// Backends such as `dwi_native` and `dwi_web` build on exactly these types;
+/// application code usually reaches them through `package:dwi` instead.
+
+import 'package:dwi_core/dwi_core.dart';
+
+void main() {
+  // A registry owns the task table a backend executes against.
+  final registry = DwiTaskRegistry();
+  registry.register('double', (input) {
+    final value = input! as int;
+    return value * 2;
+  });
+
+  print('double(21) = ${registry.invoke('double', 21)}');
+  print('knows "double": ${registry.contains('double')}');
+
+  // Unknown task names fail with a typed error, never a silent null.
+  try {
+    registry.lookup('missing');
+  } on DwiUnknownTaskException catch (error) {
+    print('expected failure: $error');
+  }
+
+  // Configuration is validated once, before a backend is used.
+  final config = const DwiConfig(
+    maxWorkers: 2,
+    taskTimeout: Duration(seconds: 5),
+  ).validated();
+  print('workers: ${config.maxWorkers}, timeout: ${config.taskTimeout}');
+
+  // Backends report what this environment can actually do.
+  const capabilities = DwiCapabilities(
+    backend: DwiBackendKind.isolate,
+    protocolVersion: 2,
+    transferables: true,
+    workerCount: 2,
+    cancellation: DwiCancellation.running,
+  );
+  print('capabilities: ${capabilities.toMap()}');
+}
+```
+
+## Advanced example
+
+A native-independent named-port round trip with `DwiPortRegistry`: a broadcast
+host port that sends and receives one message.
+
+
+```dart
+import 'package:dwi_core/dwi_core.dart';
+
+Future<void> main() async {
+  final port = DwiPortRegistry.create(
+    name: 'status',
+    scope: DwiPortScope.hostOnly,
+    listeners: DwiPortListeners.broadcast,
+    bufferSize: 4,
+  );
+  try {
+    final received = port.messages.first;
+    await port.send('ready');
+    print(await received);
+  } finally {
+    await port.close();
+  }
+}
+```
 
 [Source and issue tracker](https://github.com/SoundSliced/dart-web-isolates)

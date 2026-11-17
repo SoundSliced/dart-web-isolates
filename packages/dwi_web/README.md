@@ -21,13 +21,81 @@ Copy the basic example into the host project as `lib/main.dart`. Run
 serve the `web/` directory over HTTP. Open the browser console for the
 result. Serve worker assets from the same origin.
 
-The advanced example uses a dedicated handle and sends repeated calls to
-one worker context. Choose Wasm using `DwiWorkerBackend.wasm` and the
-matching generated entry asset. See the Wasm deployment example linked
-from the dwi guide for MIME and CSP settings. The dispatcher and runtime
-exports serve custom worker integration. The standard builder generates
-that wiring for the application.
+Choose Wasm using `DwiWorkerBackend.wasm` and the matching generated entry
+asset. See the Wasm deployment example linked from the dwi guide for MIME and
+CSP settings. The dispatcher and runtime exports serve custom worker
+integration. The standard builder generates that wiring for the application.
 
-[Advanced example source](https://github.com/SoundSliced/dart-web-isolates/tree/main/packages/dwi_web/example/dwi_web_advanced.dart)
+## Basic example
+
+Runs the `sum` task in a dedicated worker through the browser backend.
+
+
+```dart
+/// Runs a task in a dedicated Web Worker through the browser backend.
+///
+/// Compile the worker with `dwi_builder` first, serve the artefact at the path
+/// configured by `workerScript`, and run this example with the Dart web
+/// compiler. Application code usually uses `package:dwi`, which selects this
+/// backend when compiled to JavaScript or Wasm.
+
+import 'package:dwi_core/dwi_core.dart';
+import 'package:dwi_web/dwi_web.dart';
+
+Future<void> main() async {
+  final backend = WebBackend();
+  await backend.configure(
+    const DwiConfig(
+      workerScript: 'dwi/worker.dart.js',
+      maxWorkers: 2,
+      taskTimeout: Duration(seconds: 10),
+    ),
+  );
+
+  try {
+    // The task table lives in the generated worker, so the caller only names
+    // the task and passes the input.
+    final result = await backend.run('sum', 1000);
+    print('sum(1000) = $result');
+
+    final capabilities = await backend.capabilities();
+    print(
+      'backend: ${capabilities.backend.name}, '
+      'workers: ${capabilities.workerCount}, '
+      'transferables: ${capabilities.transferables}',
+    );
+  } finally {
+    await backend.close();
+  }
+}
+```
+
+## Advanced example
+
+Pings a dedicated worker and calls it twice, so both calls reach the same
+worker context.
+
+
+```dart
+import 'package:dwi_core/dwi_core.dart';
+import 'package:dwi_web/dwi_web.dart';
+
+Future<void> main() async {
+  final backend = WebBackend();
+  try {
+    await backend.configure(const DwiConfig());
+    final worker = await backend.spawnHandle();
+    try {
+      print(await worker.ping());
+      print(await worker.run('sum', 10));
+      print(await worker.run('sum', 20));
+    } finally {
+      await worker.close();
+    }
+  } finally {
+    await backend.close();
+  }
+}
+```
 
 [Source and issue tracker](https://github.com/SoundSliced/dart-web-isolates)

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1
+
+- Documentation: the pub.dev README shows the basic and advanced examples inline, so the features can be read without running the example files.
+
 ## 1.1.0
 
 - Named ports: `Dwi.createPort`, `Dwi.port`, `DwiWorker.bindPort` (ADR-032).

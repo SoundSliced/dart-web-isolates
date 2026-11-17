@@ -1,6 +1,6 @@
 name: dwi_flutter
 description: "Flutter-facing helpers for Dart Web Isolates: parallel computation over typed DWI tasks."
-version: 1.1.0
+version: 1.1.1
 repository: https://github.com/SoundSliced/dart-web-isolates
 topics:
   - isolate
