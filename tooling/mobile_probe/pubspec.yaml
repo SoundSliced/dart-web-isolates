@@ -1,0 +1,30 @@
+name: mobile_probe
+description: "Device probe: runs DWI checks on mobile simulators and in mobile browsers."
+publish_to: none
+version: 0.11.0
+
+environment:
+  sdk: ^3.13.0
+  flutter: ">=3.50.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dwi:
+    path: ../../packages/dwi
+  dwi_annotations:
+    path: ../../packages/dwi_annotations
+  dwi_flutter:
+    path: ../../packages/dwi_flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  dwi_builder:
+    path: ../../packages/dwi_builder
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
