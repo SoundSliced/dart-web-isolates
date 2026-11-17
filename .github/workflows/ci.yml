@@ -43,3 +43,9 @@ jobs:
           else
             dart test
           fi
+
+      - name: Web compile (dart2js and dart2wasm)
+        # The function-reference fixture is compiled for both web targets with
+        # the SDK the release uses (tranche A9). Runs only for dwi_builder.
+        if: matrix.package == 'dwi_builder'
+        run: dart test test/function_reference_discovery_test.dart --name "compile for dart2js and dart2wasm"
