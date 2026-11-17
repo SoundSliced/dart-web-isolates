@@ -1,8 +1,7 @@
 /// Runs one task through the shared pool, then two through a dedicated worker.
 ///
-/// On native platforms the work runs in real isolates; on web it runs in
-/// dedicated Web Workers compiled by `dwi_builder`. The calling code is the
-/// same either way.
+/// This example uses native task registration. The package README walks
+/// through annotation-driven registration for browser builds.
 library;
 
 import 'package:dwi/dwi.dart';

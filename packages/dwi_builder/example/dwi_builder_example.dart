@@ -1,15 +1,17 @@
 /// Builds a project's worker entrypoint programmatically.
 ///
-/// Equivalent to `dart run dwi_builder build`, and to what the Flutter build
-/// hook runs. Set `compile: false` to generate sources without invoking
-/// `dart compile js`.
+/// Equivalent to `dart run dwi_builder:dwi generate`. The
+/// `compile: false` setting generates sources without compiling a worker.
 library;
 
 import 'package:dwi_builder/dwi_builder.dart';
 
-Future<void> main() async {
+Future<void> main(List<String> args) async {
   final builder = DwiBuilder(
-    const DwiBuildConfig(projectRoot: '.', compile: false),
+    DwiBuildConfig(
+      projectRoot: args.isEmpty ? '.' : args.single,
+      compile: false,
+    ),
   );
 
   final result = await builder.build();

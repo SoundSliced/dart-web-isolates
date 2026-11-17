@@ -1,18 +1,25 @@
 # dwi_flutter
 
-Flutter-facing helpers for [Dart Web Isolates](https://github.com/SoundSliced/dart-web-isolates).
+Run a batch of typed DWI tasks from Flutter and collect results in input order.
+
+Add `dwi_flutter` and set up an annotated task following the
+[dwi quick start](https://pub.dev/packages/dwi). Then call:
 
 ```dart
-import 'package:dwi_flutter/dwi_flutter.dart';
-
-final primes = await computeParallel(DwiTasks.countPrimes, [100000, 200000]);
+final values = await computeParallel(DwiTasks.sumTo, [10, 20, 30]);
 ```
 
-`computeParallel` runs one task per input on the shared DWI pool and returns the
-results in input order. It is pure Dart and does not depend on Flutter.
+Import `package:dwi_flutter/dwi_flutter.dart` and the app's generated
+`dwi_tasks.g.dart`. DWI settings govern worker concurrency. An empty
+input gives an empty list. A failed call fails the batch while dispatched
+calls continue. Use individual cancellable worker calls when you need
+cancellation.
 
-Limits: calls already dispatched when one input fails keep running, because a
-generated proxy exposes no cancel token. Web builds need DWI's worker build step
-(see the `dwi_builder` README).
+The basic example runs a typed batch in a native process. The advanced
+example configures the pool and handles a typed worker error. Both are
+standalone and use native manual registration. Use generated task proxies
+in Flutter web.
 
-See `examples/flutter_counter` and `examples/flutter_jank_demo` in the repository.
+[Advanced example source](https://github.com/SoundSliced/dart-web-isolates/tree/main/packages/dwi_flutter/example/dwi_flutter_advanced.dart)
+
+[Source and issue tracker](https://github.com/SoundSliced/dart-web-isolates)
