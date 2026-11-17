@@ -1,7 +1,7 @@
 # DWI 1.0.0 — release notes
 
-Status: **prepared 2026-11-15; not yet published to pub.dev.** The publication
-record is added after each upload is verified on pub.dev.
+Status: **published 2026-11-17 to pub.dev, all eight packages at 1.0.0.** The
+publication record is in `audit/evidence/pub-1.0.0-upload-2026-11-17.txt`.
 
 DWI 1.0.0 is the first stable release. It fixes the supported API and the support
 matrix (ADR-031), and it finishes the master plan's tranches A to H. Tranche I
@@ -91,5 +91,7 @@ when the upload is made.
 
 ## Publication
 
-Pending. Each package will be uploaded with `dart pub publish --force` in the order
-above, checked on pub.dev before the next upload, and recorded in the evidence file.
+Published 2026-11-17. Each package was uploaded with `dart pub publish --force` in the
+order above and checked on the pub.dev API before the next upload. The upload output
+is in `audit/evidence/pub-1.0.0-upload-2026-11-17.txt`. The packages were uploaded
+from commit `35f5391`, where CI was green (`.github/workflows/ci.yml`, run 44090400106).
