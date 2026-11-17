@@ -37,7 +37,7 @@ text is the older intent.
 | 9 | API levels A, A1 | complete | ADR-002, ADR-011 | — |
 | 9 | Level B function references | limited | annotated top-level, class-static and enum-static functions (ADR-020, 0.9.0) and same-package `DwiFunctions` call sites (ADR-030, 0.11.0); closures are not supported | H, F |
 | 9 | Level C closures, Level D `Isolate.run` | SDK | R016, ADR-019 | F, I |
-| 10 | Compatibility contract | complete | `docs/compatibility-matrix.md` has the five platform columns for 1.0 (native, Flutter native, Dart Web JS, Flutter Web JS, Dart/Wasm); Flutter native is not measured | — |
+| 10 | Compatibility contract | complete | `docs/compatibility-matrix.md` has the five platform columns for 1.0 (native, Flutter native, Dart Web JS, Flutter Web JS, Dart/Wasm); Flutter native is measured only by the reduced probe on an iPhone 15 and an Android emulator | — |
 | 11–17 | Phase 0 research | complete | R001–R010 | — |
 | 18–21 | M001 proof of concept | complete | `experiments/dart_worker_poc`, M001 | — |
 | 19 | Flutter main-thread vs worker demonstration | complete | `examples/flutter_jank_demo` measured in four engines (`audit/evidence/flutter-jank-demo-four-engines-2026-11-14.json`) | — |
@@ -61,8 +61,8 @@ text is the older intent.
 | 48 | Backend selection | limited | explicit selection, typed failure, never a silent fallback; no opt-in fallback policy | G |
 | 49 | Flutter integration layer, `computeParallel` | complete | `dwi_flutter` 0.10.0 (ADR-025) | — |
 | 50 | `flutter run` / `flutter build web` with no manual step | limited | works except the first build of a fresh typed-proxy app | I |
-| 51 | Cross-platform test suites | limited | VM, browser JS, browser Wasm, Flutter web measured; CI runs format, analyze and VM tests; Flutter native not run (`docs/compatibility-matrix.md`) | — |
-| 52 | Browser compatibility | limited | four desktop engines (macOS arm64) for every shipped level and for the benchmark harness; mobile browsers and other operating systems not measured (`docs/browser-matrix.md`, section A11) | — |
+| 51 | Cross-platform test suites | limited | VM, browser JS, browser Wasm, Flutter web measured; CI runs format, analyze, VM tests and a web compile check (dart2js and dart2wasm); Flutter native measured only by the reduced probe (`docs/compatibility-matrix.md`) | — |
+| 52 | Browser compatibility | limited | four desktop engines (macOS arm64) for every shipped level and for the benchmark harness; mobile browsers measured only by the reduced probe (iOS Safari, Chrome for Android); other mobile browsers and operating systems not measured (`docs/browser-matrix.md`, section A11) | — |
 | 53 | Security | complete | limits implemented and tested; strict CSP in four engines; blob, data and javascript workers refused (ADR-006); review in `docs/FINAL_SECURITY_REVIEW.md` | — |
 | 54 | Benchmarks | complete | primes, transfer, startup, dispatch, sorting, JSON, hashing, compression and image blur in four engines (`audit/evidence/browser-matrix-extended-four-engines-2026-11-14.json`) | — |
 | 55 | Diagnostics and observability | complete | metrics, public pool state and protocol check (ADR-026; `audit/evidence/metrics-pool-state-four-engines-2026-11-14.json`) | — |

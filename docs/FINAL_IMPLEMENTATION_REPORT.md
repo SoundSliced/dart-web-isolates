@@ -63,7 +63,7 @@ No row is partial or open. Two classes need more than a sentence:
 | Gate | State |
 | --- | --- |
 | S3, S4, S5: payload, queue and leak limits | closed (`docs/critical-review.md`) |
-| Gate 2: browser matrix | closed for four desktop engines; mobile not measured |
+| Gate 2: browser matrix | closed for four desktop engines; mobile reduced probe only (`audit/evidence/mobile-probes-2026-11-17.txt`) |
 | Gate 3: cooperative cancellation | closed (ADR-027) |
 | Gate 4: pool-sizing guidance | closed (`docs/browser-matrix.md`, pool sizing) |
 | Gate 5: tree shaking | closed by decision: the seven measured shapes; other shapes are limitation 13 |
@@ -73,8 +73,10 @@ No row is partial or open. Two classes need more than a sentence:
 - **DWI-4 raised.** Tranches B to D passed, so the completion plan's DWI-4 condition
   is met (ADR-031).
 - **DWI-5 and DWI-6 not raised.** They depend on the SDK (ADR-030).
-- **Mobile and Flutter native stay unverified** until a device or a machine is
-  available. The release says so; it does not claim them.
+- **Mobile and Flutter native have a reduced probe only.** Five calls ran on an
+  iPhone 15, an Android emulator, an iOS Safari simulator and Chrome for Android.
+  The full fixture, other devices and other engines remain unverified; the release
+  says so and does not claim them.
 - **Tranche I deferred** until after 1.0, as the maintainer asked. Two upstream
   comments were posted earlier on dart-lang/sdk#56512 (`docs/UPSTREAM_PROPOSAL.md`).
 
@@ -92,5 +94,6 @@ No row is partial or open. Two classes need more than a sentence:
 - **Verified:** the test results, the evidence files named in each report, and the
   classification counts above (counted from `docs/IMPLEMENTATION_STATUS.md`).
 - **Not verified:** the release commit's CI result after the documentation changes
-  made for 1.0; mobile browsers; Flutter native; any external security review.
+  made for 1.0; the full fixture on mobile; Flutter native beyond the reduced probe;
+  any external security review.
 - **Could not determine:** how future browser or SDK releases will change the results.

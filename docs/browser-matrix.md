@@ -144,9 +144,11 @@ Guidance from these numbers, for CPU-bound tasks on this machine:
   stays responsive with a full pool, and machines with other core counts.
 
 **Compatibility columns (A11).** The matrix is one OS and one architecture. Every
-row above is therefore "macOS 26.5.1 arm64". Windows, Linux, Android and iOS
-browsers are **not measured** (no device or machine available); each is
-unverified until it is run. A cell is never filled from another OS.
+row above is therefore "macOS 26.5.1 arm64". Windows, Linux and other mobile
+browsers are **not measured**. Mobile has only the reduced probe (five calls, Flutter
+web JavaScript): iOS Safari on the iOS 26.5 simulator, and Chrome 124 on an Android
+emulator (`audit/evidence/mobile-probes-2026-11-17.txt`). Each other cell is unverified
+until it is run. A cell is never filled from another OS.
 
 ## Strict CSP worker, four engines (tranche A7, 2026-11-14)
 

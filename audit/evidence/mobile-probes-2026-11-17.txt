@@ -1,0 +1,17 @@
+Mobile and Flutter native probes, 2026-11-17 (reduced probe: five calls)
+
+Probe: tooling/mobile_probe (lib/web_probe.dart for browsers, integration_test/native_probe_test.dart for native).
+Calls: countPrimes(3000000) == 216816; joinParts(3,'x') == 'x3'; spread(1,3) == [1,2,3]; countBetween(1,3) == [1,2,3]; callTwiceByReference(21) == 42.
+
+## Flutter native
+iPhone 15 (iPhone15,4), iOS 26.7.3 (23H131), USB, Xcode 26.6, SDK iphoneos26.5:
+DWI_PROBE {"platform":"native","primes":216816,"joined":"x3","spread":[1,2,3],"streamed":[1,2,3],"reference":42,"ok":true,"ms":70}
+Android emulator, API 35 google_apis arm64-v8a, SDK and image on /Volumes/SSD-1/Android:
+DWI_PROBE {"platform":"native","primes":216816,"joined":"x3","spread":[1,2,3],"streamed":[1,2,3],"reference":42,"ok":true,"ms":450}
+
+## Flutter web (JS) in mobile and desktop browsers, served by probe_server.py and POSTed back
+{"platform":"web","userAgent":"Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36","primes":216816,"joined":"x3","spread":[1,2,3],"streamed":[1,2,3],"reference":42,"ok":true,"ms":1435}
+{"platform":"web","userAgent":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1","primes":216816,"joined":"x3","spread":[1,2,3],"streamed":[1,2,3],"reference":42,"ok":true,"ms":5742}
+{"platform":"web","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Claude/5.11492.5 Chrome/156.0.8078.75 Safari/537.36","primes":216816,"joined":"x3","spread":[1,2,3],"streamed":[1,2,3],"reference":42,"ok":true,"ms":135}
+
+Notes: the Safari user agent reports 'iPhone OS 18_7' although the simulator runtime is iOS 26.5; the cause is not established. The Chrome user agent is Android 10 (reduced UA), Chrome 124.

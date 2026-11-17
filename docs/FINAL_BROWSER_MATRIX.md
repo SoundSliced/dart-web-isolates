@@ -11,7 +11,9 @@ engines (AGENTS.md rules 7 and 8).
 - Dart 3.15.0-133.0.dev built the pages. Flutter appears only in the two Flutter
   examples, which were built with Flutter 3.50.0.
 - **No other operating system, architecture or device was measured.** Mobile
-  browsers are not measured, and no result here applies to them.
+  browsers were run only as the reduced probe in `audit/evidence/mobile-probes-2026-11-17.txt`
+  (iOS Safari on the iOS 26.5 simulator, Chrome 124 on an Android emulator). No
+  other result here applies to mobile.
 
 ## What is measured in four engines
 
@@ -47,9 +49,10 @@ engines (AGENTS.md rules 7 and 8).
 
 ## Not measured
 
-- Mobile browsers (iOS Safari, Chrome for Android, others).
+- Mobile browsers beyond the reduced probe (other devices, other engines).
 - Windows, Linux and any other operating system.
-- Flutter native (desktop and mobile).
+- Flutter native beyond the reduced probe on iPhone 15 and an Android emulator
+  (desktop and other mobile targets).
 - Engines beyond the four above.
 
 ## Conclusion for 1.0

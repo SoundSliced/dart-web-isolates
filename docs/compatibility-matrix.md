@@ -74,15 +74,15 @@ v0.3 unless marked proposed.** No cell claims parity.
 The master plan (§10) requires one column per platform. Each cell is backed by
 the evidence named, or marked **not measured** on this machine. "Four engines"
 means Chrome, Safari, Firefox and Edge on macOS 26.5.1 arm64; no other operating
-system or device was measured. Nothing is copied between engines or platforms.
+system or device was measured, apart from the reduced mobile probe described below. Nothing is copied between engines or platforms.
 
 | Feature | Dart VM (native) | Flutter native | Dart Web JS | Flutter Web JS | Dart/Wasm worker |
 | --- | --- | --- | --- | --- | --- |
-| Named task through `Dwi.run` and `DwiTasks` | yes; `generated_integration_test` | not measured | yes, four engines; `audit/evidence/browser-matrix-extended-four-engines-2026-11-14.json` | yes, four engines; `audit/evidence/flutter-counter-four-engines-2026-11-14.json` | yes, four engines; `browser_payload_types_test` (16 cells) |
+| Named task through `Dwi.run` and `DwiTasks` | yes; `generated_integration_test` | reduced probe: iPhone 15 and Android emulator | yes, four engines; `audit/evidence/browser-matrix-extended-four-engines-2026-11-14.json` | yes, four engines; `audit/evidence/flutter-counter-four-engines-2026-11-14.json`; reduced mobile probe in iOS Safari and Chrome for Android | yes, four engines; `browser_payload_types_test` (16 cells) |
 | Payload types (ADR-021) | yes; `native_payload_types_test` | not measured | yes, 16 cells | not measured | yes, 16 cells |
-| Several positional parameters (ADR-029) | yes; `generated_integration_test` | not measured | yes, four engines; `browser_multi_parameter_test` | not measured | yes, four engines; `browser_multi_parameter_test` |
-| Function references without annotation (ADR-030) | yes; `function_reference_discovery_test` | not measured | compiles (dart2js); not run in a browser | not measured | compiles (dart2wasm); not run in a browser |
-| Stream tasks (ADR-022) | yes; `native_stream_tasks_test` | not measured | yes; `browser_stream_tasks_test` | not measured | not measured |
+| Several positional parameters (ADR-029) | yes; `generated_integration_test` | reduced probe (`joinParts`) | yes, four engines; `browser_multi_parameter_test` | reduced mobile probe (`joinParts`) | yes, four engines; `browser_multi_parameter_test` |
+| Function references without annotation (ADR-030) | yes; `function_reference_discovery_test` | reduced probe (`twiceByReference`) | compiles (dart2js); not run in a browser | reduced mobile probe (`twiceByReference`) | compiles (dart2wasm); not run in a browser |
+| Stream tasks (ADR-022) | yes; `native_stream_tasks_test` | reduced probe (`countBetween`) | yes; `browser_stream_tasks_test` | reduced mobile probe (`countBetween`) | not measured |
 | Dedicated handles and channels (ADR-013, ADR-014) | yes; `native_worker_handle_test` | not measured | yes, four engines; `browser_handle_test` | not measured | not measured |
 | Metrics and pool state (ADR-026) | yes; `metrics_test` | not measured | yes, four engines; `audit/evidence/metrics-pool-state-four-engines-2026-11-14.json` | not measured | not measured |
 | Cooperative cancellation (ADR-027) | yes; `cooperative_cancel_test` | not measured | yes, sixteen cells | not measured | not measured |
@@ -92,8 +92,11 @@ system or device was measured. Nothing is copied between engines or platforms.
 
 Limits of this table:
 
-- Flutter native was not run anywhere in this project. Every Flutter native cell
+- Flutter native was run only as the reduced probe (five calls) on one iPhone 15
+  (iOS 26.7.3) and one Android emulator (API 35). Every other Flutter native cell
   is **not measured**.
-- Mobile browsers and other operating systems are not measured (see
-  `docs/browser-matrix.md`, section A11).
+- The reduced mobile probe ran Flutter web (JavaScript) in iOS Safari (iOS 26.5
+  simulator) and Chrome 124 on an Android emulator. Other mobile browsers, devices
+  and operating systems are not measured (see `docs/browser-matrix.md`, section
+  A11). The evidence is `audit/evidence/mobile-probes-2026-11-17.txt`.
 - A "not measured" cell is not a claim that the feature works or fails there.

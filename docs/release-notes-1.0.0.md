@@ -36,9 +36,13 @@ generated `DwiTasks` and `DwiFunctions`, `computeParallel` in `dwi_flutter`, and
 - **Supported and measured:** Dart VM (native); Dart Web JavaScript and Dart/Wasm
   workers; Flutter web (JavaScript) through `dwi_flutter`. The web platforms were
   measured in Chrome, Safari, Firefox and Edge on macOS 26.5.1 arm64.
-- **Not supported in 1.0:** mobile browsers and other operating systems (not
-  measured); Flutter native (not run); closures and `Isolate.run` with closures
-  (recorded no-go, ADR-030); `SendPort` objects (not implemented).
+- **Mobile, reduced probe only:** Flutter web (JavaScript) in iOS Safari (iOS 26.5
+  simulator) and Chrome 124 on Android; Flutter native on an iPhone 15 (iOS 26.7.3)
+  and an Android emulator (API 35). The probe makes five calls; it is not the full
+  fixture (`audit/evidence/mobile-probes-2026-11-17.txt`).
+- **Not supported in 1.0:** other mobile browsers, devices and operating systems
+  (not measured); closures and `Isolate.run` with closures (recorded no-go,
+  ADR-030); `SendPort` objects (not implemented).
 
 The full per-feature table is `docs/compatibility-matrix.md`.
 
