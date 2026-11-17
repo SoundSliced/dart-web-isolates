@@ -1547,10 +1547,10 @@ identity or worker-only compilation cannot satisfy that gate.
 
 ## ADR-032 — Named ports: an emulated port layer (1.1.0)
 
-**Status.** Proposed for the maintainer's acceptance. The direction and the four
-choices below were given by the maintainer on 2026-11-17; the broadcast delivery
-rule (decision 4) is the proposal's own. No code lands before this ADR is accepted
-and `docs/api-proposal.md` (section "Named ports") matches it.
+**Status.** Accepted by the maintainer on 2026-11-17 for 1.1.0. The direction and the
+four choices below were given by the maintainer; the broadcast delivery rule
+(decision 4) and the direction and binding details were proposed here and implemented
+as written. The code and `docs/api-proposal.md` (section "Named ports") match it.
 
 **Context.** Web workers have no `SendPort`/`ReceivePort`, and ADR-014 deliberately
 gave channels no port objects. The maintainer asked for a port-like layer that any
@@ -1624,7 +1624,10 @@ returns a `DwiPortBinding`. The binding opens a channel on that handle whose nam
 `port:<name>`. The prefix keeps port channels apart from the stream and link channels
 that DWI uses internally. Binding a `hostOnly` port throws `DwiUnsupportedException`.
 A binding completes its `done` future normally when the port closes or the binding is
-closed, and with the typed cause when the worker fails.
+closed. It completes with the typed error that ended the worker when the worker fails
+or its handle is closed while the binding is open (for example
+`DwiWorkerClosedException`). Nobody has to await `done`; an unawaited error is not
+reported as unhandled.
 
 **Protocol.** No change. Ports use the existing channel messages of protocol version 2
 (ADR-014), so existing worker artefacts keep working and no rebuild is required.

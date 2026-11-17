@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0
+
+- Named ports: `Dwi.createPort`, `Dwi.port`, `DwiWorker.bindPort` (ADR-032).
+
 ## 1.0.0
 
 - Version 1.0.0: the stable API of this package; see `docs/release-notes-1.0.0.md`. No behaviour change in this package at 1.0.0.

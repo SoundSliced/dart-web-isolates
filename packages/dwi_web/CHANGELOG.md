@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0
+
+- Version 1.1.0 with the other packages. No behaviour change in this package.
+
 ## 1.0.0
 
 - Worker URLs of the `blob:`, `data:` and `javascript:` kinds are refused at start

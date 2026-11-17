@@ -52,7 +52,11 @@ export 'package:dwi_core/dwi_core.dart'
         DwiChannelException,
         DwiChannelClosedException,
         DwiChannelStateException,
-        DwiChannelBufferException;
+        DwiChannelBufferException,
+        DwiPort,
+        DwiPortBinding,
+        DwiPortListeners,
+        DwiPortScope;
 
 /// Entry point for worker-backed, isolate-like concurrency.
 ///
@@ -257,6 +261,27 @@ abstract final class Dwi {
     maxCallTime: _maxCallTime,
     transferableBytes: _transferableBytes,
   );
+
+  /// Creates a named host port (ADR-032).
+  ///
+  /// [scope] decides whether workers may be bound to the port; [listeners]
+  /// decides whether one or many host listeners may listen. [bufferSize] defaults
+  /// to `DwiConfig.channelBufferSize`. Throws [DwiChannelStateException] for an
+  /// invalid name (at most 58 characters) or a name that is already open.
+  static DwiPort createPort(
+    String name, {
+    DwiPortScope scope = DwiPortScope.hostOnly,
+    DwiPortListeners listeners = DwiPortListeners.single,
+    int? bufferSize,
+  }) => DwiPortRegistry.create(
+    name: name,
+    scope: scope,
+    listeners: listeners,
+    bufferSize: bufferSize ?? _config.channelBufferSize,
+  );
+
+  /// The open port named [name], or `null` (ADR-032).
+  static DwiPort? port(String name) => DwiPortRegistry.find(name);
 
   /// Snapshot of the worker pool (ADR-026 G2). Before the first [configure] it
   /// reports an empty pool and does not create a backend.
@@ -698,6 +723,30 @@ final class DwiWorker {
   /// subscriber, FIFO per channel, bounded ack window, and no survival across
   /// [close] or [restart].
   Future<DwiChannel> openChannel(String name) => _handle.openChannel(name);
+
+  /// Binds the named [port] to this worker (ADR-032, decision 7).
+  ///
+  /// Task code in this worker then reaches the port with
+  /// `DwiWorkerChannels.find('port:<name>')`. Throws [DwiUnsupportedException]
+  /// for a `hostOnly` port and [DwiChannelClosedException] for a closed port.
+  Future<DwiPortBinding> bindPort(DwiPort port) async {
+    if (port is! DwiPortEndpoint) {
+      throw const DwiUnsupportedException(
+        'only ports created with Dwi.createPort can be bound',
+      );
+    }
+    port.ensureBindable();
+    final channel = await _handle.openChannel(
+      '$dwiPortChannelPrefix${port.name}',
+      ackOnConsume: true,
+    );
+    try {
+      return port.attach(channel);
+    } on DwiException {
+      await channel.close();
+      rethrow;
+    }
+  }
 
   /// Connects channel [name] in [a] to channel [name] in [b] (ADR-023).
   ///

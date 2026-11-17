@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0
+
+- Named port core: `DwiPort`, `DwiPortBinding`, `DwiPortEndpoint` (ADR-032). Internal to the package boundary.
+
 ## 1.0.0
 
 - Refuses `blob:`, `data:` and `javascript:` worker URLs with a typed startup error

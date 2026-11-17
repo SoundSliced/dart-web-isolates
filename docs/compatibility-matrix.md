@@ -87,6 +87,7 @@ system or device was measured, apart from the reduced mobile probe described bel
 | Metrics and pool state (ADR-026) | yes; `metrics_test` | not measured | yes, four engines; `audit/evidence/metrics-pool-state-four-engines-2026-11-14.json` | not measured | not measured |
 | Cooperative cancellation (ADR-027) | yes; `cooperative_cancel_test` | not measured | yes, sixteen cells | not measured | not measured |
 | Pause, resume and ping (ADR-028) | ping only; `native_ping_test`; pause not measured on VM | not measured | yes, sixteen cells | not measured | not measured |
+| Named ports bound to a worker (ADR-032, 1.1.0) | yes; `named_port_test` (facade, real worker) | not measured | yes, sixteen cells; `browser_named_port_test.dart` (four engines, both backends) | not measured | not measured |
 | `Isolate.run` on the closure form | no closure registry; named form only | not measured | **not supported** (ADR-030, closures no-go) | **not supported** | **not supported** |
 | `SendPort` / `ReceivePort` objects | not implemented | not measured | **not implemented** | **not implemented** | **not implemented** |
 

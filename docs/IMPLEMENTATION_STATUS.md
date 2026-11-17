@@ -71,6 +71,7 @@ text is the older intent.
 | 59 | Release roadmap to v1.0 | complete | 0.11.0 published 2026-11-15; v1.0 release recorded in `docs/release-notes-1.0.0.md` once published | — |
 | 60 | Upstream strategy | limited | two comments posted on dart-lang/sdk#56512 on 2026-11-10 (hook ordering, and the DataAsset follow-up, `docs/upstream/`); the function-lowering proposal is research only and is not posted; no SDK fork; further posting waits for the maintainer after 1.0 | I |
 | 61 | Final definition of success | complete | classification in this file; the FINAL_* reports in `docs/` | — |
+| 62 | Named ports, emulated over channels (ADR-032, 1.1.0) | limited | host registry with `hostOnly` and `workers` scopes, `single` and `broadcast` listeners, copy and transfer payloads; worker reach by name through `port:<name>`; no `SendPort` object (limitation 3); browser coverage in four engines and both worker backends (`browser_named_port_test.dart`) | — |
 
 ## 3. Engineering handoff (items not already covered above)
 

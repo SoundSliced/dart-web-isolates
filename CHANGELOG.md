@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-11-17
+
+Named ports: an emulated port layer over the existing channels (ADR-032). Additive;
+no existing API changes and no protocol change, so worker artefacts need no rebuild.
+
+### Added
+
+- `Dwi.createPort`, `Dwi.port`, `DwiPort`, `DwiPortScope` (`hostOnly`, `workers`),
+  `DwiPortListeners` (`single`, `broadcast`) and `DwiWorker.bindPort` returning
+  `DwiPortBinding`. Worker task code reaches a bound port with
+  `DwiWorkerChannels.find('port:<name>')`.
+- Ports carry copied values (`send`) and transferable bytes (`sendBytes`).
+
+### Notes
+
+- Broadcast and single listeners both make a sender wait for a full listener queue;
+  no message is dropped.
+- Port names are at most 58 characters.
+
 ## [1.0.0] - 2026-11-15
 
 First stable release. The supported API and its compatibility promise are in

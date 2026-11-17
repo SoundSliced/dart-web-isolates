@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0
+
+- Version 1.1.0 with the other packages. No builder behaviour change.
+
 ## 1.0.0
 
 - Version 1.0.0: the stable API of this package; see `docs/release-notes-1.0.0.md`. No behaviour change in this package at 1.0.0.
