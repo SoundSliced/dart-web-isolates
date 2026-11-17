@@ -1545,6 +1545,96 @@ and worker compilation in each measured browser; actual worker realm and
 independent task state; clean builds, cache invalidation and cleanup. Prototype
 identity or worker-only compilation cannot satisfy that gate.
 
+## ADR-032 — Named ports: an emulated port layer (1.1.0)
+
+**Status.** Proposed for the maintainer's acceptance. The direction and the four
+choices below were given by the maintainer on 2026-11-17; the broadcast delivery
+rule (decision 4) is the proposal's own. No code lands before this ADR is accepted
+and `docs/api-proposal.md` (section "Named ports") matches it.
+
+**Context.** Web workers have no `SendPort`/`ReceivePort`, and ADR-014 deliberately
+gave channels no port objects. The maintainer asked for a port-like layer that any
+part of the host application can reach by name, without a compiler or SDK change
+(`docs/FINAL_SDK_FEASIBILITY_REPORT.md`).
+
+**Decision 1 — a host registry of named ports.** A port is a host-side object,
+created and looked up through the facade:
+
+- `Dwi.createPort(name, {scope, listeners, bufferSize})` creates a port and returns
+  a `DwiPort`. Creating a second open port with the same name throws
+  `DwiChannelStateException`.
+- `Dwi.port(name)` returns the open port with that name, or `null`.
+- Names follow the channel name rules of ADR-014 (non-empty, at most 64 UTF-16
+  units, no control characters).
+
+**Decision 2 — who can use a port (the maintainer's choice: both are available).**
+`scope` is fixed at creation:
+
+- `DwiPortScope.hostOnly`: only host code sends and listens. The port cannot be
+  bound to a worker.
+- `DwiPortScope.workers`: the port may also be bound to worker handles. A bound
+  worker reaches it by name, through the existing channel API (ADR-014): task code
+  calls `DwiWorkerChannels.find(port.name)`, which returns the channel for the
+  binding. The worker never sees the registry itself.
+
+**Decision 3 — one listener or broadcast (the maintainer's choice: both are available).**
+`listeners` is fixed at creation:
+
+- `DwiPortListeners.single`: exactly one host listener. A second `listen` throws
+  `StateError`, as for channels.
+- `DwiPortListeners.broadcast`: any number of host listeners; each listener sees
+  every message, in send order.
+
+**Decision 4 — the broadcast rule (proposal).** Messages are never dropped, coalesced
+or reordered. Each listener has its own queue of `bufferSize` messages (default
+`DwiConfig.channelBufferSize`). A send completes only when every current listener
+has accepted the message into its queue. If a listener's queue is full, the send
+waits for that listener; it does not drop the message and does not drop other
+listeners' messages. A listener that cancels is removed at once. When there are no
+listeners, messages are held in a queue of `bufferSize`; a further send throws
+`DwiChannelBufferException`, matching single mode. A slow listener therefore slows
+senders, and never loses data.
+
+**Decision 5 — payloads (the maintainer's choice: both).** Every port accepts both:
+
+- `send(Object? message)` copies the value under the rules of tasks (ADR-021), with
+  `DwiSerializationException` for unsupported values.
+- `sendBytes(DwiTransferableBytes bytes)` transfers ownership (ADR-010).
+
+No option is needed; both are always available on every port.
+
+**Decision 6 — lifetime (the maintainer's choice: explicit close).** A port stays
+registered until `DwiPort.close()`. Closing ends every host listener normally, ends
+every binding, and makes later sends throw `DwiChannelClosedException`. Closing or
+restarting a handle removes that handle's bindings but leaves the port open; the
+caller binds again. No new exception types are added in 1.1.0.
+
+**Decision 7 — binding and the channel name.** `DwiWorker.bindPort(DwiPort port)`
+returns a `DwiPortBinding`. The binding opens a channel on that handle whose name is
+`port:<name>`. The prefix keeps port channels apart from the stream and link channels
+that DWI uses internally. Binding a `hostOnly` port throws `DwiUnsupportedException`.
+A binding completes its `done` future normally when the port closes or the binding is
+closed, and with the typed cause when the worker fails.
+
+**Protocol.** No change. Ports use the existing channel messages of protocol version 2
+(ADR-014), so existing worker artefacts keep working and no rebuild is required.
+
+**Consequences.** The surface grows by `Dwi.createPort`, `Dwi.port`, `DwiPort`,
+`DwiPortScope`, `DwiPortListeners`, `DwiPortBinding`, `DwiWorker.bindPort` and
+`DwiWorkerChannels` reuse. Everything else stays internal. The port core lives in
+`dwi_core`; the backends only carry channels.
+
+**Non-goals.** No `SendPort` object, no sending a port through another port, no
+delivery across page reloads, no ordering between different ports, and no
+cross-origin shared memory.
+
+**Tests required before acceptance of the code (AGENTS rules 5 and 12).** Unit tests
+for name rules, duplicate names, both scopes, both listener modes, the full-queue
+behaviour of both modes, copy and transfer payloads, close semantics, and binding on
+a closed or failed handle. Browser tests in Chrome, Safari, Firefox and Edge for a
+worker reaching a `workers` port by name, in both directions, under dart2js and
+dart2wasm. Native tests for the same worker path.
+
 ## ADR-031 — Scope and stability of the 1.0 release
 
 **Status.** Proposed for the maintainer's acceptance with the 1.0.0 release (2026-11-15).

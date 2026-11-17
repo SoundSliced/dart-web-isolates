@@ -725,6 +725,53 @@ parameter (O1, decided in ADR-025).
 - G8 (`SharedArrayBuffer` bytes): documented as a limitation, no API (O7,
   decided).
 
+## Named ports (ADR-032, proposed for 1.1.0)
+
+Host code creates named ports, and workers reach a port by name through a channel.
+The surface below is the whole public addition; the decisions and their reasons are
+in ADR-032.
+
+```dart
+import 'package:dwi/dwi.dart';
+
+final telemetry = Dwi.createPort(
+  'telemetry',
+  scope: DwiPortScope.workers,
+  listeners: DwiPortListeners.broadcast,
+);
+
+final sub = telemetry.messages.listen(print);
+await telemetry.send({'frame': 1});
+
+final binding = worker.bindPort(telemetry); // worker handle from Dwi.spawn
+```
+
+Inside a worker task:
+
+```dart
+final channel = DwiWorkerChannels.find('port:telemetry');
+await channel.send('ready');
+```
+
+Surface:
+
+- `Dwi.createPort(String name, {DwiPortScope scope = DwiPortScope.hostOnly, DwiPortListeners listeners = DwiPortListeners.single, int? bufferSize})`
+  returns `DwiPort`. Throws `DwiChannelStateException` for a bad name or a name that is
+  already open.
+- `Dwi.port(String name)` returns the open `DwiPort` or `null`.
+- `DwiPort`: `name`; `Future<void> send(Object? message)`;
+  `Future<void> sendBytes(DwiTransferableBytes bytes)`;
+  `Stream<Object?> messages`; `Future<void> close()`.
+- `DwiPortScope`: `hostOnly`, `workers`.
+- `DwiPortListeners`: `single`, `broadcast`.
+- `DwiWorker.bindPort(DwiPort port)` returns `DwiPortBinding`, with `Future<void> done`
+  and `Future<void> close()`. Throws `DwiUnsupportedException` for a `hostOnly` port.
+- `DwiWorkerChannels.find(String name)` is the existing lookup (ADR-014); port channels
+  are named `port:<name>`.
+
+Rules: names follow ADR-014; a worker never sees the registry; delivery and broadcast
+follow ADR-032 decision 4; `close()` is explicit and ends all listeners and bindings.
+
 ## Documentation requirement
 
 Every exported declaration is dartdoc'd and has a runnable example in
