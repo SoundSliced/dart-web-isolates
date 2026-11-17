@@ -1577,11 +1577,18 @@ created and looked up through the facade:
   calls `DwiWorkerChannels.find(port.name)`, which returns the channel for the
   binding. The worker never sees the registry itself.
 
+**Direction.** A `send` goes to the port's other side. On a `hostOnly` port a host
+`send` is delivered to the host listeners. On a `workers` port a host `send` is
+delivered to every bound worker, and every message from a bound worker is delivered
+to the host listeners. A host `send` on a `workers` port with no binding throws
+`DwiChannelStateException` at once; nothing is held, so the mistake is visible.
+
 **Decision 3 — one listener or broadcast (the maintainer's choice: both are available).**
 `listeners` is fixed at creation:
 
 - `DwiPortListeners.single`: exactly one host listener. A second `listen` throws
-  `StateError`, as for channels.
+  `StateError`, as for channels. Its delivery rule is the same as broadcast's
+  (decision 4).
 - `DwiPortListeners.broadcast`: any number of host listeners; each listener sees
   every message, in send order.
 
@@ -1592,8 +1599,11 @@ has accepted the message into its queue. If a listener's queue is full, the send
 waits for that listener; it does not drop the message and does not drop other
 listeners' messages. A listener that cancels is removed at once. When there are no
 listeners, messages are held in a queue of `bufferSize`; a further send throws
-`DwiChannelBufferException`, matching single mode. A slow listener therefore slows
-senders, and never loses data.
+`DwiChannelBufferException`, so nothing waits forever for a listener that never
+arrives. A slow listener therefore slows senders, and never loses data. A bound
+worker's messages are not read faster than the listeners accept them: the binding
+pauses until the message is delivered, and the worker's own send waits for that
+(the binding channel is opened with acknowledge-on-consume, ADR-023).
 
 **Decision 5 — payloads (the maintainer's choice: both).** Every port accepts both:
 

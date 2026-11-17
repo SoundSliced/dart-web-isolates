@@ -743,7 +743,7 @@ final telemetry = Dwi.createPort(
 final sub = telemetry.messages.listen(print);
 await telemetry.send({'frame': 1});
 
-final binding = worker.bindPort(telemetry); // worker handle from Dwi.spawn
+final binding = await worker.bindPort(telemetry); // worker handle from Dwi.spawn
 ```
 
 Inside a worker task:
