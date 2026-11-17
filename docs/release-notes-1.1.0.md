@@ -1,6 +1,6 @@
 # DWI 1.1.0 — release notes
 
-Status: **prepared 2026-11-17; not yet published to pub.dev.**
+Status: **published 2026-11-17 to pub.dev, all eight packages at 1.1.0.**
 
 DWI 1.1.0 adds named ports (ADR-032). It is additive: no API from 1.0.0 is removed or
 changed, and the protocol is unchanged (version 2), so worker artefacts do not need a
