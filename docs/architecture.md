@@ -1545,6 +1545,96 @@ and worker compilation in each measured browser; actual worker realm and
 independent task state; clean builds, cache invalidation and cleanup. Prototype
 identity or worker-only compilation cannot satisfy that gate.
 
+## ADR-033 — Callback-scoped ports (proposed, after 1.1.1)
+
+**Status.** Proposed. The maintainer approved the failure contract (Decision 3) and the
+ownership and cleanup rules (Decisions 1 and 2) on 2026-11-18. The method names are still
+proposals. The two preconditions below are open until their probes run. No implementation
+until the ADR is accepted.
+
+**Context.** ADR-032 ports are explicit: create, bind, close. Temporary use (one request
+and its reply) must remember to close the port and binding on every path, including
+failure. The dedicated worker is the caller's choice, so the library must not select one.
+
+**Decision 1 — the callback is the ownership boundary.** Two static-style helpers
+create a newly owned port for the duration of a callback:
+
+- `Dwi.withPort(name, body, {listeners, bufferSize})` creates a `hostOnly` port.
+- `DwiWorker.withPort(name, body, {listeners, bufferSize})` creates a `workers` port and
+  binds it to that handle before `body` runs. The handle is borrowed; the helper attaches
+  only that handle and never selects another worker.
+
+Both return the body's result, typed `FutureOr<R>`. Scoped ports are always created
+fresh. A scope never adopts an existing open port of the same name: a duplicate name
+throws `DwiChannelStateException` before any state changes, and the first port is not
+closed.
+
+**Decision 2 — acquisition and cleanup.** The port is registered before binding and
+removed when the scope ends. For a worker scope, binding runs inside the cleanup guard.
+If acquisition fails (registration or binding), `body` is not invoked and no registry
+entry or channel remains. On exit (success, synchronous throw, or asynchronous failure)
+the scope closes the captured port object, never a later lookup by name. This ends the
+binding and the port. An independently owned worker handle remains usable.
+
+**Decision 3 — failure contract (proposal, maintainer to confirm).** While `body` runs:
+
+- A binding error (worker failure, handle close or restart, channel end) fails the scope
+  with that typed error, using the existing ADR-032 decision 7 errors. No new exception
+  types are added.
+- An unexpected normal completion of the binding fails the scope with
+  `DwiChannelClosedException`.
+- If `body` finishes first, the scope is marked as finishing before the port is closed,
+  so its own teardown is not reported as an operation failure. When events race, one
+  outcome wins; losing futures are observed so late failures are not unhandled.
+- If `body` throws, its error is the primary error. A cleanup failure does not replace
+  it; the cleanup failure is surfaced under the scoped worker error policy already used
+  by `DwiWorker.using` (to be confirmed by reading that code before implementation).
+- The public future settles only after teardown completes, including when cleanup is
+  repeated or concurrent.
+- Cleanup runs on every exit, including when the body's error reaches the caller. The
+  error is the caller's to handle; teardown does not depend on whether it was observed.
+- A duplicate name is an error, never an automatic rename. Workers find ports by name
+  (`DwiWorkerChannels.find`), so a renamed port would be unreachable by the name the
+  caller expects.
+
+**Decision 4 — limits.** Closing a port releases its resources but cannot cancel work
+the callback already started. Closing a worker-scoped port during active work is an
+early termination of the operation and is documented as such. Application readiness is
+the caller's responsibility: the channel-open acknowledgement only establishes transport
+readiness. Replies are subscribed by the callback before the triggering send, and sends
+are awaited, so the existing backpressure rules apply unchanged.
+
+**Decision 5 — no protocol or backend change.** Scoped ports reuse the existing port
+registry, bindings and channel names (ADR-032, protocol version 2). A backend or protocol
+change is out of scope for this ADR and needs its own ADR and a failing probe.
+
+**Preconditions (probed 2026-11-18, `packages/dwi_core/test/port_scoped_probe_test.dart`).**
+- **Terminal signal under backpressure: reproduced, then fixed.** With the backlog past
+  `bufferSize` and the single listener paused, a worker failure did not settle
+  `binding.done` within 2 seconds, because the binding's channel subscription was
+  paused behind the pending delivery. The fix: `attach` takes the handle's `stops`
+  stream, and the binding fails from a stop directly, so it no longer waits on the
+  paused subscription. A `callerClosed` stop fails with `DwiWorkerClosedException`; any
+  other stop fails with `DwiWorkerFailedException`. Regression probe passes.
+- **Close under backpressure: not reproduced.** With a paused listener and a full
+  backlog, `port.close()` completes within 2 seconds, and `binding.done` completes
+  normally. A queued worker error is therefore not reported to `done` on close; it ends
+  the binding normally (Decision 3 does not depend on it). The registry entry is removed
+  before the binding closes, and no stall was observed.
+- Existing `port_test.dart` (21 tests) still passes.
+
+**Non-goals.** A single-reply request helper, correlation for shared ports, worker
+pooling or selection, and any change to `DwiWorkerChannels.find`.
+
+**Consequences.** Adds `Dwi.withPort` and `DwiWorker.withPort` to the public surface.
+Documentation (pub.dev and root README, examples) is required with the code, not here.
+
+**Tests required before acceptance of the code (AGENTS rules 5, 6 and 12).** Host and
+worker scopes for success and failure, validation, duplicate names, concurrent scopes,
+primary-error precedence, name reuse after return, bind failure without callback
+invocation, terminal paths during a pending reply (close, failure, restart, channel end,
+paused delivery), and browser runs per engine recorded in `docs/browser-matrix.md`.
+
 ## ADR-032 — Named ports: an emulated port layer (1.1.0)
 
 **Status.** Accepted by the maintainer on 2026-11-17 for 1.1.0. The direction and the

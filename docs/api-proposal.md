@@ -725,6 +725,39 @@ parameter (O1, decided in ADR-025).
 - G8 (`SharedArrayBuffer` bytes): documented as a limitation, no API (O7,
   decided).
 
+## Scoped ports (ADR-033, proposed)
+
+A scope creates a port for the duration of a callback and closes it on every exit path.
+Decisions and open items are in ADR-033; nothing here is implemented yet.
+
+```dart
+final response = await DwiWorker.using((worker) {
+  return worker.withPort('echo', (port) async {
+    final ready = await worker.run<bool>('listenForEcho', 'port:${port.name}');
+    if (!ready) throw StateError('Echo listener failed to start');
+    final reply = port.messages.first;
+    await port.send('hello');
+    return await reply;
+  });
+});
+
+final status = await Dwi.withPort('status', (port) async {
+  final received = port.messages.first;
+  await port.send('ready');
+  return await received;
+});
+```
+
+Surface (proposed, names to be confirmed):
+
+- `static Future<R> Dwi.withPort<R>(String name, FutureOr<R> Function(DwiPort port) body, {DwiPortListeners listeners = DwiPortListeners.single, int? bufferSize})`
+- `Future<R> DwiWorker.withPort<R>(String name, FutureOr<R> Function(DwiPort port) body, {DwiPortListeners listeners = DwiPortListeners.single, int? bufferSize})`
+  binds the scoped `workers` port to this handle before `body` runs.
+
+Rules: a duplicate open name throws `DwiChannelStateException` and never closes the
+existing port; a failed acquisition never invokes `body`; the port is absent after the
+scope returns; errors follow ADR-033 decision 3.
+
 ## Named ports (ADR-032, proposed for 1.1.0)
 
 Host code creates named ports, and workers reach a port by name through a channel.

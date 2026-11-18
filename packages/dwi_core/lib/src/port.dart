@@ -6,6 +6,7 @@ import 'channel.dart';
 import 'channel_endpoint.dart' show validateDwiChannelName;
 import 'exceptions.dart';
 import 'transferable_bytes.dart';
+import 'worker_handle.dart' show DwiWorkerStop;
 
 /// Who may use a named port (ADR-032, decision 2).
 enum DwiPortScope {
@@ -261,9 +262,13 @@ final class DwiPortEndpoint implements DwiPort {
   /// Attaches an open worker [channel] to this port and returns the binding.
   /// The caller opens [channel] with the name `port:<name>` and
   /// acknowledge-on-consume (ADR-023), after calling [ensureBindable].
-  DwiPortBinding attach(DwiChannel channel) {
+  ///
+  /// [stops] is the owning handle's terminal stream. The binding listens to it
+  /// directly: a channel error or end is queued behind a paused listener, so
+  /// only the stop signal can end [DwiPortBinding.done] promptly (ADR-033).
+  DwiPortBinding attach(DwiChannel channel, {Stream<DwiWorkerStop>? stops}) {
     ensureBindable();
-    final binding = _PortBinding(this, channel);
+    final binding = _PortBinding(this, channel, stops);
     _bindings.add(binding);
     return binding;
   }
@@ -421,7 +426,7 @@ final class _PortListener {
 
 /// One worker's channel to a `workers` port.
 final class _PortBinding implements DwiPortBinding {
-  _PortBinding(this._port, this._channel) {
+  _PortBinding(this._port, this._channel, Stream<DwiWorkerStop>? stops) {
     // A failure nobody awaits must not be reported as unhandled; callers that
     // await [done] still receive the error.
     _done.future.ignore();
@@ -431,11 +436,16 @@ final class _PortBinding implements DwiPortBinding {
       onDone: _onDone,
       cancelOnError: true,
     );
+    // Not behind the paused channel subscription (ADR-033 precondition 1).
+    _stopSubscription = stops?.listen(
+      (stop) => _fail(_stopError(stop), StackTrace.current),
+    );
   }
 
   final DwiPortEndpoint _port;
   final DwiChannel _channel;
   late final StreamSubscription<Object?> _subscription;
+  StreamSubscription<DwiWorkerStop>? _stopSubscription;
   final Completer<void> _done = Completer<void>();
   bool _ended = false;
 
@@ -487,5 +497,16 @@ final class _PortBinding implements DwiPortBinding {
     _ended = true;
     _port._removeBinding(this);
     unawaited(_subscription.cancel());
+    unawaited(_stopSubscription?.cancel());
   }
 }
+
+/// The typed error a binding fails with when its handle stops (ADR-033).
+Object _stopError(DwiWorkerStop stop) => switch (stop) {
+  DwiWorkerStop.callerClosed => const DwiWorkerClosedException(
+    'worker closed while a port was bound',
+  ),
+  _ => DwiWorkerFailedException(
+    'worker stopped ($stop) while a port was bound',
+  ),
+};

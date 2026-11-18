@@ -12,6 +12,14 @@ Future<R> runScopedWorker<R>({
   required Future<DwiWorker> Function() open,
   required Future<void> Function(DwiWorker worker) close,
   required FutureOr<R> Function(DwiWorker worker) body,
+}) => runScoped<DwiWorker, R>(open: open, close: close, body: body);
+
+/// Generic form of [runScopedWorker] (ADR-033): acquires one resource [H], runs
+/// [body], and always releases it with [close]. The callback error is primary.
+Future<R> runScoped<H, R>({
+  required Future<H> Function() open,
+  required Future<void> Function(H resource) close,
+  required FutureOr<R> Function(H resource) body,
 }) async {
   final worker = await open();
   final R result;
