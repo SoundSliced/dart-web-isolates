@@ -184,4 +184,129 @@ void main() {
       },
     );
   });
+
+  group('failure paths (ADR-033)', () {
+    setUpAll(() {
+      Dwi.registerTask('slowScoped', (Object? input) async {
+        await Future<void>.delayed(Duration(milliseconds: input! as int));
+        return 'slow';
+      });
+    });
+
+    tearDown(() => Dwi.configure(const DwiConfig()));
+
+    test(
+      'a worker failure fails the scope and frees the name after restart',
+      () async {
+        await Dwi.configure(
+          const DwiConfig(taskTimeout: Duration(milliseconds: 50)),
+        );
+        final errors = await _uncaught(() async {
+          final worker = await DwiWorker.spawn();
+          try {
+            final started = Completer<void>();
+            final scope = worker.withPort<Object?>('failWait', (port) async {
+              started.complete();
+              return port.messages.first;
+            });
+            await started.future;
+            await expectLater(
+              worker.run<String>('slowScoped', 5000),
+              throwsA(isA<DwiTimeoutException>()),
+            );
+            await expectLater(
+              scope.timeout(timeout),
+              throwsA(isA<DwiWorkerFailedException>()),
+            );
+            expect(Dwi.port('failWait'), isNull);
+
+            // The restarted context starts with no inherited binding.
+            await worker.restart();
+            expect(
+              await worker.run<bool>('scopedFind', 'port:failWait'),
+              isFalse,
+            );
+            final reuse = await worker
+                .withPort<Object?>('failWait', (port) async {
+                  expect(
+                    await worker.run<String>('scopedEcho', 'port:${port.name}'),
+                    'listening',
+                  );
+                  final reply = port.messages.first;
+                  await port.send('again');
+                  return reply;
+                })
+                .timeout(timeout);
+            expect(reuse, 'echo:again');
+          } finally {
+            await worker.close();
+          }
+        });
+        expect(errors, isEmpty);
+      },
+    );
+
+    test('a callback error wins over a later worker failure', () async {
+      await Dwi.configure(
+        const DwiConfig(taskTimeout: Duration(milliseconds: 50)),
+      );
+      final errors = await _uncaught(() async {
+        final worker = await DwiWorker.spawn();
+        try {
+          final scope = worker.withPort<Object?>('bodyFirst', (port) async {
+            await Future<void>.delayed(const Duration(milliseconds: 10));
+            throw StateError('callback failed');
+          });
+          await expectLater(scope.timeout(timeout), throwsA(isA<StateError>()));
+          expect(Dwi.port('bodyFirst'), isNull);
+          // A worker failure after the scope ended must not surface through it.
+          await expectLater(
+            worker.run<String>('slowScoped', 5000),
+            throwsA(isA<DwiTimeoutException>()),
+          );
+        } finally {
+          await worker.close();
+        }
+      });
+      expect(errors, isEmpty);
+    });
+
+    test('closing the port during the callback ends the scope with a channel error', () async {
+      final errors = await _uncaught(() async {
+        final worker = await DwiWorker.spawn();
+        try {
+          final started = Completer<void>();
+          final scope = worker.withPort<Object?>('manualClose', (port) async {
+            started.complete();
+            return port.messages.first;
+          });
+          await started.future;
+          await Dwi.port('manualClose')!.close();
+          await expectLater(
+            scope.timeout(timeout),
+            throwsA(isA<DwiChannelClosedException>()),
+          );
+          expect(Dwi.port('manualClose'), isNull);
+          expect(
+            await worker
+                .withPort('manualClose', (port) => 'reused')
+                .timeout(timeout),
+            'reused',
+          );
+        } finally {
+          await worker.close();
+        }
+      });
+      expect(errors, isEmpty);
+    });
+  });
+}
+
+/// Runs [body] in a zone and returns every error that escaped it. Late callback
+/// or binding failures must not appear here (ADR-033).
+Future<List<Object>> _uncaught(Future<void> Function() body) async {
+  final errors = <Object>[];
+  await runZonedGuarded(body, (error, stack) => errors.add(error));
+  await Future<void>.delayed(const Duration(milliseconds: 50));
+  return errors;
 }
