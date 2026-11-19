@@ -1545,6 +1545,31 @@ and worker compilation in each measured browser; actual worker realm and
 independent task state; clean builds, cache invalidation and cleanup. Prototype
 identity or worker-only compilation cannot satisfy that gate.
 
+## ADR-036 — Generated typed dedicated-worker entry (proposed for 1.3.0)
+
+**Context.** Pooled generated proxies (`DwiTasks.x`) route each call through `Dwi.run`
+and may use any worker. A caller that needs one worker for several calls must register
+tasks and spawn a worker by hand (`Dwi.registerTask`, `DwiWorker.using`, `worker.run`).
+
+**Decisions.**
+1. The generator adds `DwiTasks.withWorker<R>(FutureOr<R> Function(DwiDedicatedTasks tasks)
+   body)`. It registers the generated native tasks, then runs `body` against one worker
+   borrowed through `DwiWorker.using`. The worker is released when `body` settles.
+2. `DwiDedicatedTasks` has one instance method per non-stream task. Each method sends its
+   call to the borrowed worker with `worker.run`, using the same encoders and decoders as the
+   pooled proxy. Consecutive calls in one callback share that worker.
+3. Stream tasks are excluded. Fresh-worker stream semantics (ADR-022) do not fit a shared
+   worker, so `Dwi.runStream` remains their entry point.
+4. Typed cancellation is excluded (ADR-027 cancellation is the untyped route).
+5. Generated pooled methods and `DwiFunctions` are unchanged. Output stays deterministic.
+6. No change to the public runtime API; the generated surface is the addition.
+
+**Consequences.** Native behaviour is covered by `packages/dwi_builder/test/generated_integration_test.dart`
+(the dedicated call is the first generated dispatch of that program) and deterministic output by
+`packages/dwi_builder/test/generator_test.dart`. Browser behaviour is not verified; see
+`docs/browser-matrix.md`. The worker artifact a browser build uses is the one selected at build
+time (plan phase 2 is not implemented).
+
 ## ADR-035 — Callback-scoped channels and links (proposed for 1.3.0)
 
 **Context.** `openChannel` and `DwiWorker.link` (ADR-014, ADR-023) require explicit

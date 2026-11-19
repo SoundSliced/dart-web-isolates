@@ -820,6 +820,12 @@ follow ADR-032 decision 4; `close()` is explicit and ends all listeners and bind
 Both open the resource before `body`, always close it when `body` settles, and keep both
 handles usable afterwards. Startup errors are the result and `body` does not run.
 
+## Generated dedicated-worker entry (ADR-036, proposed for 1.3.0)
+
+- `static Future<R> DwiTasks.withWorker<R>(FutureOr<R> Function(DwiDedicatedTasks tasks) body)`
+- `DwiDedicatedTasks`: one instance method per non-stream generated task, with the same
+  signature as its pooled `DwiTasks` counterpart. Calls share the callback's worker.
+
 ## Documentation requirement
 
 Every exported declaration is dartdoc'd and has a runnable example in
