@@ -9,6 +9,7 @@ the recommended way to use DWI and must not reach into implementation details.
 | `automatic_worker/` | Zero-boilerplate `@DwiTask` discovery, worker generation and compilation. |
 | `stateful_worker/` | Dedicated `DwiWorker` handle and worker-local state that persists between calls. |
 | `scoped_worker/` | `DwiWorker.using` scope ownership and `Dwi.runFresh` fresh-context calls. |
+| `scoped_port/` | `Dwi.withPort` and `DwiWorker.withPort`: callback-scoped named ports, host-only and worker-bound (ADR-033). |
 | `stop_observer/` | `DwiWorker.stopReason` / `stops` termination observation (ADR-017). |
 | `worker_link/` | `DwiWorker.link`: two handles exchanging messages through a relayed link (ADR-023). |
 | `dispatch_control/` | `Dwi.pause`/`resume` and `DwiWorker.ping` (ADR-028). |

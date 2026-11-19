@@ -283,6 +283,26 @@ abstract final class Dwi {
   /// The open port named [name], or `null` (ADR-032).
   static DwiPort? port(String name) => DwiPortRegistry.find(name);
 
+  /// Runs [body] with a host-only port that exists only for the callback
+  /// (ADR-033).
+  ///
+  /// The port is created fresh and closed when [body] finishes, whether it
+  /// returns, throws synchronously, or fails asynchronously. A name that is
+  /// already open throws [DwiChannelStateException] before anything is closed.
+  /// If [body] throws, that error is the result; a cleanup failure does not
+  /// replace it. Closing does not cancel work [body] already started.
+  static Future<R> withPort<R>(
+    String name,
+    FutureOr<R> Function(DwiPort port) body, {
+    DwiPortListeners listeners = DwiPortListeners.single,
+    int? bufferSize,
+  }) => runScoped<DwiPort, R>(
+    open: () async =>
+        createPort(name, listeners: listeners, bufferSize: bufferSize),
+    close: (port) => port.close(),
+    body: body,
+  );
+
   /// Snapshot of the worker pool (ADR-026 G2). Before the first [configure] it
   /// reports an empty pool and does not create a backend.
   static DwiPoolState poolState() {
@@ -621,6 +641,74 @@ final class DwiWorker {
     );
   }
 
+  /// Runs [body] with a port created for the callback and bound to this
+  /// worker (ADR-033).
+  ///
+  /// The port is created fresh with the `workers` scope, bound to this handle
+  /// before [body] runs, and closed when [body] finishes. The worker keeps
+  /// running and can serve other calls afterwards. [body] is not called if the
+  /// name is already open or binding fails. The worker's application must be
+  /// ready before a send: the binding acknowledgement only means the channel
+  /// is open. A binding failure while [body] runs fails this call with the
+  /// typed error that ended the binding. If [body] throws, that error is the
+  /// result. Closing does not cancel work [body] already started.
+  Future<R> withPort<R>(
+    String name,
+    FutureOr<R> Function(DwiPort port) body, {
+    DwiPortListeners listeners = DwiPortListeners.single,
+    int? bufferSize,
+  }) => runScoped<({DwiPort port, DwiPortBinding binding}), R>(
+    open: () async {
+      final port = Dwi.createPort(
+        name,
+        scope: DwiPortScope.workers,
+        listeners: listeners,
+        bufferSize: bufferSize,
+      );
+      try {
+        return (port: port, binding: await bindPort(port));
+      } on Object {
+        await port.close();
+        rethrow;
+      }
+    },
+    close: (scope) => scope.port.close(),
+    body: (scope) => _untilBindingEnds(scope.binding, () => body(scope.port)),
+  );
+
+  /// Completes with [body]'s result, or with the binding's failure if the
+  /// binding ends first. A normal binding end while [body] runs is a closed
+  /// channel. One outcome wins; the other is observed so it is not unhandled.
+  static Future<R> _untilBindingEnds<R>(
+    DwiPortBinding binding,
+    FutureOr<R> Function() body,
+  ) {
+    final outcome = Completer<R>();
+    Future<R>.sync(body).then(
+      (value) {
+        if (!outcome.isCompleted) outcome.complete(value);
+      },
+      onError: (Object error, StackTrace stack) {
+        if (!outcome.isCompleted) outcome.completeError(error, stack);
+      },
+    );
+    binding.done.then<void>(
+      (_) {
+        if (!outcome.isCompleted) {
+          outcome.completeError(
+            const DwiChannelClosedException(
+              'port binding ended before the callback finished',
+            ),
+          );
+        }
+      },
+      onError: (Object error, StackTrace stack) {
+        if (!outcome.isCompleted) outcome.completeError(error, stack);
+      },
+    );
+    return outcome.future;
+  }
+
   /// Current lifecycle state of the handle.
   DwiWorkerState get state => _handle.state;
 
@@ -741,7 +829,7 @@ final class DwiWorker {
       ackOnConsume: true,
     );
     try {
-      return port.attach(channel);
+      return port.attach(channel, stops: _handle.stops);
     } on DwiException {
       await channel.close();
       rethrow;
