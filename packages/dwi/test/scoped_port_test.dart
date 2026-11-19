@@ -121,6 +121,31 @@ void main() {
       }).timeout(timeout);
     });
 
+    test('simultaneous scopes with one name produce one owner', () async {
+      final first = await DwiWorker.spawn();
+      final second = await DwiWorker.spawn();
+      addTearDown(first.close);
+      addTearDown(second.close);
+      final owner = Completer<void>();
+      final release = Completer<void>();
+
+      final winner = first.withPort('sameName', (port) async {
+        owner.complete();
+        await release.future;
+        return 'owner';
+      });
+      await owner.future;
+      await expectLater(
+        second.withPort('sameName', (port) => 'loser'),
+        throwsA(isA<DwiChannelStateException>()),
+      );
+      // The losing scope must not close the owner's port.
+      expect(Dwi.port('sameName'), isNotNull);
+      release.complete();
+      expect(await winner.timeout(timeout), 'owner');
+      expect(Dwi.port('sameName'), isNull);
+    });
+
     test('a closed handle fails binding and never runs the callback', () async {
       final worker = await DwiWorker.spawn();
       await worker.close();

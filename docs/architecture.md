@@ -1547,10 +1547,11 @@ identity or worker-only compilation cannot satisfy that gate.
 
 ## ADR-033 — Callback-scoped ports (proposed, after 1.1.1)
 
-**Status.** Proposed. The maintainer approved the failure contract (Decision 3) and the
-ownership and cleanup rules (Decisions 1 and 2) on 2026-11-18. The method names are still
-proposals. The two preconditions below are open until their probes run. No implementation
-until the ADR is accepted.
+**Status.** Accepted by the maintainer on 2026-11-18 and implemented on
+`feat/scoped-ports` (PR #1). The failure contract and the ownership and cleanup rules were
+approved. Both preconditions were probed: the terminal-signal wiring was fixed in core, and
+close ordering did not stall. Restart during a callback is not covered by tests, because
+`restart()` requires a failed handle.
 
 **Context.** ADR-032 ports are explicit: create, bind, close. Temporary use (one request
 and its reply) must remember to close the port and binding on every path, including

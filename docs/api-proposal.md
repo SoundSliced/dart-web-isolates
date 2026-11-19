@@ -725,10 +725,10 @@ parameter (O1, decided in ADR-025).
 - G8 (`SharedArrayBuffer` bytes): documented as a limitation, no API (O7,
   decided).
 
-## Scoped ports (ADR-033, proposed)
+## Scoped ports (ADR-033, implemented on feat/scoped-ports)
 
 A scope creates a port for the duration of a callback and closes it on every exit path.
-Decisions and open items are in ADR-033; nothing here is implemented yet.
+Decisions are in ADR-033.
 
 ```dart
 final response = await DwiWorker.using((worker) {
