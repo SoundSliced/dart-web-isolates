@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0
+
+- Version aligned with the 1.3.0 release; no API change in this package.
+
 ## 1.2.0
 
 - Scoped ports (ADR-033): a worker stop or failure now fails a port binding even while the host listener is paused. `DwiPortEndpoint.attach` takes the handle's stop stream.

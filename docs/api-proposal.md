@@ -805,6 +805,21 @@ Surface:
 Rules: names follow ADR-014; a worker never sees the registry; delivery and broadcast
 follow ADR-032 decision 4; `close()` is explicit and ends all listeners and bindings.
 
+## Bounded Flutter batch (ADR-034, proposed for 1.3.0)
+
+- `Future<List<O>> computeParallelBounded<I, O>(Future<O> Function(I input) task, List<I> inputs, {int concurrency = 4})`
+  in `dwi_flutter`. Admits at most `concurrency` calls at once, returns results in input order,
+  stops admitting on the first failure, and throws `ArgumentError` for `concurrency < 1`.
+  `computeParallel` is unchanged.
+
+## Scoped channels and links (ADR-035, proposed for 1.3.0)
+
+- `Future<R> DwiWorker.withChannel<R>(String name, FutureOr<R> Function(DwiChannel channel) body)`
+- `static Future<R> DwiWorker.withLink<R>(DwiWorker a, DwiWorker b, String name, FutureOr<R> Function(DwiLink link) body)`
+
+Both open the resource before `body`, always close it when `body` settles, and keep both
+handles usable afterwards. Startup errors are the result and `body` does not run.
+
 ## Documentation requirement
 
 Every exported declaration is dartdoc'd and has a runnable example in

@@ -166,7 +166,24 @@ abstract final class DwiGenerator {
         '/// Every method routes through `Dwi.run`; workers are '
         'started lazily.',
       )
-      ..writeln('abstract final class DwiTasks {');
+      ..writeln('abstract final class DwiTasks {')
+      ..writeln(
+        '  /// Runs [body] against one dedicated worker and releases it afterwards.',
+      )
+      ..writeln('  ///')
+      ..writeln(
+        '  /// Registers the native tasks before the worker starts. Calls made '
+        'through [DwiDedicatedTasks] share that worker for the whole callback.',
+      )
+      ..writeln(
+        '  static Future<R> withWorker<R>(FutureOr<R> Function(DwiDedicatedTasks tasks) body) {',
+      )
+      ..writeln('    _dwiRegisterGeneratedTasks();')
+      ..writeln(
+        '    return DwiWorker.using<R>((worker) => body(DwiDedicatedTasks._(worker)));',
+      )
+      ..writeln('  }')
+      ..writeln();
     for (var index = 0; index < tasks.length; index++) {
       final task = tasks[index];
       if (index > 0) buffer.writeln();
@@ -216,6 +233,7 @@ abstract final class DwiGenerator {
     buffer
       ..writeln('}')
       ..writeln();
+    _writeDedicatedTasks(buffer, tasks, typePrefixes, ids);
     buffer..writeln(
       'final Map<Function, Object> _dwiFunctionAdapters = <Function, Object>{',
     );
@@ -287,6 +305,54 @@ abstract final class DwiGenerator {
     _writeDecoders(buffer, codecs, ids, typePrefixes);
     _writeEncoders(buffer, codecs, ids, typePrefixes);
     return buffer.toString();
+  }
+
+  /// Writes `DwiDedicatedTasks`: instance methods for the non-stream tasks,
+  /// each sending its call to one borrowed worker (ADR-036).
+  static void _writeDedicatedTasks(
+    StringBuffer buffer,
+    List<DwiTaskDescriptor> tasks,
+    Map<String, String> typePrefixes,
+    Map<String, int> ids,
+  ) {
+    buffer
+      ..writeln(
+        '/// Typed calls on one dedicated worker (see `DwiTasks.withWorker`).',
+      )
+      ..writeln('final class DwiDedicatedTasks {')
+      ..writeln('  DwiDedicatedTasks._(this._worker);')
+      ..writeln()
+      ..writeln('  final DwiWorker _worker;');
+    for (final task in tasks) {
+      if (task.returnsStream) continue;
+      buffer
+        ..writeln()
+        ..writeln(
+          '  /// Runs `${task.qualifiedName}` on this dedicated worker.',
+        )
+        ..writeln(
+          '  ${_proxySignature(task, typePrefixes).replaceFirst('static ', '')} async {',
+        );
+      final call = task.takesInput
+          ? "_worker.run<Object?>('${_dartString(task.name)}', "
+                "${_inputArgument(task, ids)})"
+          : "_worker.run<Object?>('${_dartString(task.name)}')";
+      if (task.returnsVoid) {
+        buffer
+          ..writeln('    await $call;')
+          ..writeln('  }');
+      } else {
+        buffer
+          ..writeln('    final value = await $call;')
+          ..writeln(
+            "    return ${_decodeCall(task.output, 'value', "'result'", ids)};",
+          )
+          ..writeln('  }');
+      }
+    }
+    buffer
+      ..writeln('}')
+      ..writeln();
   }
 
   static String _proxySignature(

@@ -137,6 +137,45 @@ void main() {
     },
   );
 
+  test(
+    'emits a dedicated-worker entry and typed dedicated methods (ADR-036)',
+    () {
+      final sources = DwiGenerator.generate(<DwiTaskDescriptor>[
+        descriptor('calculatePrimes', input: type('int'), output: type('int')),
+        descriptor('noInput', output: type('void')),
+      ], workerId: 'poolA');
+
+      expect(
+        sources.proxies,
+        contains(
+          'static Future<R> withWorker<R>(FutureOr<R> Function(DwiDedicatedTasks tasks) body) {',
+        ),
+      );
+      expect(sources.proxies, contains('_dwiRegisterGeneratedTasks();'));
+      expect(sources.proxies, contains('final class DwiDedicatedTasks {'));
+      expect(
+        sources.proxies,
+        contains('Future<int> calculatePrimes(int input) async {'),
+      );
+      expect(
+        sources.proxies,
+        contains(
+          "final value = await _worker.run<Object?>('calculatePrimes', input)",
+        ),
+      );
+      expect(
+        sources.proxies,
+        contains("await _worker.run<Object?>('noInput');"),
+      );
+      // Output stays byte-identical for the same input.
+      final again = DwiGenerator.generate(<DwiTaskDescriptor>[
+        descriptor('calculatePrimes', input: type('int'), output: type('int')),
+        descriptor('noInput', output: type('void')),
+      ], workerId: 'poolA');
+      expect(again.proxies, sources.proxies);
+    },
+  );
+
   test('emits typed proxies, native registration and metadata', () {
     final sources = DwiGenerator.generate(<DwiTaskDescriptor>[
       descriptor('calculatePrimes', input: type('int'), output: type('int')),

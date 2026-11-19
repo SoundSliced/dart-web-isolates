@@ -1545,6 +1545,56 @@ and worker compilation in each measured browser; actual worker realm and
 independent task state; clean builds, cache invalidation and cleanup. Prototype
 identity or worker-only compilation cannot satisfy that gate.
 
+## ADR-035 — Callback-scoped channels and links (proposed for 1.3.0)
+
+**Context.** `openChannel` and `DwiWorker.link` (ADR-014, ADR-023) require explicit
+`close()`. A caller that forgets the close, or that returns early on an error, leaks
+the name and the relay. ADR-033 added the same scope shape for ports.
+
+**Decisions.**
+1. `DwiWorker.withChannel<R>(String name, FutureOr<R> Function(DwiChannel) body)` opens the
+   channel, runs `body`, and always closes the channel when `body` settles. It uses the
+   shared `runScoped` helper (ADR-015, ADR-033).
+2. `DwiWorker.withLink<R>(DwiWorker a, DwiWorker b, String name, FutureOr<R> Function(DwiLink)
+   body)` links the channels, runs `body`, and always closes the link. A startup failure is
+   the result and `body` never runs. Passing the same handle twice throws
+   `DwiChannelStateException` before opening anything.
+3. The callback error is primary. A cleanup failure is recorded as described in ADR-015.
+4. The scope does not close or detach either handle. Both handles stay usable afterwards.
+5. The scope does not change message, backpressure or topology semantics; it borrows the
+   channel or link returned by the explicit API.
+6. Explicit `openChannel`, `link` and their `close()` methods are unchanged.
+
+**Consequences.** Native behaviour is covered by `packages/dwi/test/scoped_channel_link_test.dart`.
+Browser behaviour is not verified in this change; see the release report.
+
+## ADR-034 — Bounded Flutter batch helper (`computeParallelBounded`, proposed for 1.3.0)
+
+**Context.** `computeParallel` (ADR-025) submits every input at once. The pool limits
+execution, but a 10,000-input batch fills the queue (`DwiConfig.maxQueuedTasks`, default 64)
+and fails. Callers need a batch that paces submissions and keeps the eager helper intact.
+
+**Decisions.**
+1. Add `computeParallelBounded<I, O>(task, inputs, {int concurrency = 4})` to `dwi_flutter`.
+   `computeParallel` is unchanged.
+2. Default `concurrency` is 4, equal to the `DwiConfig.maxWorkers` default. The helper does not
+   read the runtime configuration; it is a fixed default. A value below 1 throws
+   `ArgumentError` synchronously before any call is dispatched.
+3. At most `concurrency` calls from this batch are in flight. A new call is admitted when an
+   earlier one completes.
+4. Results are stored by input index, so the output order matches the input order.
+5. On the first observed failure, no new calls are admitted. Every admitted call is observed
+   until it completes, so no future is left unhandled. The first error is rethrown. A
+   synchronous throw from `task` becomes a failed call, as in ADR-025.
+6. No cancellation is claimed for plain futures (ADR-027 scope). The limiter controls
+   submissions within one batch only. Concurrent batches and other work still compete for the
+   global pool.
+7. An empty input completes with an empty list and never calls `task`.
+
+**Consequences.** Peak submissions of one batch are bounded at `concurrency`. Its effect on
+timing and memory must be measured against the eager path before a performance claim is made
+(AGENTS.md rule 15). No benchmark is recorded in this ADR; the claim is limited to the bound.
+
 ## ADR-033 — Callback-scoped ports (proposed, after 1.1.1)
 
 **Status.** Accepted by the maintainer on 2026-11-18 and implemented on

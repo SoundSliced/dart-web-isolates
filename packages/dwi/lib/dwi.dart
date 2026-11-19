@@ -882,6 +882,33 @@ final class DwiWorker {
     return DwiLink._(name, first, second);
   }
 
+  /// Opens channel [name] on this handle, runs [body] with it, and always closes
+  /// it afterwards (ADR-035). The channel is released when [body] settles, and
+  /// the handle stays usable. If [body] throws, that error is the result.
+  Future<R> withChannel<R>(
+    String name,
+    FutureOr<R> Function(DwiChannel channel) body,
+  ) => runScoped<DwiChannel, R>(
+    open: () => openChannel(name),
+    close: (channel) => channel.close(),
+    body: body,
+  );
+
+  /// Links channel [name] between [a] and [b], runs [body] with the link, and
+  /// always closes it afterwards (ADR-035). The link is opened before [body]
+  /// runs. Startup failure is the result and [body] never runs. Both handles
+  /// stay usable after the scope.
+  static Future<R> withLink<R>(
+    DwiWorker a,
+    DwiWorker b,
+    String name,
+    FutureOr<R> Function(DwiLink link) body,
+  ) => runScoped<DwiLink, R>(
+    open: () => link(a, b, name),
+    close: (link) => link.close(),
+    body: body,
+  );
+
   /// Cancels queued and running work, then terminates the context.
   ///
   /// Every affected caller settles with [DwiWorkerClosedException]. Idempotent.

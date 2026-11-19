@@ -75,6 +75,34 @@ Future<void> main(List<String> args) async {
 }
 ```
 
+## Clean-checkout first build
+
+On a clean checkout with no generated proxy, run the combined command once. It
+generates the proxy and worker, compiles the worker, and then runs
+`flutter build web` with any arguments after `--`:
+
+```bash
+dart run dwi_builder:dwi build --flutter-build -- --release
+```
+
+The worker is built first, so a worker failure stops the command before Flutter
+starts. Flutter's exit code is returned unchanged. A later run with unchanged
+sources reuses the cached worker.
+
+Other commands:
+
+- `dart run dwi_builder:dwi generate` writes the proxy and worker sources only.
+- `dart run dwi_builder:dwi watch` rebuilds the worker when Dart sources change.
+- `dart run dwi_builder:dwi check` fails when generated sources or the artifact are
+  stale. Use it as a CI freshness gate for checked-in artifacts.
+
+Plain Dart host compilation stays explicit. The worker's target comes from
+`dwi.yaml`, and the host's Wasm flags are independent of it.
+
+Verified: the command ordering and forwarding are read from `bin/dwi.dart`
+(`_build`, `_runFlutterBuild`). An end-to-end Flutter build was not run in this
+pass; see the release report.
+
 ## Programmatic build options
 
 `DwiBuildConfig(projectRoot: ...)` selects the project. `compile: false`

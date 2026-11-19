@@ -74,6 +74,15 @@ import 'package:dwi/dwi.dart';
 import 'package:sample_app/dwi_tasks.g.dart';
 
 Future<void> main() async {
+  // First generated dispatch of the process: the dedicated entry registers the
+  // native tasks before it spawns its worker (ADR-036).
+  final dedicated = await DwiTasks.withWorker<List<int>>((tasks) async {
+    final a = await tasks.twice(5);
+    final b = await tasks.twice(6);
+    await tasks.fireAndForget(1);
+    return <int>[a, b];
+  });
+
   // Several concurrent first calls must register exactly once and all settle.
   final first = await Future.wait<int>(<Future<int>>[
     DwiTasks.twice(1),
@@ -110,6 +119,7 @@ Future<void> main() async {
   final reused = await DwiTasks.twice(4);
 
   print(jsonEncode(<String, Object?>{
+    'dedicated': dedicated,
     'first': first,
     'bytes': bytes.toList(),
     'ints': ints,
@@ -175,6 +185,7 @@ void main() {
       expect(lines, isNotEmpty, reason: result.stdout as String);
       final decoded = jsonDecode(lines.last) as Map<String, dynamic>;
 
+      expect(decoded['dedicated'], <int>[10, 12]);
       expect(decoded['first'], <int>[2, 4, 6]);
       expect(decoded['bytes'], <int>[1, 2, 3]);
       expect(decoded['ints'], <int>[4, 5, 6]);

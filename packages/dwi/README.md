@@ -227,6 +227,42 @@ bool listenForEcho(Object? input) {
 }
 ```
 
+### Typed dedicated worker
+
+`DwiTasks.withWorker` runs the generated typed calls on one dedicated worker and
+releases it when the callback settles. The native tasks are registered before
+the worker starts, so this is the first call a program can make. Stream tasks
+are not included; use `Dwi.runStream` for them.
+
+```dart
+final sums = await DwiTasks.withWorker<List<int>>((tasks) async {
+  final a = await tasks.sumTo(10);
+  final b = await tasks.sumTo(20);
+  return <int>[a, b];
+});
+```
+
+Browser backends use the generated worker artifact selected at build time; a
+custom worker URL is still set through `DwiConfig` as before.
+
+### Scoped channels and links
+
+`DwiWorker.withChannel` and `DwiWorker.withLink` open a channel or link before
+the callback, and close it when the callback settles. Both handles stay usable
+afterwards. A startup failure (for example a duplicate name) is the result and
+the callback does not run (ADR-035).
+
+```dart
+await DwiWorker.using((worker) async {
+  final echoed = await worker.withChannel('echo', (channel) async {
+    final reply = channel.messages.first;
+    await channel.send('hi');
+    return reply;
+  });
+  print(echoed);
+});
+```
+
 ### Host broadcast
 
 A `hostOnly` port with `DwiPortListeners.broadcast` delivers each message to

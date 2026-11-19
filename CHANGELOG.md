@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-11-19
+
+Developer-experience additions (ADR-034 to ADR-036). Additive; no existing API changes and no protocol change.
+The browser worker-settings work (plan phase 2) is not part of this release.
+
+### Added
+
+- `DwiWorker.withChannel` and `DwiWorker.withLink`: scoped channels and links that close on exit (ADR-035).
+- `DwiTasks.withWorker` and `DwiDedicatedTasks`: generated typed calls on one dedicated worker (ADR-036).
+- `computeParallelBounded` in `dwi_flutter`: bounded batch helper with ordered results (ADR-034).
+
+### Documentation
+
+- Clean-checkout Flutter build path and CLI scope in `dwi_builder` and the root README.
+
 ## [1.2.0] - 2026-11-19
 
 Scoped ports (ADR-033). Additive; no existing API changes and no protocol change.
