@@ -22,6 +22,7 @@ abstract final class DwiGenerator {
     List<DwiTaskDescriptor> tasks, {
     required String workerId,
     String target = 'js',
+    String? workerScript,
   }) {
     final sorted = List<DwiTaskDescriptor>.of(tasks)
       ..sort((a, b) {
@@ -31,7 +32,12 @@ abstract final class DwiGenerator {
       });
     return DwiGeneratedSources(
       worker: _workerSource(sorted, workerId: workerId, target: target),
-      proxies: _proxySource(sorted, workerId: workerId),
+      proxies: _proxySource(
+        sorted,
+        workerId: workerId,
+        workerScript: workerScript,
+        target: target,
+      ),
     );
   }
 
@@ -96,6 +102,8 @@ abstract final class DwiGenerator {
   static String _proxySource(
     List<DwiTaskDescriptor> tasks, {
     required String workerId,
+    String? workerScript,
+    String target = 'js',
   }) {
     final taskPrefixes = _taskPrefixes(tasks);
     final typePrefixes = _typePrefixes(tasks);
@@ -139,17 +147,35 @@ abstract final class DwiGenerator {
         "'${_dartString(workerId)}';",
       )
       ..writeln()
-      ..writeln('bool _dwiGeneratedTasksRegistered = false;')
+      ..writeln('Future<void>? _dwiRegistration;')
       ..writeln()
-      ..writeln('/// Registers native implementations for generated tasks.')
+      ..writeln(
+        '/// Applies the generated worker artifact and registers native',
+      )
+      ..writeln(
+        '/// implementations once. Concurrent first calls share one result.',
+      )
       ..writeln('///')
       ..writeln(
         '/// The web backend ignores this registry; native DWI runs the same '
         'task on an isolate.',
       )
-      ..writeln('void _dwiRegisterGeneratedTasks() {')
-      ..writeln('  if (_dwiGeneratedTasksRegistered) return;')
-      ..writeln('  _dwiGeneratedTasksRegistered = true;');
+      ..writeln('Future<void> _dwiRegisterGeneratedTasks() {')
+      ..writeln('  final pending = _dwiRegistration ??= _dwiRegisterOnce();')
+      ..writeln('  return pending.onError<Object>((error, stack) {')
+      ..writeln('    _dwiRegistration = null;')
+      ..writeln('    Error.throwWithStackTrace(error, stack);')
+      ..writeln('  });')
+      ..writeln('}')
+      ..writeln()
+      ..writeln('Future<void> _dwiRegisterOnce() async {');
+    if (workerScript != null) {
+      buffer.writeln(
+        "  await Dwi.useGeneratedWorker(workerScript: "
+        "'${_dartString(workerScript)}', workerBackend: "
+        "${target == 'wasm' ? 'DwiWorkerBackend.wasm' : 'DwiWorkerBackend.js'});",
+      );
+    }
     for (final task in tasks) {
       final prefix = taskPrefixes[task.importUri]!;
       buffer.writeln(
@@ -166,7 +192,24 @@ abstract final class DwiGenerator {
         '/// Every method routes through `Dwi.run`; workers are '
         'started lazily.',
       )
-      ..writeln('abstract final class DwiTasks {');
+      ..writeln('abstract final class DwiTasks {')
+      ..writeln(
+        '  /// Runs [body] against one dedicated worker and releases it afterwards.',
+      )
+      ..writeln('  ///')
+      ..writeln(
+        '  /// Registers the native tasks before the worker starts. Calls made '
+        'through [DwiDedicatedTasks] share that worker for the whole callback.',
+      )
+      ..writeln(
+        '  static Future<R> withWorker<R>(FutureOr<R> Function(DwiDedicatedTasks tasks) body) async {',
+      )
+      ..writeln('    await _dwiRegisterGeneratedTasks();')
+      ..writeln(
+        '    return DwiWorker.using<R>((worker) => body(DwiDedicatedTasks._(worker)));',
+      )
+      ..writeln('  }')
+      ..writeln();
     for (var index = 0; index < tasks.length; index++) {
       final task = tasks[index];
       if (index > 0) buffer.writeln();
@@ -181,10 +224,10 @@ abstract final class DwiGenerator {
             'DWI worker or isolate.',
           )
           ..writeln('  static ${_proxySignature(task, typePrefixes)} {')
-          ..writeln('    _dwiRegisterGeneratedTasks();')
           ..writeln(
-            '    return $call.map((Object? item) => '
-            "${_decodeCall(task.output, 'item', "'item'", ids)});",
+            '    return Stream<void>.fromFuture(_dwiRegisterGeneratedTasks())'
+            '.asyncExpand((Object? _) => $call.map((Object? item) => '
+            "${_decodeCall(task.output, 'item', "'item'", ids)}));",
           )
           ..writeln('  }');
         continue;
@@ -195,7 +238,7 @@ abstract final class DwiGenerator {
           'isolate.',
         )
         ..writeln('  static ${_proxySignature(task, typePrefixes)} async {')
-        ..writeln('    _dwiRegisterGeneratedTasks();');
+        ..writeln('    await _dwiRegisterGeneratedTasks();');
       final call = task.takesInput
           ? "Dwi.run<Object?>('${_dartString(task.name)}', "
                 "${_inputArgument(task, ids)})"
@@ -216,6 +259,7 @@ abstract final class DwiGenerator {
     buffer
       ..writeln('}')
       ..writeln();
+    _writeDedicatedTasks(buffer, tasks, typePrefixes, ids);
     buffer..writeln(
       'final Map<Function, Object> _dwiFunctionAdapters = <Function, Object>{',
     );
@@ -287,6 +331,54 @@ abstract final class DwiGenerator {
     _writeDecoders(buffer, codecs, ids, typePrefixes);
     _writeEncoders(buffer, codecs, ids, typePrefixes);
     return buffer.toString();
+  }
+
+  /// Writes `DwiDedicatedTasks`: instance methods for the non-stream tasks,
+  /// each sending its call to one borrowed worker (ADR-036).
+  static void _writeDedicatedTasks(
+    StringBuffer buffer,
+    List<DwiTaskDescriptor> tasks,
+    Map<String, String> typePrefixes,
+    Map<String, int> ids,
+  ) {
+    buffer
+      ..writeln(
+        '/// Typed calls on one dedicated worker (see `DwiTasks.withWorker`).',
+      )
+      ..writeln('final class DwiDedicatedTasks {')
+      ..writeln('  DwiDedicatedTasks._(this._worker);')
+      ..writeln()
+      ..writeln('  final DwiWorker _worker;');
+    for (final task in tasks) {
+      if (task.returnsStream) continue;
+      buffer
+        ..writeln()
+        ..writeln(
+          '  /// Runs `${task.qualifiedName}` on this dedicated worker.',
+        )
+        ..writeln(
+          '  ${_proxySignature(task, typePrefixes).replaceFirst('static ', '')} async {',
+        );
+      final call = task.takesInput
+          ? "_worker.run<Object?>('${_dartString(task.name)}', "
+                "${_inputArgument(task, ids)})"
+          : "_worker.run<Object?>('${_dartString(task.name)}')";
+      if (task.returnsVoid) {
+        buffer
+          ..writeln('    await $call;')
+          ..writeln('  }');
+      } else {
+        buffer
+          ..writeln('    final value = await $call;')
+          ..writeln(
+            "    return ${_decodeCall(task.output, 'value', "'result'", ids)};",
+          )
+          ..writeln('  }');
+      }
+    }
+    buffer
+      ..writeln('}')
+      ..writeln();
   }
 
   static String _proxySignature(

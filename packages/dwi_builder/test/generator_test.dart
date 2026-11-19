@@ -137,6 +137,79 @@ void main() {
     },
   );
 
+  test(
+    'emits a dedicated-worker entry and typed dedicated methods (ADR-036)',
+    () {
+      final sources = DwiGenerator.generate(<DwiTaskDescriptor>[
+        descriptor('calculatePrimes', input: type('int'), output: type('int')),
+        descriptor('noInput', output: type('void')),
+      ], workerId: 'poolA');
+
+      expect(
+        sources.proxies,
+        contains(
+          'static Future<R> withWorker<R>(FutureOr<R> Function(DwiDedicatedTasks tasks) body) async {',
+        ),
+      );
+      expect(sources.proxies, contains('_dwiRegisterGeneratedTasks();'));
+      expect(sources.proxies, contains('final class DwiDedicatedTasks {'));
+      expect(
+        sources.proxies,
+        contains('Future<int> calculatePrimes(int input) async {'),
+      );
+      expect(
+        sources.proxies,
+        contains(
+          "final value = await _worker.run<Object?>('calculatePrimes', input)",
+        ),
+      );
+      expect(
+        sources.proxies,
+        contains("await _worker.run<Object?>('noInput');"),
+      );
+      // Output stays byte-identical for the same input.
+      final again = DwiGenerator.generate(<DwiTaskDescriptor>[
+        descriptor('calculatePrimes', input: type('int'), output: type('int')),
+        descriptor('noInput', output: type('void')),
+      ], workerId: 'poolA');
+      expect(again.proxies, sources.proxies);
+    },
+  );
+
+  test(
+    'emits the served artifact only when a served entry is given (ADR-037)',
+    () {
+      final withEntry = DwiGenerator.generate(
+        <DwiTaskDescriptor>[
+          descriptor(
+            'calculatePrimes',
+            input: type('int'),
+            output: type('int'),
+          ),
+        ],
+        workerId: 'poolA',
+        workerScript: 'dwi/worker.boot.mjs',
+        target: 'wasm',
+      );
+      expect(
+        withEntry.proxies,
+        contains(
+          "await Dwi.useGeneratedWorker(workerScript: 'dwi/worker.boot.mjs', "
+          'workerBackend: DwiWorkerBackend.wasm);',
+        ),
+      );
+
+      final legacy = DwiGenerator.generate(<DwiTaskDescriptor>[
+        descriptor('calculatePrimes', input: type('int'), output: type('int')),
+      ], workerId: 'poolA');
+      expect(legacy.proxies, isNot(contains('useGeneratedWorker')));
+      expect(
+        legacy.proxies,
+        contains('Future<void> _dwiRegisterOnce() async {'),
+      );
+    },
+  );
+
   test('emits typed proxies, native registration and metadata', () {
     final sources = DwiGenerator.generate(<DwiTaskDescriptor>[
       descriptor('calculatePrimes', input: type('int'), output: type('int')),
@@ -362,10 +435,7 @@ void main() {
     ], workerId: 'default');
 
     expect(sources.proxies, contains('static Stream<int> counts(int input) {'));
-    expect(
-      sources.proxies,
-      contains("return Dwi.runStream('counts', input).map("),
-    );
+    expect(sources.proxies, contains("Dwi.runStream('counts', input).map("));
     expect(sources.proxies, contains('static Stream<'));
     expect(sources.proxies, contains("Dwi.runStream('colors')"));
     expect(

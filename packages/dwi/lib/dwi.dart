@@ -186,9 +186,55 @@ abstract final class Dwi {
   /// On web, [DwiConfig.workerScript] is required; without it calls fail with
   /// [DwiStartupException] rather than falling back to the main thread.
   static Future<void> configure(DwiConfig config) async {
+    _explicitConfig = true;
     _config = config.validated();
     _backend ??= impl.createBackend(registry);
     await _backend!.configure(_config);
+  }
+
+  /// Set once [configure] is called; an explicit configuration always wins over
+  /// a generated artifact (ADR-037).
+  static bool _explicitConfig = false;
+
+  /// The artifact applied by the first generated proxy (ADR-037).
+  static ({String workerScript, DwiWorkerBackend workerBackend})? _generated;
+
+  /// Applies the worker artifact a generated proxy was built for (ADR-037).
+  ///
+  /// Generated code calls this before its first registration. It does nothing
+  /// when [configure] was called, so an explicit configuration always wins. A
+  /// different artifact from an earlier call throws [DwiUnsupportedException].
+  /// Native backends ignore [workerScript]. Calls with the same artifact are
+  /// no-ops, so the generated proxies may call this on each first use.
+  static Future<void> useGeneratedWorker({
+    required String workerScript,
+    required DwiWorkerBackend workerBackend,
+  }) async {
+    if (_explicitConfig) return;
+    final current = _generated;
+    if (current != null) {
+      if (current.workerScript == workerScript &&
+          current.workerBackend == workerBackend) {
+        return;
+      }
+      throw DwiUnsupportedException(
+        'a different generated worker ("${current.workerScript}", '
+        '${current.workerBackend.name}) already owns the pool; the program '
+        'has two generated catalogs with different artifacts',
+      );
+    }
+    _generated = (workerScript: workerScript, workerBackend: workerBackend);
+    try {
+      _config = DwiConfig(
+        workerScript: workerScript,
+        workerBackend: workerBackend,
+      );
+      _backend ??= impl.createBackend(registry);
+      await _backend!.configure(_config);
+    } catch (_) {
+      _generated = null;
+      rethrow;
+    }
   }
 
   /// Registers a task implementation for the native backend and for tests.
@@ -881,6 +927,33 @@ final class DwiWorker {
     }
     return DwiLink._(name, first, second);
   }
+
+  /// Opens channel [name] on this handle, runs [body] with it, and always closes
+  /// it afterwards (ADR-035). The channel is released when [body] settles, and
+  /// the handle stays usable. If [body] throws, that error is the result.
+  Future<R> withChannel<R>(
+    String name,
+    FutureOr<R> Function(DwiChannel channel) body,
+  ) => runScoped<DwiChannel, R>(
+    open: () => openChannel(name),
+    close: (channel) => channel.close(),
+    body: body,
+  );
+
+  /// Links channel [name] between [a] and [b], runs [body] with the link, and
+  /// always closes it afterwards (ADR-035). The link is opened before [body]
+  /// runs. Startup failure is the result and [body] never runs. Both handles
+  /// stay usable after the scope.
+  static Future<R> withLink<R>(
+    DwiWorker a,
+    DwiWorker b,
+    String name,
+    FutureOr<R> Function(DwiLink link) body,
+  ) => runScoped<DwiLink, R>(
+    open: () => link(a, b, name),
+    close: (link) => link.close(),
+    body: body,
+  );
 
   /// Cancels queued and running work, then terminates the context.
   ///

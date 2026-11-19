@@ -209,6 +209,21 @@ integration_tests/   browser integration tests (protocol end to end)
 benchmarks/          methodology and recorded results
 ```
 
+## First build on a clean checkout
+
+Run this once on a clean checkout to generate the proxy and worker, compile the
+worker, and build Flutter web. A worker failure stops the command before Flutter
+starts:
+
+```bash
+dart run dwi_builder:dwi build --flutter-build -- --release
+```
+
+Use `dart run dwi_builder:dwi watch` while developing and
+`dart run dwi_builder:dwi check` as a CI freshness gate. Scope and limits are in
+[packages/dwi_builder/README.md](packages/dwi_builder/README.md) and
+[docs/automatic-workers.md](docs/automatic-workers.md).
+
 ## Quickstart
 
 Automatic worker example (Dart web):

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.0
+
+- Generated proxies apply the served worker path and backend (ADR-037); `DwiGenerator.generate` takes an optional `workerScript`, and output without it is unchanged.
+- Generated proxies add `DwiTasks.withWorker` and `DwiDedicatedTasks` for typed calls
+  on one dedicated worker, registered before the worker starts (ADR-036). Stream
+  tasks are not included.
+- Documentation: the clean-checkout Flutter build command, scope of the hook, and the
+  watch/check/CLI alternatives (`--flutter-build` forwards arguments after `--`).
+
 ## 1.2.0
 
 - Version aligned with the 1.2.0 release; no API change in this package.

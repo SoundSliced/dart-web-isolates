@@ -1,5 +1,19 @@
 # Browser Matrix
 
+## 1.3.0 generated artifact defaults (ADR-037)
+
+- Chrome (headless, this machine, JS backend, custom served path `app/worker.dart.js`,
+  no `Dwi.configure`): PASS. `packages/dwi_builder/test/browser_generated_artifact_test.dart`.
+- Chrome, Wasm backend default: unverified.
+- Safari, Firefox, Edge: unverified.
+
+## 1.3.0 additions — browsers not verified
+
+ADR-034 (`computeParallelBounded`), ADR-035 (`withChannel`, `withLink`) and ADR-036
+(`DwiTasks.withWorker`) were verified natively only. No Chrome, Safari, Firefox or
+Edge result was recorded for these APIs in this release. Each engine is marked
+unverified until a browser run records evidence here.
+
 ## Flutter examples, four engines (ADR-025, 2026-11-14)
 
 Flutter 3.50.0, which embeds Dart 3.14.0. Both apps were built with `flutter build

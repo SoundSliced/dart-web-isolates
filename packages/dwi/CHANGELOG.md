@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.0
+
+- Adds `DwiWorker.withChannel` and `DwiWorker.withLink`: channels and links opened
+  before a callback and closed when it settles (ADR-035). Explicit `openChannel`,
+  `link` and `close()` are unchanged.
+- Adds `Dwi.useGeneratedWorker` (ADR-037): generated proxies apply the build-selected worker path and backend; explicit `Dwi.configure` wins.
+- Adds `DwiTasks.withWorker` to the generated proxy, a typed dedicated-worker entry
+  (ADR-036). Generated code requires `dwi_builder` 1.3.0.
+
 ## 1.2.0
 
 - Scoped ports: `Dwi.withPort` (host-only) and `DwiWorker.withPort` (bound to the handle) create a port for one callback and close it on every exit path (ADR-033). Requires `dwi_core` 1.2.0.

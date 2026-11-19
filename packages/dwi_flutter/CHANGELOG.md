@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0
+
+- Adds `computeParallelBounded(task, inputs, {concurrency = 4})`: a bounded batch
+  that keeps results in input order and stops admitting calls on the first failure
+  (ADR-034). `computeParallel` is unchanged.
+
 ## 1.2.0
 
 - Version aligned with the 1.2.0 release; no API change in this package.

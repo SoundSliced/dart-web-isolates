@@ -74,3 +74,23 @@ Future<void> main() async {
 ```
 
 [Source and issue tracker](https://github.com/SoundSliced/dart-web-isolates)
+
+## Bounded batches
+
+`computeParallelBounded` runs at most `concurrency` calls from one batch at a
+time (default 4, the `DwiConfig.maxWorkers` default; a value below 1 throws
+`ArgumentError`). Results follow input order. The first failure stops new calls,
+the already admitted calls are observed, and the first error is rethrown.
+Plain futures cannot be cancelled, so admitted calls keep running. The limit
+applies to one batch only; other work still competes for the global pool.
+
+```dart
+final squares = await computeParallelBounded(
+  DwiTasks.sumTo,
+  List<int>.generate(1000, (i) => i),
+  concurrency: 8,
+);
+```
+
+`computeParallel` keeps its eager behaviour: it submits every input at once
+(ADR-025). Use `computeParallelBounded` for large batches (ADR-034).

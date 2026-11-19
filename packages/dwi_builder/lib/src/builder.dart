@@ -127,6 +127,7 @@ class DwiBuilder {
       discovery.sortedTasks,
       workerId: cfg.workerId,
       target: cfg.target,
+      workerScript: _servedUrl(cfg, cfg.absoluteEntry),
     );
     final dependencies = <String>{
       ...discovery.dependencyFiles,
@@ -230,6 +231,7 @@ class DwiBuilder {
       discovery.sortedTasks,
       workerId: cfg.workerId,
       target: cfg.target,
+      workerScript: _servedUrl(cfg, cfg.absoluteEntry),
     );
     final dependencies = <String>{
       ...discovery.dependencyFiles,
