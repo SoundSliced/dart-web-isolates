@@ -134,7 +134,9 @@ void main() {
           for (final engine in BrowserEngine.values) {
             final availability = browserAvailability(engine);
             if (!availability.available) {
-              throw StateError('${engine.name} blocked: ${availability.reason}');
+              throw StateError(
+                '${engine.name} blocked: ${availability.reason}',
+              );
             }
             final observed = await probeBrowser(
               engine,
