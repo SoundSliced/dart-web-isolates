@@ -227,6 +227,23 @@ bool listenForEcho(Object? input) {
 }
 ```
 
+### Web worker settings and precedence
+
+On web, a generated proxy applies the worker artifact its build selected: the
+served path and the `js` or `wasm` backend (ADR-037). A page with no
+configuration therefore needs no worker URL.
+
+Precedence, highest first:
+
+1. An explicit `Dwi.configure(DwiConfig(...))` call. It always wins, even when
+   it names the default path or an empty path; `Dwi.configure` called after the
+   first generated call applies to workers spawned afterwards.
+2. The artifact recorded by the generated proxy at build time.
+3. The `DwiConfig` default (`dwi/worker.dart.js`, `js`).
+
+Two generated catalogs with different artifacts in one program fail with
+`DwiUnsupportedException`.
+
 ### Typed dedicated worker
 
 `DwiTasks.withWorker` runs the generated typed calls on one dedicated worker and

@@ -103,6 +103,12 @@ Verified: the command ordering and forwarding are read from `bin/dwi.dart`
 (`_build`, `_runFlutterBuild`). An end-to-end Flutter build was not run in this
 pass; see the release report.
 
+## Served artifact defaults
+
+The generated proxy applies the worker path and backend the build produced
+(ADR-037), so pages need no `Dwi.configure` for a standard JS worker. An explicit
+`Dwi.configure` always wins. See the `dwi` README for precedence.
+
 ## Programmatic build options
 
 `DwiBuildConfig(projectRoot: ...)` selects the project. `compile: false`

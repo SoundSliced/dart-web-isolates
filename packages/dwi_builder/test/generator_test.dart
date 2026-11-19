@@ -148,7 +148,7 @@ void main() {
       expect(
         sources.proxies,
         contains(
-          'static Future<R> withWorker<R>(FutureOr<R> Function(DwiDedicatedTasks tasks) body) {',
+          'static Future<R> withWorker<R>(FutureOr<R> Function(DwiDedicatedTasks tasks) body) async {',
         ),
       );
       expect(sources.proxies, contains('_dwiRegisterGeneratedTasks();'));
@@ -173,6 +173,40 @@ void main() {
         descriptor('noInput', output: type('void')),
       ], workerId: 'poolA');
       expect(again.proxies, sources.proxies);
+    },
+  );
+
+  test(
+    'emits the served artifact only when a served entry is given (ADR-037)',
+    () {
+      final withEntry = DwiGenerator.generate(
+        <DwiTaskDescriptor>[
+          descriptor(
+            'calculatePrimes',
+            input: type('int'),
+            output: type('int'),
+          ),
+        ],
+        workerId: 'poolA',
+        workerScript: 'dwi/worker.boot.mjs',
+        target: 'wasm',
+      );
+      expect(
+        withEntry.proxies,
+        contains(
+          "await Dwi.useGeneratedWorker(workerScript: 'dwi/worker.boot.mjs', "
+          'workerBackend: DwiWorkerBackend.wasm);',
+        ),
+      );
+
+      final legacy = DwiGenerator.generate(<DwiTaskDescriptor>[
+        descriptor('calculatePrimes', input: type('int'), output: type('int')),
+      ], workerId: 'poolA');
+      expect(legacy.proxies, isNot(contains('useGeneratedWorker')));
+      expect(
+        legacy.proxies,
+        contains('Future<void> _dwiRegisterOnce() async {'),
+      );
     },
   );
 
@@ -401,10 +435,7 @@ void main() {
     ], workerId: 'default');
 
     expect(sources.proxies, contains('static Stream<int> counts(int input) {'));
-    expect(
-      sources.proxies,
-      contains("return Dwi.runStream('counts', input).map("),
-    );
+    expect(sources.proxies, contains("Dwi.runStream('counts', input).map("));
     expect(sources.proxies, contains('static Stream<'));
     expect(sources.proxies, contains("Dwi.runStream('colors')"));
     expect(

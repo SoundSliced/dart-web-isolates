@@ -2,6 +2,7 @@
 
 ## 1.3.0
 
+- Generated proxies apply the served worker path and backend (ADR-037); `DwiGenerator.generate` takes an optional `workerScript`, and output without it is unchanged.
 - Generated proxies add `DwiTasks.withWorker` and `DwiDedicatedTasks` for typed calls
   on one dedicated worker, registered before the worker starts (ADR-036). Stream
   tasks are not included.

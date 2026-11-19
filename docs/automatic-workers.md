@@ -316,6 +316,19 @@ Verified: the command ordering and forwarding are read from `bin/dwi.dart`
 (`_build`, `_runFlutterBuild`). An end-to-end Flutter build was not run in this
 pass; see the release report.
 
+## Served artifact defaults (ADR-037, 1.3.0)
+
+The generated proxy calls `Dwi.useGeneratedWorker` with the served path and backend
+the build produced. Pages need no `Dwi.configure` for a standard JS worker. An explicit
+`Dwi.configure` wins over the generated artifact, including a deliberately invalid
+`workerScript`. Two generated catalogs with different artifacts fail with
+`DwiUnsupportedException`. Proxies generated without a served entry (older programmatic
+callers) are unchanged.
+
+Verified in headless Chrome: `packages/dwi_builder/test/browser_generated_artifact_test.dart`
+(custom served path `app/worker.dart.js`, no configuration). The Wasm artifact default
+is not verified in a browser in this release.
+
 ## Development workflow
 
 For a Flutter app, no watcher is required: `flutter run -d chrome` runs the

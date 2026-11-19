@@ -1545,6 +1545,39 @@ and worker compilation in each measured browser; actual worker realm and
 independent task state; clean builds, cache invalidation and cleanup. Prototype
 identity or worker-only compilation cannot satisfy that gate.
 
+## ADR-037 — Generated worker artifact defaults (proposed for 1.3.0)
+
+**Context.** A web build's worker path and backend (`DwiConfig.workerScript`,
+`DwiConfig.workerBackend`) must be repeated by hand when the artifact is not at the
+conventional path, or when it is a Wasm worker. The builder already knows the served
+entry (manifest `artifact`) and the target (`js`/`wasm`).
+
+**Decisions.**
+1. The generated proxy calls `Dwi.useGeneratedWorker({required String workerScript,
+   required DwiWorkerBackend workerBackend})` once, before its first registration. The
+   generator emits the call only when the builder passes the served entry (`workerScript`).
+   Output from callers that omit it is unchanged (programmatic compatibility).
+2. `workerScript` is the same served path that the manifest records, computed by the
+   builder's existing `_servedUrl`. `workerBackend` is `wasm` for target `wasm`, else `js`.
+3. Representation of omitted versus explicit values: `DwiConfig` is not changed. `Dwi.configure`
+   sets an explicit-configuration flag. An explicit configuration, including a deliberately
+   invalid or empty `workerScript`, always wins: `useGeneratedWorker` returns without change.
+4. Without explicit configuration, the first `useGeneratedWorker` applies the artifact to the
+   backend before any worker spawns. Later calls with the same artifact are no-ops.
+5. A different artifact from another generated catalog throws `DwiUnsupportedException`
+   and does not replace the owning artifact. The registration memo is cleared so a
+   corrected program can retry.
+6. Live workers are never switched or replayed. Explicit `configure` after the first
+   generated call applies to workers spawned afterwards.
+7. Concurrent first calls share one registration future, so registration and the artifact
+   apply run once.
+8. Native backends ignore `workerScript`; the call still records the artifact harmlessly.
+9. Pool-state conflicts with a default artifact that was already dispatched by a non-generated
+   `Dwi.run` are not detected and are a documented limitation.
+
+**Consequences.** Browser verification is required for the served path and backend; see
+`docs/browser-matrix.md`. Generated files in `examples/` and `tooling/` are regenerated.
+
 ## ADR-036 — Generated typed dedicated-worker entry (proposed for 1.3.0)
 
 **Context.** Pooled generated proxies (`DwiTasks.x`) route each call through `Dwi.run`
@@ -1567,8 +1600,7 @@ tasks and spawn a worker by hand (`Dwi.registerTask`, `DwiWorker.using`, `worker
 **Consequences.** Native behaviour is covered by `packages/dwi_builder/test/generated_integration_test.dart`
 (the dedicated call is the first generated dispatch of that program) and deterministic output by
 `packages/dwi_builder/test/generator_test.dart`. Browser behaviour is not verified; see
-`docs/browser-matrix.md`. The worker artifact a browser build uses is the one selected at build
-time (plan phase 2 is not implemented).
+`docs/browser-matrix.md`. The browser worker artifact is applied by ADR-037.
 
 ## ADR-035 — Callback-scoped channels and links (proposed for 1.3.0)
 

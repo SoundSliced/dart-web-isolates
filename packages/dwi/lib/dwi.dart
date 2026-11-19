@@ -186,9 +186,55 @@ abstract final class Dwi {
   /// On web, [DwiConfig.workerScript] is required; without it calls fail with
   /// [DwiStartupException] rather than falling back to the main thread.
   static Future<void> configure(DwiConfig config) async {
+    _explicitConfig = true;
     _config = config.validated();
     _backend ??= impl.createBackend(registry);
     await _backend!.configure(_config);
+  }
+
+  /// Set once [configure] is called; an explicit configuration always wins over
+  /// a generated artifact (ADR-037).
+  static bool _explicitConfig = false;
+
+  /// The artifact applied by the first generated proxy (ADR-037).
+  static ({String workerScript, DwiWorkerBackend workerBackend})? _generated;
+
+  /// Applies the worker artifact a generated proxy was built for (ADR-037).
+  ///
+  /// Generated code calls this before its first registration. It does nothing
+  /// when [configure] was called, so an explicit configuration always wins. A
+  /// different artifact from an earlier call throws [DwiUnsupportedException].
+  /// Native backends ignore [workerScript]. Calls with the same artifact are
+  /// no-ops, so the generated proxies may call this on each first use.
+  static Future<void> useGeneratedWorker({
+    required String workerScript,
+    required DwiWorkerBackend workerBackend,
+  }) async {
+    if (_explicitConfig) return;
+    final current = _generated;
+    if (current != null) {
+      if (current.workerScript == workerScript &&
+          current.workerBackend == workerBackend) {
+        return;
+      }
+      throw DwiUnsupportedException(
+        'a different generated worker ("${current.workerScript}", '
+        '${current.workerBackend.name}) already owns the pool; the program '
+        'has two generated catalogs with different artifacts',
+      );
+    }
+    _generated = (workerScript: workerScript, workerBackend: workerBackend);
+    try {
+      _config = DwiConfig(
+        workerScript: workerScript,
+        workerBackend: workerBackend,
+      );
+      _backend ??= impl.createBackend(registry);
+      await _backend!.configure(_config);
+    } catch (_) {
+      _generated = null;
+      rethrow;
+    }
   }
 
   /// Registers a task implementation for the native backend and for tests.

@@ -22,12 +22,15 @@ Date: 2026-11-19. Additive release. No protocol change.
   exit code. Read from `packages/dwi_builder/bin/dwi.dart`; an end-to-end Flutter
   build was not run.
 
+- **Served artifact defaults (ADR-037).** Generated proxies apply the build-selected worker
+  path and backend. An explicit `Dwi.configure` always wins. Verified natively and in headless
+  Chrome (JS backend, custom served path, no configuration):
+  `packages/dwi_builder/test/browser_generated_artifact_test.dart`.
+
 ## Not in this release
 
-- **Web worker runtime settings (plan phase 2).** Not implemented. It needs the
-  configuration-representation decision and browser verification, which were not
-  completed.
-- **Browser verification of the new APIs.** The browser test suites were not run
-  for this release. Native, Web JS and Web Wasm are recorded separately in
-  `docs/browser-matrix.md`; this release adds no browser results.
-- **Typed cancellation, and batch cancellation** remain out of scope (ADR-034, ADR-036).
+- **Wasm and other browsers.** The Wasm artifact default and Safari, Firefox and Edge are not
+  verified for these APIs. `docs/browser-matrix.md` records each engine as unverified.
+- **Typed cancellation and batch cancellation** remain out of scope (ADR-034, ADR-036).
+- **Pool conflict with a default already dispatched by a non-generated `Dwi.run`** is not
+  detected (ADR-037 decision 9).

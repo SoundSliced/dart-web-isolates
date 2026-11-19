@@ -1,5 +1,12 @@
 # Browser Matrix
 
+## 1.3.0 generated artifact defaults (ADR-037)
+
+- Chrome (headless, this machine, JS backend, custom served path `app/worker.dart.js`,
+  no `Dwi.configure`): PASS. `packages/dwi_builder/test/browser_generated_artifact_test.dart`.
+- Chrome, Wasm backend default: unverified.
+- Safari, Firefox, Edge: unverified.
+
 ## 1.3.0 additions — browsers not verified
 
 ADR-034 (`computeParallelBounded`), ADR-035 (`withChannel`, `withLink`) and ADR-036
