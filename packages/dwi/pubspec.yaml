@@ -1,6 +1,6 @@
 name: dwi
 description: Isolate-like background execution for Dart and Flutter Web.
-version: 1.1.1
+version: 1.2.0
 repository: https://github.com/SoundSliced/dart-web-isolates
 topics:
   - isolate
@@ -13,7 +13,7 @@ environment:
 
 dependencies:
   dwi_annotations: ^1.1.0
-  dwi_core: ^1.1.0
+  dwi_core: ^1.2.0
   dwi_native: ^1.1.0
   dwi_web: ^1.1.0
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.0
+
+- Scoped ports: `Dwi.withPort` (host-only) and `DwiWorker.withPort` (bound to the handle) create a port for one callback and close it on every exit path (ADR-033). Requires `dwi_core` 1.2.0.
+
 ## 1.1.1
 
 - Documentation: the pub.dev README shows the basic and advanced examples inline, so the features can be read without running the example files.

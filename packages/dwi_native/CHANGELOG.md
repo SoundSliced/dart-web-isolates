@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.0
+
+- Version aligned with the 1.2.0 release; no API change in this package.
+
 ## 1.1.1
 
 - Documentation: the pub.dev README shows the basic and advanced examples inline, so the features can be read without running the example files.

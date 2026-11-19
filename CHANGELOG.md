@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-11-19
+
+Scoped ports (ADR-033). Additive; no existing API changes and no protocol change.
+
+### Added
+
+- `Dwi.withPort(name, body)` creates a host-only port for one callback and closes it
+  on every exit path. `DwiWorker.withPort(name, body)` binds that port to the handle
+  before the callback runs.
+- A duplicate open name throws `DwiChannelStateException` and never closes the first port.
+
+### Fixed
+
+- A worker stop or failure now fails a port binding even while the host listener is
+  paused by backpressure.
+
 ## [1.1.1] - 2026-11-17
 
 Documentation only. The pub.dev README of each package shows its basic and advanced examples inline. No API, protocol or behaviour change.
