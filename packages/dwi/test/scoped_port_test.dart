@@ -191,6 +191,14 @@ void main() {
         await Future<void>.delayed(Duration(milliseconds: input! as int));
         return 'slow';
       });
+      Dwi.registerTask('floodScoped', (Object? input) {
+        final channel = DwiWorkerChannels.find(input! as String)!;
+        // Two messages into a one-slot backlog: the second waits for room.
+        for (var i = 0; i < 2; i++) {
+          unawaited(channel.send('flood $i').catchError((Object _) {}));
+        }
+        return 'sent';
+      });
     });
 
     tearDown(() => Dwi.configure(const DwiConfig()));
@@ -238,6 +246,51 @@ void main() {
                 })
                 .timeout(timeout);
             expect(reuse, 'echo:again');
+          } finally {
+            await worker.close();
+          }
+        });
+        expect(errors, isEmpty);
+      },
+    );
+
+    test(
+      'a worker failure while delivery is paused fails the scope promptly',
+      () async {
+        await Dwi.configure(
+          const DwiConfig(taskTimeout: Duration(milliseconds: 50)),
+        );
+        final errors = await _uncaught(() async {
+          final worker = await DwiWorker.spawn();
+          try {
+            final started = Completer<void>();
+            final release = Completer<void>();
+            final scope = worker.withPort<Object?>('pausedFail', (port) async {
+              // A host listener that is paused: the backlog fills and the
+              // binding's delivery waits, as ADR-032 describes.
+              final listener = port.messages.listen((_) {});
+              listener.pause();
+              started.complete();
+              await release.future;
+              await listener.cancel();
+              return 'body';
+            }, bufferSize: 1);
+            await started.future;
+            expect(
+              await worker.run<String>('floodScoped', 'port:pausedFail'),
+              'sent',
+            );
+            await expectLater(
+              worker.run<String>('slowScoped', 5000),
+              throwsA(isA<DwiTimeoutException>()),
+            );
+            // The scope must settle now, while the body still waits on its release.
+            await expectLater(
+              scope.timeout(timeout),
+              throwsA(isA<DwiWorkerFailedException>()),
+            );
+            expect(Dwi.port('pausedFail'), isNull);
+            release.complete();
           } finally {
             await worker.close();
           }
