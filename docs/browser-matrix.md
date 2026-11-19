@@ -991,3 +991,25 @@ one. Details and request logs in
 
 Not measured: browser cache eviction or revalidation timing; a dart2wasm host in
 the cached-bootstrap fixture (it uses a dart2js host).
+
+## 10. Scoped ports, four engines (ADR-033, 2026-11-19)
+
+`packages/dwi_builder/test/browser_scoped_port_test.dart`. Host `Dwi.withPort`
+and worker-bound `DwiWorker.withPort` run in every host × worker combination.
+Each cell reports the echo round trip, a worker announce, the scope outcome, and
+that the port is closed after the scope. Run unsandboxed on the local machine
+because the harness binds a loopback server.
+
+| Host | Worker | Chrome 158.0.8127.37 | Safari 26.5 | Firefox 160.0 | Edge 157.0.4341.60 |
+| --- | --- | --- | --- | --- | --- |
+| dart2js | dart2js | pass | pass | pass | pass |
+| dart2wasm | dart2js | pass | pass | pass | pass |
+| dart2js | dart2wasm | pass | pass | pass | pass |
+| dart2wasm | dart2wasm | pass | pass | pass | pass |
+
+Regression: `browser_named_port_test.dart` (ADR-032) passes on the same four
+engines, 4 test cells, 2026-11-19.
+
+Not covered by the browser cells: the Dart VM path, which is covered by the facade
+tests (`packages/dwi/test/scoped_port_test.dart`) and the runnable
+`examples/scoped_port`. Results here are for these engine versions only.

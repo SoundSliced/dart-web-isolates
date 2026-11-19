@@ -733,7 +733,7 @@ Decisions and open items are in ADR-033; nothing here is implemented yet.
 ```dart
 final response = await DwiWorker.using((worker) {
   return worker.withPort('echo', (port) async {
-    final ready = await worker.run<bool>('listenForEcho', 'port:${port.name}');
+    final ready = await worker.run<bool>('listenForEcho', port.name);
     if (!ready) throw StateError('Echo listener failed to start');
     final reply = port.messages.first;
     await port.send('hello');

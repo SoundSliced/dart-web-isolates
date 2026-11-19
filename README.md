@@ -170,6 +170,27 @@ The helper closes the handle when the callback returns or throws (ADR-015). It
 does not wait for calls you forgot to await: on exit, `close()` cancels active
 work. See [`examples/scoped_worker/`](examples/scoped_worker/).
 
+For one temporary exchange on a named port, `withPort` owns the port (ADR-033).
+It creates the port for the callback, binds it to the worker you pass, and
+closes it when the callback ends:
+
+```dart
+final response = await DwiWorker.using((worker) {
+  return worker.withPort('echo', (port) async {
+    final ready = await worker.run<bool>('listenForEcho', port.name);
+    if (!ready) throw StateError('Echo listener failed to start');
+    final reply = port.messages.first;
+    await port.send('hello');
+    return await reply;
+  });
+});
+```
+
+`Dwi.withPort` does the same for a host-only port. A name that is already open
+throws; the existing port is never closed. The package README explains the
+failure rules. See [`examples/scoped_port/`](examples/scoped_port/) and
+[`packages/dwi/README.md`](packages/dwi/README.md#port-rules).
+
 Losing a handle loses its state. Use a handle for repeated work that benefits
 from a warm cache or retained identity; use `Dwi.run` for one-off tasks. See
 [`examples/stateful_worker/`](examples/stateful_worker/) and ADR-013 in

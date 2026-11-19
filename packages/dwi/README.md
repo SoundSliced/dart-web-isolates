@@ -273,6 +273,48 @@ the port and bind it before sending. Subscribe before expecting a reply, and
 await sends to respect backpressure. Close a binding to detach one worker and
 close the port to end all its listeners and bindings.
 
+For one temporary exchange, use a scope. The scope creates the port, closes
+it when the callback returns or throws, and never adopts a port that is
+already open under the same name (a duplicate throws
+`DwiChannelStateException` and the first port stays open).
+
+Host-only, with no worker:
+
+```dart
+final status = await Dwi.withPort('status', (port) async {
+  final received = port.messages.first;
+  await port.send('ready');
+  return await received;
+});
+```
+
+Bound to a worker you choose. The port is bound before the callback runs. The
+worker must confirm its listener is installed before the first send, because
+the binding acknowledgement only means the channel is open. Pass the port name;
+the worker looks up the reserved channel `port:<name>`:
+
+```dart
+final response = await DwiWorker.using((worker) {
+  return worker.withPort('echo', (port) async {
+    final ready = await worker.run<bool>('listenForEcho', port.name);
+    if (!ready) throw StateError('Echo listener failed to start');
+    final reply = port.messages.first;
+    await port.send('hello');
+    return await reply;
+  });
+});
+```
+
+If the worker stops or the binding fails while the callback waits, the scope
+fails with a typed error (`DwiWorkerClosedException`, `DwiWorkerFailedException`
+or `DwiChannelClosedException`). If the callback throws, its error is the
+result. Closing the port during the callback ends it early and cannot cancel
+work the callback already started. See
+[`examples/scoped_port`](../../examples/scoped_port) (ADR-033).
+
+Use the explicit lifecycle above for shared, long-lived, or multi-worker ports.
+Close a port you created yourself; a scope closes only the port it created.
+
 ## Choose an API by workload
 
 | Workload | API and example |
