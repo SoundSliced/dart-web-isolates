@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1]
+
+- `dwi` and `dwi_web` document Wasm host builds, HTTP header requirements, and web task payload limits.
+- `dwi_web` reports cyclic raw payloads as `DwiSerializationException` with the offending path.
+
 ## [1.3.0] - 2026-11-19
 
 Developer-experience additions (ADR-034 to ADR-036). Additive; no existing API changes and no protocol change.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1
+
+- Report cyclic raw web payloads as `DwiSerializationException` with the offending path.
+- Document Wasm host support, COOP/COEP requirements, and the configurable payload budget.
+
 ## 1.3.0
 
 - Version aligned with the 1.3.0 release; no API change in this package.

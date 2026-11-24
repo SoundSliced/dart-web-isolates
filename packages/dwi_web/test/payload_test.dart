@@ -73,6 +73,40 @@ void main() {
       );
     });
 
+    test('rejects a cycle across list, map and set with its path', () {
+      final list = <Object?>[];
+      final set = Set<Object?>.identity()..add(list);
+      list.add(<String, Object?>{'loop': set});
+
+      expect(
+        () => validateDwiPayload(list),
+        throwsA(
+          isA<DwiSerializationException>().having(
+            (error) => error.message,
+            'message',
+            'payload[0][loop]{0}: cyclic payload collection',
+          ),
+        ),
+      );
+    });
+
+    test(
+      'counts repeated references separately without treating them as cycles',
+      () {
+        final shared = <Object?>[null];
+        final payload = <Object?>[shared, shared];
+
+        expect(
+          () => validateDwiPayload(payload, maxBytes: 40),
+          returnsNormally,
+        );
+        expect(
+          () => validateDwiPayload(payload, maxBytes: 39),
+          throwsA(isA<DwiSerializationException>()),
+        );
+      },
+    );
+
     test('enforces an approximate payload budget', () {
       expect(
         () => validateDwiPayload('short', maxBytes: 1024),

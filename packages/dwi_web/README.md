@@ -21,9 +21,13 @@ Copy the basic example into the host project as `lib/main.dart`. Run
 serve the `web/` directory over HTTP. Open the browser console for the
 result. Serve worker assets from the same origin.
 
-Choose Wasm using `DwiWorkerBackend.wasm` and the matching generated entry
-asset. See the Wasm deployment example linked from the dwi guide for MIME and
-CSP settings. The dispatcher and runtime exports serve custom worker
+The host can also use `dart compile wasm`. Choose the worker target
+independently using `DwiWorkerBackend.wasm` and the matching generated entry
+asset for a Wasm worker. Dedicated workers and transferable bytes work without
+COOP/COEP on both worker targets. The default per-message estimated task
+payload budget is 64 MiB and can be raised with `DwiConfig.maxPayloadBytes`.
+See the [dwi guide](https://pub.dev/packages/dwi) for the Wasm loader and
+deployment settings. The dispatcher and runtime exports serve custom worker
 integration. The standard builder generates that wiring for the application.
 
 ## Basic example

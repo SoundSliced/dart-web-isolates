@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1
+
+- Document Dart and Flutter Wasm hosts, HTTP header requirements, and web task payload limits.
+- Require `dwi_web` 1.3.1 for typed errors on cyclic raw web payloads.
+
 ## 1.3.0
 
 - Adds `DwiWorker.withChannel` and `DwiWorker.withLink`: channels and links opened

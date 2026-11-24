@@ -45,6 +45,51 @@ script from your HTML, and serve `web/` over HTTP. Deploy the generated
 `web/dwi/` directory with the same origin as the host. For Flutter web use
 your normal Flutter run or build command after worker generation.
 
+## Wasm hosts, HTTP headers and arguments
+
+You can compile the browser host with either `dart compile js` or
+`dart compile wasm`. The host can use the default JavaScript worker or opt in
+to a Wasm worker independently. For a plain Dart Wasm host, generate the worker
+as above, then run:
+
+```sh
+dart compile wasm -o web/main.wasm lib/main.dart
+```
+
+Load the generated module from `web/index.html`:
+
+```html
+<script type="module">
+  import { compileStreaming } from './main.mjs';
+  const module = await compileStreaming(fetch('./main.wasm'));
+  const app = await module.instantiate({});
+  app.invokeMain();
+</script>
+```
+
+For Flutter, generate the worker and proxies first, then run
+`flutter build web --wasm`. Use a browser that can run the Wasm output from
+your Dart or Flutter SDK. The [Wasm worker example](https://github.com/SoundSliced/dart-web-isolates/tree/main/examples/wasm_worker)
+shows how to opt in to that worker target.
+
+DWI works without `Cross-Origin-Opener-Policy` (COOP) or
+`Cross-Origin-Embedder-Policy` (COEP) for both worker targets, including
+ordinary copied arguments and `DwiTransferableBytes`. Flutter's multithreaded
+Wasm renderer has its own cross-origin isolation requirements. Serve DWI's
+worker assets from the app's origin, use `application/wasm` for `.wasm` and a
+JavaScript MIME type for `.mjs`. If you set a Content Security Policy, allow the
+worker entry in `worker-src` and allow Wasm compilation when using Wasm.
+
+Web task inputs and results each have a configurable **64 MiB default**
+estimated payload budget (`DwiConfig.maxPayloadBytes`). You can raise it for
+larger messages or send data in chunks. Browser memory and cloning limits
+still apply. Generated proxies support typed collections, records, enums,
+`DateTime`, `Duration`, `BigInt`, `Uri` and `@DwiPayload` models. Raw `Dwi.run`
+calls accept wire values such as primitives, acyclic collections with string
+map keys, and typed data. See the [serialization guide](https://github.com/SoundSliced/dart-web-isolates/blob/main/docs/serialization.md)
+for wire types and numeric precision, and the [compatibility matrix](https://github.com/SoundSliced/dart-web-isolates/blob/main/docs/compatibility-matrix.md)
+for the measured host and worker combinations.
+
 ## Basic example: pooled calls and a dedicated worker
 
 This program uses native task registration. Browser apps use the generated

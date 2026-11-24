@@ -9,8 +9,8 @@ Dart web applications have no `dart:isolate`. `Isolate.run`, `Isolate.spawn`,
 DWI investigates closing that gap with browser Web Workers, a versioned message
 protocol, and — where it is honest to do so — an isolate-shaped API.
 
-> **Status: all eight packages are published at 1.0.0 (2026-11-17).** The previous
-> release, 0.11.0 (2026-11-15), adds several positional parameters (ADR-029) and
+> **Current package series: 1.3.x.** Release 0.11.0 (2026-11-15) added
+> several positional parameters (ADR-029) and
 > function references without an annotation (ADR-030). The release before that,
 > 0.10.0 (2026-11-14), adds registered static functions (`DwiFunctions`, ADR-020), generated payload
 > types (`@DwiPayload`, enums, `DateTime`, records…, ADR-021) and tasks that
@@ -47,7 +47,7 @@ Chrome-only: see [`docs/browser-matrix.md`](docs/browser-matrix.md).
 
 ## Packages
 
-All eight packages are published on pub.dev at **1.0.0** (2026-11-17).
+The package manifests in this repository use the **1.3.x** series.
 
 | Package | What it does | Status |
 | --- | --- | --- |
@@ -275,6 +275,21 @@ cp index.html build/index.html
 python3 serve.py
 # open http://127.0.0.1:8090/
 ```
+
+## Web deployment and arguments
+
+- **Host compilation.** DWI supports `dart compile js`, `dart compile wasm`,
+  and `flutter build web --wasm`. A Wasm host can use the default JavaScript
+  worker or an opt-in Wasm worker. See the [package quickstart](packages/dwi/README.md#wasm-hosts-http-headers-and-arguments)
+  for build and loader steps and the [compatibility matrix](docs/compatibility-matrix.md)
+  for measured combinations.
+- **HTTP headers.** DWI workers and transferable bytes work without COOP/COEP.
+  Flutter's multithreaded Wasm renderer requires cross-origin isolation.
+  [Wasm worker deployment](docs/limitations.md#engineering-limitations)
+  covers same-origin assets, MIME types, and CSP.
+- **Task arguments.** Web inputs and results have a configurable 64 MiB default
+  estimated budget. See [serialization](docs/serialization.md) for supported
+  values, how the estimate is calculated, and raising the limit.
 
 ## Principles
 

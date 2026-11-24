@@ -3,25 +3,24 @@
 What DWI can send, what it refuses, and what it costs. Evidence: R001 (VM),
 R003 (structured clone), R006 (comparison).
 
-## Accepted by default
+## Raw web values
+
+Name-based calls such as `Dwi.run('name', value)` pass wire values directly.
 
 | Type | Wire form | Notes |
 | --- | --- | --- |
-| `null`, `bool`, `int`, `double`, `String` | themselves | `int`/`double` distinction follows JS numbers on web |
-| `List` of accepted values | JS array | element types are erased; only `dynamic`/`Object?` element types build |
-| `Map` with `String` keys | plain object | non-string keys are rejected; only `dynamic`/`Object?` key and value types build |
-| `Set` of accepted values | JS array | arrives as a list; only `dynamic`/`Object?` element types build |
-| `Uint8List`, `Int32List`, … | typed array | accepted by the payload validator; transfer is v0.4 |
-| `ByteBuffer` | `ArrayBuffer` | transfer is v0.4 |
+| `null`, `bool`, `int`, `double`, `String` | JS primitives | raw numbers follow JS `Number` semantics |
+| `List` of accepted values | JS array | element types are erased |
+| `Map` with `String` keys | plain object | generic types are erased |
+| `Set` of accepted values | JS array | arrives as a list |
+| `Uint8List`, `Int32List`, and other supported typed lists | typed array | copied by default |
+| `ByteData`, `ByteBuffer` | `DataView`, `ArrayBuffer` | copied by default |
 
-Nested combinations of the above are allowed. Cycles are allowed only if the
-encoding is structured clone (it supports cycles); JSON codecs must reject them.
-
-**Typed collections are a build error in v0.3.** Dart's web compilers erase
-element types when a value passes through `jsify`/`dartify`: `List<int>` arrives
-as `List<dynamic>` and `Map<String, int>` arrives as `Map<Object?, Object?>`.
-A type-directed collection codec is planned for v0.4; until then use
-`List<dynamic>`/`Map<Object?, Object?>` and decode inside the task.
+Nested values must be acyclic. Raw collection cycles produce a
+`DwiSerializationException` with the path where the cycle was found. For
+integer precision across JS and Wasm, stay within the JS safe integer range
+(−(2⁵³ − 1) through 2⁵³ − 1), or use generated `BigInt` arguments or decimal
+strings to carry larger exact integers.
 
 ## Converted by generated code (ADR-021, since 0.9.0)
 
@@ -31,6 +30,7 @@ on arrival.
 
 | Type | Wire form | Notes |
 | --- | --- | --- |
+| `List<T>`, `Set<T>`, `Map<String, V>` | arrays and objects | generated code rebuilds supported element and value types |
 | public enum | constant name | an unknown name is a `DwiSerializationException` |
 | `DateTime` | `[microsecondsSinceEpoch, isUtc]` | instant and `isUtc` preserved |
 | `Duration` | microseconds | |
@@ -38,10 +38,8 @@ on arrival.
 | record | list: positional, then named sorted by name | arity is checked |
 | `@DwiPayload` class | map of constructor parameters | rebuilt through the unnamed constructor |
 
-A payload class crosses as its constructor parameters only: no identity, no
-other state, no subtype. Object graphs must be trees; a cycle does not
-terminate. The name-based `Dwi.run('name', value)` API does no conversion and
-still accepts only the forms in the first table.
+A payload class crosses as its constructor parameters. The receiver constructs
+a new instance with the declared type. Use acyclic values with generated codecs.
 
 ## Not supported
 
@@ -50,24 +48,33 @@ still accepts only the forms in the first table.
 - The bare `Record` and `Enum` types, and maps with non-`String` keys.
 - Functions, closures, tear-offs and `Symbol`.
 
-## Rejected
+Raw web calls also reject unencoded class and enum instances and native
+`SendPort`/`ReceivePort` values.
 
-- Functions, closures, tear-offs, `Symbol`.
-- Any object with a non-cloneable field, including a class instance or an enum
-  (rejected before a worker is acquired, not silently converted).
-- Payloads above `DwiConfig.maxPayloadBytes`: the host enforces an approximate
-  budget before sending and includes the limit in request metadata so the worker
-  rejects oversized results. The budget counts strings by UTF-16 code units and
-  is a resource guard, not an exact wire size.
-- `SendPort`/`ReceivePort` (no web representation).
+## Web task payload budget
 
-Rejections throw `DwiSerializationException` *before* a worker is started or a
-message is sent, so a failure never depends on remote behaviour.
+`DwiConfig.maxPayloadBytes` defaults to 64 MiB (67,108,864 bytes). It applies
+separately to the encoded input and the encoded result of each web task call.
+The host checks the input before sending it. Oversized inputs and results
+produce `DwiSerializationException`.
+
+The estimate adds eight bytes per visited value, one unit per UTF-16 code
+unit in strings and map keys, and the byte length of buffers or typed data.
+You can configure a larger budget before using the pool:
+
+```dart
+await Dwi.configure(const DwiConfig(maxPayloadBytes: 128 * 1024 * 1024));
+```
+
+The browser still needs enough memory to encode, clone and decode each message.
+For larger data, send chunks or transfer byte buffers. Transferable bytes also
+count toward the configured budget. Native task calls use the Dart VM's
+isolate sendability rules.
 
 ## Transfer policy
 
 ```dart
-await Dwi.run('hash', DwiTransferableBytes(bytes)); // proposed helper
+await Dwi.run('hash', DwiTransferableBytes(bytes));
 ```
 
 - Transfer is opt-in and single-use, mirroring `TransferableTypedData`.

@@ -33,8 +33,20 @@ import 'model.dart';
 @JS('globalThis.constructor.name')
 external JSString get _scope;
 
+@JS('crossOriginIsolated')
+external JSBoolean get _crossOriginIsolated;
+
 @DwiTask()
 (String, Color) where(Color color) => (_scope.toDart, color);
+
+@DwiTask()
+bool workerCrossOriginIsolated() => _crossOriginIsolated.toDart;
+
+@DwiTask()
+Object? echoWebPayload(Object? input) => input;
+
+@DwiTask()
+String repeatWebPayload(int length) => 'x' * length;
 ''';
 
 String _mainSource({required bool useWasm}) =>
@@ -51,6 +63,18 @@ import 'package:sample_app/tasks.dart';
 @JS('document')
 external JSObject get _document;
 
+@JS('crossOriginIsolated')
+external JSBoolean get _crossOriginIsolated;
+
+Future<String?> _serializationError(Future<Object?> Function() run) async {
+  try {
+    await run();
+    return null;
+  } on DwiSerializationException catch (error) {
+    return error.message;
+  }
+}
+
 Future<void> main() async {
   final result = <String, Object?>{};
   try {
@@ -60,10 +84,31 @@ Future<void> main() async {
           : DwiConfig.defaultWorkerScript,
       workerBackend: $useWasm ? DwiWorkerBackend.wasm : DwiWorkerBackend.js,
       startupTimeout: const Duration(seconds: 20),
+      maxPayloadBytes: 1024,
     ));
 $payloadCalls
     final where = await DwiTasks.where(Color.green);
     result['realm'] = <Object?>[where.\$1, where.\$2.name];
+    result['hostCrossOriginIsolated'] = _crossOriginIsolated.toDart;
+    result['workerCrossOriginIsolated'] =
+        await DwiTasks.workerCrossOriginIsolated();
+
+    final boundary = 'x' * 1016; // Eight bytes of estimated overhead.
+    result['boundaryEcho'] =
+        await Dwi.run<Object?>('echoWebPayload', boundary) == boundary;
+    result['oversizedInput'] = await _serializationError(
+      () => Dwi.run<Object?>('echoWebPayload', 'x' * 1017),
+    );
+    result['oversizedResult'] = await _serializationError(
+      () => DwiTasks.repeatWebPayload(1017),
+    );
+    final cycle = <Object?>[];
+    cycle.add(cycle);
+    result['cyclicInput'] = await _serializationError(
+      () => Dwi.run<Object?>('echoWebPayload', cycle),
+    );
+    result['afterRejections'] =
+        await Dwi.run<Object?>('echoWebPayload', 'still ready');
     final capabilities = await Dwi.capabilities();
     result['backend'] = capabilities.backend.name;
     result['workerBackend'] = capabilities.workerBackend;
@@ -191,6 +236,22 @@ void main() {
               'green',
             ]);
             expect(decoded['backend'], 'worker');
+            expect(decoded['hostCrossOriginIsolated'], isFalse);
+            expect(decoded['workerCrossOriginIsolated'], isFalse);
+            expect(decoded['boundaryEcho'], isTrue);
+            expect(
+              decoded['oversizedInput'],
+              contains('input exceeds maxPayloadBytes'),
+            );
+            expect(
+              decoded['oversizedResult'],
+              contains('result exceeds maxPayloadBytes'),
+            );
+            expect(
+              decoded['cyclicInput'],
+              'input[0]: cyclic payload collection',
+            );
+            expect(decoded['afterRejections'], 'still ready');
             expect(
               decoded['workerBackend'],
               backend == 'wasm' ? 'dart2wasm' : 'dart2js',

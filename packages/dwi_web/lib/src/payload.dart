@@ -9,9 +9,9 @@ import 'package:dwi_core/dwi_core.dart';
 /// a class instance loses its type. Sending such a value silently corrupts the
 /// payload, so every value is checked before it reaches `postMessage`.
 ///
-/// Supported values are `null`, `num`, `String`, `bool`, `List`, `Set`, `Map`
-/// with `String` keys, and typed-data values. Everything else fails with
-/// [DwiSerializationException].
+/// Supported values are `null`, `num`, `String`, `bool`, acyclic `List`, `Set`,
+/// and `Map` with `String` keys, and typed-data values. Unsupported values fail
+/// with [DwiSerializationException].
 ///
 /// When [maxBytes] is set, the walk also enforces an approximate payload budget.
 /// Strings are counted by UTF-16 code units and containers carry a small
@@ -49,42 +49,51 @@ void _validate(Object? value, String path, _ByteBudget budget) {
     budget.add(value.lengthInBytes, path);
     return;
   }
-  if (value is List) {
-    for (var index = 0; index < value.length; index++) {
-      _validate(value[index], '$path[$index]', budget);
-    }
-    return;
+  if (value is! List && value is! Map && value is! Set) {
+    throw DwiSerializationException(
+      '$path: ${value.runtimeType} is not structured-cloneable by DWI. '
+      'Use primitives, List, Map with String keys, Set or typed data.',
+    );
   }
-  if (value is Map) {
-    for (final entry in value.entries) {
-      if (entry.key is! String) {
-        throw DwiSerializationException(
-          '$path: map keys must be String, got ${entry.key.runtimeType}',
-        );
-      }
-      budget.add((entry.key! as String).length, '$path[${entry.key}]');
-      _validate(entry.value, '$path[${entry.key}]', budget);
-    }
-    return;
+  if (!budget.activeCollections.add(value)) {
+    throw DwiSerializationException('$path: cyclic payload collection');
   }
-  if (value is Set) {
-    var index = 0;
-    for (final element in value) {
-      _validate(element, '$path{$index}', budget);
-      index++;
+
+  try {
+    switch (value) {
+      case List():
+        for (var index = 0; index < value.length; index++) {
+          _validate(value[index], '$path[$index]', budget);
+        }
+      case Map():
+        for (final entry in value.entries) {
+          final key = entry.key;
+          if (key is! String) {
+            throw DwiSerializationException(
+              '$path: map keys must be String, got ${key.runtimeType}',
+            );
+          }
+          final entryPath = '$path[$key]';
+          budget.add(key.length, entryPath);
+          _validate(entry.value, entryPath, budget);
+        }
+      case Set():
+        var index = 0;
+        for (final element in value) {
+          _validate(element, '$path{$index}', budget);
+          index++;
+        }
     }
-    return;
+  } finally {
+    budget.activeCollections.remove(value);
   }
-  throw DwiSerializationException(
-    '$path: ${value.runtimeType} is not structured-cloneable by DWI. '
-    'Use primitives, List, Map with String keys, Set or typed data.',
-  );
 }
 
 class _ByteBudget {
   _ByteBudget(this.limit);
 
   final int? limit;
+  final activeCollections = Set<Object>.identity();
   int used = 0;
 
   void add(int bytes, String path) {

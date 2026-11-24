@@ -111,10 +111,11 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
     preserved, and a cyclic object graph is not supported. Classes without
     `@DwiPayload`, functions, streams and non-String map keys are build errors
     (`DWI001`). The name-based `Dwi.run` does no conversion.
-12. **Payload size is enforced approximately.** `DwiConfig.maxPayloadBytes` is
-    checked by the host before send and by the worker for results (the limit is
-    sent in request metadata). The estimate counts strings by UTF-16 code units,
-    so it is a resource guard rather than an exact wire size.
+12. **Web task payload size is estimated.** `DwiConfig.maxPayloadBytes` defaults
+    to 64 MiB and applies separately to inputs and results. The host checks
+    inputs before sending and passes the limit to the worker. See
+    [serialization](serialization.md#web-task-payload-budget) for the estimate,
+    configuration and value types.
 13. **Generated-registry tree shaking is verified for tested shapes.** The
     generated worker uses static references, and v0.3 compiles and runs in
     Chrome. A universal proof for every library shape is not claimed.
@@ -142,6 +143,9 @@ a documented DWI-4 gap in `Dwi.run`, closed only by the explicit fresh API.
     Flutter hook integration are covered by the 2026-11-10 matrices (ADR-018,
     `audit/evidence/dart2wasm-worker-deployment-2026-11-10.txt`,
     `audit/evidence/flutter-wasm-worker-matrix-2026-11-10.txt`).
+    DWI's dedicated workers, copied payloads and `ArrayBuffer` transfers work
+    without COOP/COEP. Flutter's multithreaded Wasm renderer requires
+    cross-origin isolation separately.
 
     **Retention is the deployment's job, not the build's.** A build never
     deletes a published `gen-*` generation, because a browser can keep the

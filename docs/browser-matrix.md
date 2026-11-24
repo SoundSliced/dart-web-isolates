@@ -1,5 +1,20 @@
 # Browser Matrix
 
+## Web argument and header regression
+
+Run `dart test test/browser_payload_types_test.dart -r expanded` in
+`packages/dwi_builder`. The fixture compiles the JavaScript and Wasm hosts
+against both worker targets and serves them without COOP/COEP. It checks
+`crossOriginIsolated` in each realm, an ordinary argument at the configured
+size boundary, typed errors for oversized inputs and results and cyclic inputs,
+and a successful call after those errors.
+
+On Dart 3.14.0 (2026-11-24), all four host and worker pairings compiled and
+passed in every measured browser: Chrome 158.0.8127.88, Edge 158.0.4370.33,
+Firefox 160.0 and Safari 26.5. Each realm reported `crossOriginIsolated: false`,
+so the assertions hold without COOP/COEP. The earlier Flutter runtime matrix is
+in [§8](#8-flutter-host--worker-compiler-matrix-2026-11-10).
+
 ## 1.3.0 generated artifact defaults (ADR-037)
 
 - Chrome (headless, this machine, JS backend, custom served path `app/worker.dart.js`,
