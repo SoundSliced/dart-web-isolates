@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.1
+
+- Version aligned with the 1.3.1 release; no API change in this package.
+- The browser payload fixture also asserts the task payload boundary, oversized
+  input and result errors, cyclic input errors, and COOP/COEP isolation in both
+  realms.
+
 ## 1.3.0
 
 - Generated proxies apply the served worker path and backend (ADR-037); `DwiGenerator.generate` takes an optional `workerScript`, and output without it is unchanged.

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `dwi` and `dwi_web` document Wasm host builds, HTTP header requirements, and web task payload limits.
 - `dwi_web` reports cyclic raw payloads as `DwiSerializationException` with the offending path.
+- All eight packages are version-aligned at 1.3.1; `dwi_builder` also extends its
+  browser payload fixture to the payload boundary and isolation checks.
 
 ## [1.3.0] - 2026-11-19
 

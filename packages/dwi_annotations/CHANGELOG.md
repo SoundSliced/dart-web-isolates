@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.1
+
+- Version aligned with the 1.3.1 release; no API change in this package.
+
 ## 1.3.0
 
 - Version aligned with the 1.3.0 release; no API change in this package.

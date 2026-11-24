@@ -29,6 +29,10 @@ worker artefacts need no rebuild.
 - **`tooling/mobile_probe` compiles again.** The probe imports
   `package:material_ui/material_ui.dart` but did not declare the dependency, so
   analysis reported unresolved Flutter types. The dependency is now declared.
+- **All eight packages aligned at 1.3.1.** `dwi_annotations`, `dwi_builder`,
+  `dwi_core`, `dwi_flutter`, `dwi_native` and `dwi_protocol` carry the version
+  only; `dwi_builder` also extends its browser payload fixture to the boundary and
+  isolation assertions. No API change in any of the six.
 
 ## Not in this release
 
